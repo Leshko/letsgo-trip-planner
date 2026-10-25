@@ -35,6 +35,8 @@ export interface IdeaView {
   link: string;
   address: string;
   cost: Idea['cost'];
+  imageUrl: string;
+  siteName: string;
   suggestedBy: MemberView;
   voteCount: number;
   voters: MemberView[];
@@ -51,7 +53,10 @@ export interface ItineraryEntryView {
   notes: string;
   position: number;
   ideaId: string | null;
-  idea: Pick<IdeaView, 'id' | 'kind' | 'title' | 'link' | 'address'> | null;
+  idea: Pick<
+    IdeaView,
+    'id' | 'kind' | 'title' | 'link' | 'address' | 'imageUrl'
+  > | null;
   addedBy: MemberView;
 }
 
@@ -84,6 +89,8 @@ export const ideaView = (i: Idea, meId: string, commentCount = 0): IdeaView => {
     link: i.link,
     address: i.address,
     cost: i.cost,
+    imageUrl: i.imageUrl ?? '',
+    siteName: i.siteName ?? '',
     suggestedBy: memberView(i.suggestedBy),
     voteCount: votes.length,
     voters: votes.map((v) => memberView(v.member)),
@@ -108,6 +115,7 @@ export const itineraryEntryView = (e: ItineraryEntry): ItineraryEntryView => ({
         title: e.idea.title,
         link: e.idea.link,
         address: e.idea.address,
+        imageUrl: e.idea.imageUrl ?? '',
       }
     : null,
   addedBy: memberView(e.addedBy),

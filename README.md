@@ -14,9 +14,11 @@ What the family can do:
 - **Stay** — the hotel / cabin / rental: photos, address with an embedded map and
   one-tap directions, check-in and check-out, the listing link, and notes for the
   family (door code, parking, who sleeps where).
-- **Do** and **Eat** — two idea lists. Anyone can suggest; everyone votes ("I'm
-  in"); the list sorts by votes; each idea has its own comment thread. Any idea
-  can be dropped straight onto a day of the plan.
+- **Do** and **Eat** — two idea lists. Paste a link and the title, description
+  and photos are pulled from the page (like a share sheet); pick a cover photo.
+  Anyone can suggest; everyone votes ("I'm in"); the list sorts by votes; each
+  idea has its own comment thread. Any idea can be dropped straight onto a day
+  of the plan.
 - **Plan** — a day-by-day itinerary generated from the trip dates. Add entries
   from the idea list or write your own, give them a time or leave them "anytime",
   and drag them between days.
@@ -64,7 +66,7 @@ pnpm --filter @letsgo/api test      # end-to-end API suite against an in-memory 
 api/   NestJS 11 + TypeORM + SQLite. Trips, members, ideas, votes, comments,
        posts, activity feed, itinerary. Serves web/dist in production.
 web/   Angular 20 (standalone, signals). Mobile-first; bottom tabs on phones,
-       top tabs on desktop; light and dark.
+       top tabs on desktop; always light theme.
 ```
 
 ### Environment
@@ -73,6 +75,7 @@ web/   Angular 20 (standalone, signals). Mobile-first; bottom tabs on phones,
 |-----------|-------------------------|-----------------------------------|
 | `PORT`    | `3001`                  | API (and web) port                |
 | `DB_PATH` | `api/data/letsgo.sqlite` | SQLite file, or `:memory:`        |
+| `UNFURL_ALLOW_PRIVATE` | unset | `1` lets link previews fetch private/local hosts. Dev only. |
 
 ### How access works
 

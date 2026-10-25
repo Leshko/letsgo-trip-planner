@@ -14,6 +14,7 @@ import {
   Post,
   Session,
   Trip,
+  Unfurled,
 } from './models';
 
 /** Thin typed wrapper over the LetsGo API. Every call returns a Promise. */
@@ -74,11 +75,27 @@ export class ApiService {
   }
   createIdea(
     tripId: string,
-    body: { kind: IdeaKind; title: string; description?: string; link?: string; address?: string; cost?: CostLevel },
+    body: {
+      kind: IdeaKind;
+      title: string;
+      description?: string;
+      link?: string;
+      address?: string;
+      cost?: CostLevel;
+      imageUrl?: string;
+      siteName?: string;
+    },
   ) {
     return this.post<Idea>(`/trips/${tripId}/ideas`, body);
   }
-  updateIdea(tripId: string, ideaId: string, body: Partial<Pick<Idea, 'title' | 'description' | 'link' | 'address' | 'cost'>>) {
+  unfurl(tripId: string, url: string) {
+    return this.get<Unfurled>(`/trips/${tripId}/unfurl`, { url });
+  }
+  updateIdea(
+    tripId: string,
+    ideaId: string,
+    body: Partial<Pick<Idea, 'title' | 'description' | 'link' | 'address' | 'cost' | 'imageUrl' | 'siteName'>>,
+  ) {
     return this.patch<Idea>(`/trips/${tripId}/ideas/${ideaId}`, body);
   }
   deleteIdea(tripId: string, ideaId: string) {

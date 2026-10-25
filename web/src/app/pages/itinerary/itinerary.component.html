@@ -31,7 +31,7 @@
 
         <div class="day__list" cdkDropList [id]="day.date" [cdkDropListData]="day.entries" (cdkDropListDropped)="drop($event, day.date)">
           @for (e of day.entries; track e.id) {
-            <div class="entry" cdkDrag [cdkDragData]="e">
+            <div class="entry" [class.entry--img]="e.idea?.imageUrl" cdkDrag [cdkDragData]="e">
               <span class="entry__grip" cdkDragHandle aria-label="Drag to reorder">⋮⋮</span>
               <span class="entry__time" [class.entry__time--none]="!e.startTime">{{ e.startTime ? (e.startTime | time12) : 'anytime' }}</span>
               <div class="grow" (click)="startEdit(e)" style="cursor:pointer">
@@ -39,6 +39,7 @@
                 @if (e.notes) { <div class="entry__notes">{{ e.notes }}</div> }
                 @if (e.idea?.address) { <div class="tiny">📍 {{ e.idea?.address }}</div> }
               </div>
+              @if (e.idea?.imageUrl) { <img class="thumb thumb--sm" [src]="e.idea?.imageUrl" alt="" loading="lazy" (error)="$any($event.target).style.display='none'" /> }
               <app-avatar [member]="e.addedBy" size="sm" />
             </div>
           } @empty {

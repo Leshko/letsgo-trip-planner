@@ -12,22 +12,47 @@
   } @else {
     <form class="card mt stack-v" (ngSubmit)="add()">
       <div class="field">
+        <label for="ilink">Got a link? Paste it and we'll fill in the rest</label>
+        <div class="row">
+          <input id="ilink" class="input grow" name="ilink" type="url" [(ngModel)]="link" maxlength="500" placeholder="https://…"
+            inputmode="url" autocomplete="off" (paste)="onLinkPaste($event)" (change)="fetchPreview()" />
+          <button class="btn btn--sm" type="button" (click)="fetchPreview()" [disabled]="previewBusy() || !link.trim()">
+            {{ previewBusy() ? 'Reading…' : 'Preview' }}
+          </button>
+        </div>
+        @if (previewError()) { <span class="tiny" style="color:var(--danger)">{{ previewError() }}</span> }
+      </div>
+
+      @if (preview(); as p) {
+        <div class="preview">
+          <div class="row" style="gap:6px">
+            @if (p.icon) { <img [src]="p.icon" alt="" width="16" height="16" style="border-radius:3px" (error)="$any($event.target).style.display='none'" /> }
+            <span class="tiny">{{ p.siteName }}</span>
+          </div>
+          @if (previewImages().length) {
+            <div class="preview__images" role="radiogroup" aria-label="Pick a cover photo">
+              @for (src of previewImages(); track src) {
+                <button type="button" class="preview__img" [class.is-selected]="imageUrl === src" (click)="pickImage(src)" role="radio" [attr.aria-checked]="imageUrl === src">
+                  <img [src]="src" alt="" loading="lazy" (error)="$any($event.target).closest('button').style.display='none'" />
+                </button>
+              }
+            </div>
+            <span class="tiny">Tap a photo to use it as the cover{{ imageUrl ? '' : ' (none selected)' }}</span>
+          }
+        </div>
+      }
+
+      <div class="field">
         <label for="ititle">What is it?</label>
-        <input id="ititle" class="input" name="ititle" [(ngModel)]="title" required maxlength="120" [placeholder]="c.placeholder" autofocus />
+        <input id="ititle" class="input" name="ititle" [(ngModel)]="title" required maxlength="120" [placeholder]="c.placeholder" />
       </div>
       <div class="field">
         <label for="idesc">Why it's great (optional)</label>
         <textarea id="idesc" class="textarea" name="idesc" [(ngModel)]="description" rows="2" maxlength="2000"></textarea>
       </div>
-      <div class="form-grid form-grid--2">
-        <div class="field">
-          <label for="ilink">Link</label>
-          <input id="ilink" class="input" name="ilink" type="url" [(ngModel)]="link" maxlength="500" placeholder="https://" />
-        </div>
-        <div class="field">
-          <label for="iaddr">Address / area</label>
-          <input id="iaddr" class="input" name="iaddr" [(ngModel)]="address" maxlength="300" />
-        </div>
+      <div class="field">
+        <label for="iaddr">Address / area</label>
+        <input id="iaddr" class="input" name="iaddr" [(ngModel)]="address" maxlength="300" />
       </div>
       <div class="field">
         <span class="label">Cost</span>
@@ -40,7 +65,7 @@
       @if (error()) { <p class="error">{{ error() }}</p> }
       <div class="row">
         <button class="btn btn--primary grow" type="submit" [disabled]="busy() || !title.trim()">{{ busy() ? 'Adding…' : 'Add it' }}</button>
-        <button class="btn btn--ghost" type="button" (click)="adding.set(false)">Cancel</button>
+        <button class="btn btn--ghost" type="button" (click)="adding.set(false); resetForm()">Cancel</button>
       </div>
     </form>
   }
@@ -62,10 +87,15 @@
             <span class="idea__title">{{ i.title }}</span>
             @if (i.cost) { <span class="chip chip--sun">{{ i.cost }}</span> }
           </div>
-          @if (i.description) { <p class="muted" style="margin-top:4px">{{ i.description }}</p> }
+          @if (i.description) { <p class="muted idea__desc" style="margin-top:4px">{{ i.description }}</p> }
+          @if (i.imageUrl) {
+            <a class="idea__cover" [href]="i.link || i.imageUrl" target="_blank" rel="noopener">
+              <img [src]="i.imageUrl" alt="" loading="lazy" (error)="$any($event.target).closest('a').style.display='none'" />
+            </a>
+          }
           <div class="idea__meta">
             <span class="row" style="gap:4px"><app-avatar [member]="i.suggestedBy" size="sm" /> {{ i.suggestedBy.id === me()?.id ? 'you' : i.suggestedBy.name }} · {{ i.createdAt | ago }}</span>
-            @if (i.link) { <a [href]="i.link" target="_blank" rel="noopener">🔗 {{ hostOf(i.link) }}</a> }
+            @if (i.link) { <a [href]="i.link" target="_blank" rel="noopener">🔗 {{ i.siteName || hostOf(i.link) }}</a> }
             @if (i.address) { <a [href]="'https://www.google.com/maps/search/?api=1&query=' + i.address" target="_blank" rel="noopener">📍 {{ i.address }}</a> }
           </div>
           @if (i.voters.length) {

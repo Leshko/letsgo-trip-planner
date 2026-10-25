@@ -9,6 +9,8 @@ export class CreateIdeaDto {
   @IsOptional() @IsString() @MaxLength(500) link?: string;
   @IsOptional() @IsString() @MaxLength(300) address?: string;
   @IsOptional() @IsIn(COST_LEVELS) cost?: CostLevel;
+  @IsOptional() @IsString() @MaxLength(1000) imageUrl?: string;
+  @IsOptional() @IsString() @MaxLength(120) siteName?: string;
 }
 
 export class UpdateIdeaDto {
@@ -17,4 +19,6 @@ export class UpdateIdeaDto {
   @IsOptional() @IsString() @MaxLength(500) link?: string;
   @IsOptional() @IsString() @MaxLength(300) address?: string;
   @IsOptional() @IsIn(COST_LEVELS) cost?: CostLevel;
+  @IsOptional() @IsString() @MaxLength(1000) imageUrl?: string;
+  @IsOptional() @IsString() @MaxLength(120) siteName?: string;
 }

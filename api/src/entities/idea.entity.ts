@@ -44,6 +44,13 @@ export class Idea extends Timestamped {
   @Column({ type: 'varchar', default: '' })
   cost!: CostLevel;
 
+  /** Cover image picked from the link preview (or pasted directly). */
+  @Column({ default: '' })
+  imageUrl!: string;
+
+  @Column({ default: '' })
+  siteName!: string;
+
   @Column()
   suggestedById!: string;
 

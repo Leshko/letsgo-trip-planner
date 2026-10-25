@@ -5,7 +5,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
-import { Comment, CostLevel, Idea, IdeaKind } from '../../core/models';
+import { Comment, CostLevel, Idea, IdeaKind, Unfurled } from '../../core/models';
 import { dateRangeDays } from './days';
 import { usePolling } from '../../core/polling';
 import { AvatarComponent } from '../../shared/avatar.component';
@@ -61,7 +61,16 @@ export class IdeasComponent {
   link = '';
   address = '';
   cost: CostLevel = '';
+  imageUrl = '';
+  siteName = '';
   readonly costs: CostLevel[] = ['free', '$', '$$', '$$$'];
+
+  // link preview
+  readonly preview = signal<Unfurled | null>(null);
+  readonly previewBusy = signal(false);
+  readonly previewError = signal('');
+  readonly previewImages = computed(() => this.preview()?.images ?? []);
+  private lastUnfurled = '';
 
   // comments
   readonly openComments = signal<string | null>(null);
@@ -102,6 +111,49 @@ export class IdeasComponent {
     this.ideas.update((all) => all.map((i) => (i.id === updated.id ? updated : i)).sort(byVotes));
   }
 
+  /** Called when the link field changes or is pasted into. */
+  async fetchPreview() {
+    const url = this.link.trim();
+    if (!url || url === this.lastUnfurled) return;
+    if (!/^(https?:\/\/)?[^\s/]+\.[^\s/]+/i.test(url)) return;
+    this.lastUnfurled = url;
+    this.previewBusy.set(true);
+    this.previewError.set('');
+    try {
+      const u = await this.api.unfurl(this.session.tripId(), url);
+      this.preview.set(u);
+      if (!this.title.trim() && u.title) this.title = u.title.slice(0, 120);
+      if (!this.description.trim() && u.description) this.description = u.description.slice(0, 2000);
+      this.siteName = u.siteName;
+      this.imageUrl = u.image;
+    } catch (e: unknown) {
+      this.preview.set(null);
+      this.previewError.set(messageOf(e, "Couldn't read that link, but you can still add it"));
+    } finally {
+      this.previewBusy.set(false);
+    }
+  }
+
+  onLinkPaste(ev: ClipboardEvent) {
+    const text = ev.clipboardData?.getData('text') ?? '';
+    if (text) {
+      // let ngModel take the paste first, then unfurl
+      setTimeout(() => void this.fetchPreview(), 0);
+    }
+  }
+
+  pickImage(src: string) {
+    this.imageUrl = this.imageUrl === src ? '' : src;
+  }
+
+  resetForm() {
+    this.title = this.description = this.link = this.address = this.imageUrl = this.siteName = '';
+    this.cost = '';
+    this.preview.set(null);
+    this.previewError.set('');
+    this.lastUnfurled = '';
+  }
+
   async add() {
     this.busy.set(true);
     this.error.set('');
@@ -113,10 +165,11 @@ export class IdeasComponent {
         link: this.link,
         address: this.address,
         cost: this.cost,
+        imageUrl: this.imageUrl,
+        siteName: this.siteName,
       });
       this.ideas.update((all) => [...all, idea].sort(byVotes));
-      this.title = this.description = this.link = this.address = '';
-      this.cost = '';
+      this.resetForm();
       this.adding.set(false);
     } catch (e: unknown) {
       this.error.set(messageOf(e, "Couldn't add that"));

@@ -69,6 +69,8 @@ export class IdeasService {
         link: (dto.link ?? '').trim(),
         address: (dto.address ?? '').trim(),
         cost: dto.cost ?? '',
+        imageUrl: safeImage(dto.imageUrl),
+        siteName: (dto.siteName ?? '').trim(),
         suggestedById: me.id,
       }),
     );
@@ -98,6 +100,8 @@ export class IdeasService {
     if (dto.link !== undefined) idea.link = dto.link.trim();
     if (dto.address !== undefined) idea.address = dto.address.trim();
     if (dto.cost !== undefined) idea.cost = dto.cost;
+    if (dto.imageUrl !== undefined) idea.imageUrl = safeImage(dto.imageUrl);
+    if (dto.siteName !== undefined) idea.siteName = dto.siteName.trim();
     await this.ideas.save(idea);
     return ideaView(
       await this.load(tripId, ideaId),
@@ -140,4 +144,10 @@ export class IdeasService {
       await this.commentCount(ideaId),
     );
   }
+}
+
+/** Only http(s) image URLs are stored; anything else becomes empty. */
+function safeImage(raw?: string): string {
+  const s = (raw ?? '').trim();
+  return /^https?:\/\//i.test(s) ? s : '';
 }

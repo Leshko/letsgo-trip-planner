@@ -58,6 +58,7 @@
             <div class="row"><span class="rank" [class.rank--top]="idx === 0">#{{ idx + 1 }}</span><span class="idea__title">{{ i.title }}</span></div>
             <div class="idea__meta"><app-avatar-stack [members]="i.voters" [max]="4" /> <span>{{ i.voteCount === 1 ? '1 person is' : i.voteCount + ' people are' }} in</span></div>
           </div>
+          @if (i.imageUrl) { <img class="thumb" [src]="i.imageUrl" alt="" loading="lazy" (error)="$any($event.target).style.display='none'" /> }
         </div>
       }
     </div>
@@ -79,6 +80,7 @@
               @if (i.cost) { <span class="chip chip--sun">{{ i.cost }}</span> }</div>
             <div class="idea__meta"><app-avatar-stack [members]="i.voters" [max]="4" /> <span>{{ i.voteCount === 1 ? '1 person is' : i.voteCount + ' people are' }} in</span></div>
           </div>
+          @if (i.imageUrl) { <img class="thumb" [src]="i.imageUrl" alt="" loading="lazy" (error)="$any($event.target).style.display='none'" /> }
         </div>
       }
     </div>

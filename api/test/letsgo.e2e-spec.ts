@@ -358,3 +358,71 @@ describe('LetsGo API (e2e)', () => {
       .expect(400);
   });
 });
+
+describe('unfurl endpoint (e2e)', () => {
+  let app: INestApplication;
+  let http: ReturnType<typeof request>;
+  let auth: { Authorization: string };
+  let tripId: string;
+
+  beforeAll(async () => {
+    const moduleRef = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+    app = moduleRef.createNestApplication();
+    configureApp(app);
+    await app.init();
+    http = request(app.getHttpServer());
+    const res = await http
+      .post('/api/trips')
+      .send({
+        name: 'U',
+        startDate: '2027-01-01',
+        endDate: '2027-01-02',
+        memberName: 'Me',
+      })
+      .expect(201);
+    auth = { Authorization: `Bearer ${res.body.token}` };
+    tripId = res.body.trip.id;
+  });
+
+  afterAll(async () => app.close());
+
+  it('requires a member and refuses private or malformed links', async () => {
+    await http.get('/api/trips/x/unfurl?url=https://example.com').expect(401);
+    const bad = [
+      '',
+      'ftp://example.com/x',
+      'http://127.0.0.1:3001/',
+      'http://192.168.86.113/',
+      'http://localhost/',
+    ];
+    for (const url of bad) {
+      await http
+        .get(`/api/trips/${tripId}/unfurl?url=${encodeURIComponent(url)}`)
+        .set(auth)
+        .expect(400);
+    }
+  });
+
+  it('stores an image on an idea and drops non-http ones', async () => {
+    const ok = await http
+      .post(`/api/trips/${tripId}/ideas`)
+      .set(auth)
+      .send({
+        kind: 'activity',
+        title: 'Zip line',
+        imageUrl: 'https://cdn.example.com/zip.jpg',
+        siteName: 'Zip Co',
+      })
+      .expect(201);
+    expect(ok.body.imageUrl).toBe('https://cdn.example.com/zip.jpg');
+    expect(ok.body.siteName).toBe('Zip Co');
+    const bad = await http
+      .post(`/api/trips/${tripId}/ideas`)
+      .set(auth)
+      .send({ kind: 'activity', title: 'Bad', imageUrl: 'javascript:alert(1)' })
+      .expect(201);
+    expect(bad.body.imageUrl).toBe('');
+  });
+});

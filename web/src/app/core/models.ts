@@ -44,6 +44,8 @@ export interface Idea {
   link: string;
   address: string;
   cost: CostLevel;
+  imageUrl: string;
+  siteName: string;
   suggestedBy: Member;
   voteCount: number;
   voters: Member[];
@@ -93,11 +95,22 @@ export interface ItineraryEntry {
   notes: string;
   position: number;
   ideaId: string | null;
-  idea: Pick<Idea, 'id' | 'kind' | 'title' | 'link' | 'address'> | null;
+  idea: Pick<Idea, 'id' | 'kind' | 'title' | 'link' | 'address' | 'imageUrl'> | null;
   addedBy: Member;
 }
 
 export interface ItineraryDay {
   date: string;
   entries: ItineraryEntry[];
+}
+
+/** What the server pulled out of a pasted link. */
+export interface Unfurled {
+  url: string;
+  title: string;
+  description: string;
+  siteName: string;
+  image: string;
+  images: string[];
+  icon: string;
 }
