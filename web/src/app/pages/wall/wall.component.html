@@ -1,0 +1,49 @@
+<div class="page">
+  <h1>The wall</h1>
+  <p class="muted">Questions, hype, logistics. Everyone sees it.</p>
+
+  <form class="card mt stack-v" (ngSubmit)="post()">
+    <div class="post">
+      @if (me(); as m) { <app-avatar [member]="m" /> }
+      <textarea class="textarea grow" name="draft" [(ngModel)]="draft" rows="2" maxlength="2000"
+        placeholder="Who's bringing the cooler? Anyone up for a sunrise hike?" (keydown)="onKey($event)"></textarea>
+    </div>
+    <div class="row row--between">
+      <span class="tiny">⌘/Ctrl + Enter to post</span>
+      <button class="btn btn--primary btn--sm" type="submit" [disabled]="busy() || !draft.trim()">Post</button>
+    </div>
+  </form>
+
+  @if (loaded() && posts().length === 0) {
+    <div class="card card--flat empty mt"><div class="big">💬</div>Quiet in here. Say hi to the family.</div>
+  }
+
+  <div class="stack-v mt">
+    @for (p of posts(); track p.id) {
+      <article class="card post">
+        <app-avatar [member]="p.member" />
+        <div class="post__bubble">
+          <div class="row row--between">
+            <span><span class="comment__who">{{ p.member.id === me()?.id ? 'You' : p.member.name }}</span><span class="tiny">{{ p.createdAt | ago }}</span></span>
+            @if (canDelete(p)) { <button class="btn btn--ghost btn--sm" (click)="remove(p)" aria-label="Delete post">✕</button> }
+          </div>
+          <p class="post__body">{{ p.body }}</p>
+          <div class="reactions">
+            @for (r of p.reactions; track r.emoji) {
+              <button class="reaction" [class.is-mine]="r.mine" (click)="react(p, r.emoji)" [title]="whoReacted(p, r.memberIds)">
+                {{ r.emoji }} <strong>{{ r.count }}</strong>
+              </button>
+            }
+            @if (pickerFor() === p.id) {
+              <span class="emoji-bar">
+                @for (e of quick; track e) { <button type="button" (click)="react(p, e)">{{ e }}</button> }
+              </span>
+            } @else {
+              <button class="reaction reaction--add" (click)="pickerFor.set(p.id)" aria-label="Add reaction">＋ 😊</button>
+            }
+          </div>
+        </div>
+      </article>
+    }
+  </div>
+</div>

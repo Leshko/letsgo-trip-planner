@@ -1,0 +1,129 @@
+<div class="page">
+  @let c = copy();
+  <div class="row row--between">
+    <div>
+      <h1>{{ c.title }}</h1>
+      <p class="muted">{{ c.blurb }}</p>
+    </div>
+  </div>
+
+  @if (!adding()) {
+    <button class="btn btn--primary btn--block mt" (click)="adding.set(true)">＋ {{ c.cta }}</button>
+  } @else {
+    <form class="card mt stack-v" (ngSubmit)="add()">
+      <div class="field">
+        <label for="ititle">What is it?</label>
+        <input id="ititle" class="input" name="ititle" [(ngModel)]="title" required maxlength="120" [placeholder]="c.placeholder" autofocus />
+      </div>
+      <div class="field">
+        <label for="idesc">Why it's great (optional)</label>
+        <textarea id="idesc" class="textarea" name="idesc" [(ngModel)]="description" rows="2" maxlength="2000"></textarea>
+      </div>
+      <div class="form-grid form-grid--2">
+        <div class="field">
+          <label for="ilink">Link</label>
+          <input id="ilink" class="input" name="ilink" type="url" [(ngModel)]="link" maxlength="500" placeholder="https://" />
+        </div>
+        <div class="field">
+          <label for="iaddr">Address / area</label>
+          <input id="iaddr" class="input" name="iaddr" [(ngModel)]="address" maxlength="300" />
+        </div>
+      </div>
+      <div class="field">
+        <span class="label">Cost</span>
+        <div class="segmented">
+          @for (lvl of costs; track lvl) {
+            <button type="button" [class.is-active]="cost === lvl" (click)="cost = cost === lvl ? '' : lvl">{{ lvl }}</button>
+          }
+        </div>
+      </div>
+      @if (error()) { <p class="error">{{ error() }}</p> }
+      <div class="row">
+        <button class="btn btn--primary grow" type="submit" [disabled]="busy() || !title.trim()">{{ busy() ? 'Adding…' : 'Add it' }}</button>
+        <button class="btn btn--ghost" type="button" (click)="adding.set(false)">Cancel</button>
+      </div>
+    </form>
+  }
+
+  @if (loaded() && ideas().length === 0) {
+    <div class="card card--flat empty mt"><div class="big">{{ kind() === 'food' ? '🌮' : '💡' }}</div>{{ c.empty }}</div>
+  }
+  @if (!loaded()) { <p class="spinner">Loading…</p> }
+
+  <div class="stack-v mt">
+    @for (i of ideas(); track i.id; let idx = $index) {
+      <article class="card idea">
+        <button class="vote" [class.is-on]="i.votedByMe" (click)="vote(i)" [attr.aria-pressed]="i.votedByMe" [attr.aria-label]="i.votedByMe ? 'You are in' : 'Count me in'">
+          <span class="ico">{{ i.votedByMe ? c.voteIco : '👍' }}</span><span class="n">{{ i.voteCount }}</span>
+        </button>
+        <div class="grow">
+          <div class="row row--wrap">
+            <span class="rank" [class.rank--top]="idx === 0 && i.voteCount > 1">#{{ idx + 1 }}</span>
+            <span class="idea__title">{{ i.title }}</span>
+            @if (i.cost) { <span class="chip chip--sun">{{ i.cost }}</span> }
+          </div>
+          @if (i.description) { <p class="muted" style="margin-top:4px">{{ i.description }}</p> }
+          <div class="idea__meta">
+            <span class="row" style="gap:4px"><app-avatar [member]="i.suggestedBy" size="sm" /> {{ i.suggestedBy.id === me()?.id ? 'you' : i.suggestedBy.name }} · {{ i.createdAt | ago }}</span>
+            @if (i.link) { <a [href]="i.link" target="_blank" rel="noopener">🔗 {{ hostOf(i.link) }}</a> }
+            @if (i.address) { <a [href]="'https://www.google.com/maps/search/?api=1&query=' + i.address" target="_blank" rel="noopener">📍 {{ i.address }}</a> }
+          </div>
+          @if (i.voters.length) {
+            <div class="idea__meta"><app-avatar-stack [members]="i.voters" [max]="6" />
+              <span>{{ i.voteCount === 1 ? (i.votedByMe ? 'Just you so far' : i.voters[0].name + ' is in') : i.voteCount + ' in' }}</span></div>
+          }
+          <div class="idea__actions">
+            <button class="btn btn--sm" (click)="toggleComments(i)">💬 {{ i.commentCount || '' }} {{ i.commentCount === 1 ? 'comment' : 'comments' }}</button>
+            <button class="btn btn--sm" (click)="startPlan(i)">🗓️ Add to plan</button>
+            @if (canRemove(i)) { <button class="btn btn--sm btn--ghost btn--danger" (click)="remove(i)">Remove</button> }
+          </div>
+
+          @if (openComments() === i.id) {
+            <div class="comments">
+              @for (cm of comments(); track cm.id) {
+                <div class="comment">
+                  <app-avatar [member]="cm.member" size="sm" />
+                  <div class="comment__body">
+                    <span class="comment__who">{{ cm.member.id === me()?.id ? 'You' : cm.member.name }}</span><span class="tiny">{{ cm.createdAt | ago }}</span>
+                    <div>{{ cm.body }}</div>
+                  </div>
+                  @if (cm.member.id === me()?.id || me()?.isOwner) {
+                    <button class="btn btn--ghost btn--sm" (click)="deleteComment(i, cm)" aria-label="Delete comment">✕</button>
+                  }
+                </div>
+              } @empty { <p class="tiny">No comments yet. Say something.</p> }
+              <form class="row" (ngSubmit)="comment(i)">
+                <input class="input grow" name="cdraft" [(ngModel)]="commentDraft" maxlength="1000" placeholder="Add a comment…" autocomplete="off" />
+                <button class="btn btn--primary btn--sm" type="submit" [disabled]="!commentDraft.trim()">Post</button>
+              </form>
+            </div>
+          }
+        </div>
+      </article>
+    }
+  </div>
+
+  @if (planning(); as p) {
+    <div class="modal-backdrop" (click)="planning.set(null)">
+      <form class="modal stack-v" (click)="$event.stopPropagation()" (ngSubmit)="addToPlan()" role="dialog">
+        <h2>Add to the plan</h2>
+        <p class="muted">{{ p.title }}</p>
+        <div class="field">
+          <label for="pday">Which day?</label>
+          <select id="pday" class="select" name="pday" [(ngModel)]="planDate">
+            @for (d of days(); track d) { <option [value]="d">{{ d | longDate }}</option> }
+          </select>
+        </div>
+        <div class="field">
+          <label for="ptime">Time (optional)</label>
+          <input id="ptime" class="input" type="time" name="ptime" [(ngModel)]="planTime" />
+        </div>
+        <div class="row">
+          <button class="btn btn--primary grow" type="submit">Add</button>
+          <button class="btn btn--ghost" type="button" (click)="planning.set(null)">Cancel</button>
+        </div>
+      </form>
+    </div>
+  }
+  @if (toast()) { <div class="toast" role="status">{{ toast() }}</div> }
+</div>

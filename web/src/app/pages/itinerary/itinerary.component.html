@@ -1,0 +1,104 @@
+<div class="page">
+  <h1>The plan</h1>
+  <p class="muted">Day by day. Drag things between days. Times are optional.</p>
+
+  @if (unplanned().length) {
+    <div class="card card--flat mt">
+      <div class="label">Top ideas not on the plan yet</div>
+      <div class="row row--wrap mt" style="gap:6px">
+        @for (i of unplanned().slice(0, 6); track i.id) {
+          <span class="chip" [class.chip--leaf]="i.kind === 'activity'" [class.chip--sun]="i.kind === 'food'">
+            {{ i.kind === 'food' ? '🍽️' : '🎯' }} {{ i.title }} · {{ i.voteCount }}
+          </span>
+        }
+      </div>
+      <p class="tiny mt">Use “＋ Add” on a day and pick from the list.</p>
+    </div>
+  }
+
+  @if (!loaded()) { <p class="spinner">Loading…</p> }
+
+  <div class="mt-lg" cdkDropListGroup>
+    @for (day of days(); track day.date) {
+      <section class="day">
+        <div class="day__head">
+          <span class="day__name">Day {{ dayNumber(day.date) }} · {{ dayName(day.date) }}</span>
+          <span class="day__date">{{ shortDate(day.date) }}</span>
+          @if (day.date === today) { <span class="chip chip--accent">today</span> }
+          <span class="grow"></span>
+          <button class="btn btn--sm" (click)="openAdd(day.date)">＋ Add</button>
+        </div>
+
+        <div class="day__list" cdkDropList [id]="day.date" [cdkDropListData]="day.entries" (cdkDropListDropped)="drop($event, day.date)">
+          @for (e of day.entries; track e.id) {
+            <div class="entry" cdkDrag [cdkDragData]="e">
+              <span class="entry__grip" cdkDragHandle aria-label="Drag to reorder">⋮⋮</span>
+              <span class="entry__time" [class.entry__time--none]="!e.startTime">{{ e.startTime ? (e.startTime | time12) : 'anytime' }}</span>
+              <div class="grow" (click)="startEdit(e)" style="cursor:pointer">
+                <div class="entry__title">{{ e.idea?.kind === 'food' ? '🍽️ ' : e.idea ? '🎯 ' : '' }}{{ e.title }}</div>
+                @if (e.notes) { <div class="entry__notes">{{ e.notes }}</div> }
+                @if (e.idea?.address) { <div class="tiny">📍 {{ e.idea?.address }}</div> }
+              </div>
+              <app-avatar [member]="e.addedBy" size="sm" />
+            </div>
+          } @empty {
+            <div class="day__empty">Nothing planned. A free day is a fine plan too.</div>
+          }
+        </div>
+
+        @if (addingFor() === day.date) {
+          <form class="card stack-v mt" (ngSubmit)="add()">
+            <div class="field">
+              <label for="pick">From the ideas list</label>
+              <select id="pick" class="select" name="pick" [(ngModel)]="draftIdeaId" (ngModelChange)="pickIdea()">
+                <option value="">— or write your own below —</option>
+                @for (i of ideas(); track i.id) {
+                  <option [value]="i.id">{{ i.kind === 'food' ? '🍽️' : '🎯' }} {{ i.title }} ({{ i.voteCount }} in)</option>
+                }
+              </select>
+            </div>
+            <div class="form-grid form-grid--2">
+              <div class="field">
+                <label for="dtitle">What</label>
+                <input id="dtitle" class="input" name="dtitle" [(ngModel)]="draftTitle" maxlength="120" placeholder="Drive up, check in, pool time…" />
+              </div>
+              <div class="field">
+                <label for="dtime">Time (optional)</label>
+                <input id="dtime" class="input" type="time" name="dtime" [(ngModel)]="draftTime" />
+              </div>
+            </div>
+            <div class="field">
+              <label for="dnotes">Notes</label>
+              <input id="dnotes" class="input" name="dnotes" [(ngModel)]="draftNotes" maxlength="2000" placeholder="Bring towels, book ahead…" />
+            </div>
+            @if (error()) { <p class="error">{{ error() }}</p> }
+            <div class="row">
+              <button class="btn btn--primary grow" type="submit" [disabled]="!draftTitle.trim() && !draftIdeaId">Add to {{ dayName(day.date) }}</button>
+              <button class="btn btn--ghost" type="button" (click)="addingFor.set(null)">Cancel</button>
+            </div>
+          </form>
+        }
+      </section>
+    }
+  </div>
+
+  @if (editing(); as e) {
+    <div class="modal-backdrop" (click)="editing.set(null)">
+      <form class="modal stack-v" (click)="$event.stopPropagation()" (ngSubmit)="saveEdit()" role="dialog">
+        <h2>Edit</h2>
+        <div class="field"><label for="etitle">What</label>
+          <input id="etitle" class="input" name="etitle" [(ngModel)]="editTitle" required maxlength="120" /></div>
+        <div class="field"><label for="etime">Time</label>
+          <input id="etime" class="input" type="time" name="etime" [(ngModel)]="editTime" /></div>
+        <div class="field"><label for="enotes">Notes</label>
+          <textarea id="enotes" class="textarea" name="enotes" [(ngModel)]="editNotes" rows="3" maxlength="2000"></textarea></div>
+        <p class="tiny">Added by {{ e.addedBy.name }}</p>
+        <div class="row">
+          <button class="btn btn--primary grow" type="submit" [disabled]="!editTitle.trim()">Save</button>
+          <button class="btn btn--ghost btn--danger" type="button" (click)="remove(e)">Remove</button>
+          <button class="btn btn--ghost" type="button" (click)="editing.set(null)">Cancel</button>
+        </div>
+      </form>
+    </div>
+  }
+</div>

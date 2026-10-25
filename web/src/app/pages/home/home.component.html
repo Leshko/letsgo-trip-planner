@@ -1,0 +1,103 @@
+@if (trip(); as t) {
+  <div class="page">
+    @if (countdown(); as c) {
+      <section class="card card--accent row row--between">
+        <div>
+          <div class="countdown">{{ c.big }}</div>
+          <div class="muted">{{ c.label }}</div>
+        </div>
+        <app-avatar-stack [members]="t.members" [max]="4" />
+      </section>
+    }
+
+    @if (t.lodging.name || t.lodging.address) {
+      <a routerLink="/trip/stay" class="card card--sea row mt" style="text-decoration:none;color:inherit">
+        @if (t.lodging.photos[0]) {
+          <img [src]="t.lodging.photos[0]" alt="" (error)="$any($event.target).style.display = 'none'" style="width:72px;height:56px;object-fit:cover;border-radius:10px" />
+        } @else { <span style="font-size:2rem">🏡</span> }
+        <div class="grow">
+          <div class="tiny">Where we're staying</div>
+          <div style="font-weight:700">{{ t.lodging.name || t.lodging.address }}</div>
+          @if (t.lodging.checkIn) { <div class="tiny">Check-in {{ t.lodging.checkIn }}</div> }
+        </div>
+        <span class="muted">›</span>
+      </a>
+    } @else {
+      <a routerLink="/trip/stay" class="card card--flat row mt" style="text-decoration:none;color:inherit">
+        <span style="font-size:1.6rem">🏡</span>
+        <div class="grow"><strong>Add where you're staying</strong><div class="tiny">Address, check-in, photos, the listing link</div></div>
+        <span class="muted">›</span>
+      </a>
+    }
+
+    @if (latestPost(); as p) {
+      <a routerLink="/trip/wall" class="card card--flat mt" style="display:block;text-decoration:none;color:inherit">
+        <div class="tiny">Latest on the wall</div>
+        <div class="post mt" style="margin-top:6px">
+          <app-avatar [member]="p.member" size="sm" />
+          <div class="post__bubble"><span class="comment__who">{{ p.member.name }}</span><span class="tiny">{{ p.createdAt | ago }}</span>
+            <div class="post__body" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ p.body }}</div>
+          </div>
+        </div>
+      </a>
+    }
+
+    <div class="section-title"><h2>🎯 Top things to do</h2><a routerLink="/trip/do">All ideas ›</a></div>
+    @if (topDo().length === 0 && loaded()) {
+      <a routerLink="/trip/do" class="card card--flat empty" style="display:block;text-decoration:none;color:inherit">
+        <div class="big">💡</div>Nobody has pitched an activity yet. Be the first.
+      </a>
+    }
+    <div class="stack-v">
+      @for (i of topDo(); track i.id; let idx = $index) {
+        <div class="card idea">
+          <button class="vote" [class.is-on]="i.votedByMe" (click)="vote(i)" [attr.aria-pressed]="i.votedByMe" aria-label="I'm in">
+            <span class="ico">{{ i.votedByMe ? '🙌' : '👍' }}</span><span class="n">{{ i.voteCount }}</span>
+          </button>
+          <div class="grow">
+            <div class="row"><span class="rank" [class.rank--top]="idx === 0">#{{ idx + 1 }}</span><span class="idea__title">{{ i.title }}</span></div>
+            <div class="idea__meta"><app-avatar-stack [members]="i.voters" [max]="4" /> <span>{{ i.voteCount === 1 ? '1 person is' : i.voteCount + ' people are' }} in</span></div>
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="section-title"><h2>🍽️ Top places to eat</h2><a routerLink="/trip/eat">All places ›</a></div>
+    @if (topEat().length === 0 && loaded()) {
+      <a routerLink="/trip/eat" class="card card--flat empty" style="display:block;text-decoration:none;color:inherit">
+        <div class="big">🌮</div>No restaurants yet. Where should we eat?
+      </a>
+    }
+    <div class="stack-v">
+      @for (i of topEat(); track i.id; let idx = $index) {
+        <div class="card idea">
+          <button class="vote" [class.is-on]="i.votedByMe" (click)="vote(i)" [attr.aria-pressed]="i.votedByMe" aria-label="I'm in">
+            <span class="ico">{{ i.votedByMe ? '😋' : '👍' }}</span><span class="n">{{ i.voteCount }}</span>
+          </button>
+          <div class="grow">
+            <div class="row"><span class="rank" [class.rank--top]="idx === 0">#{{ idx + 1 }}</span><span class="idea__title">{{ i.title }}</span>
+              @if (i.cost) { <span class="chip chip--sun">{{ i.cost }}</span> }</div>
+            <div class="idea__meta"><app-avatar-stack [members]="i.voters" [max]="4" /> <span>{{ i.voteCount === 1 ? '1 person is' : i.voteCount + ' people are' }} in</span></div>
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="section-title"><h2>✨ What's happening</h2></div>
+    <section class="card">
+      @if (feed().length === 0) { <p class="muted">Activity from the family shows up here.</p> }
+      <div class="feed">
+        @for (a of feed(); track a.id) {
+          <div class="feed__item">
+            <span class="feed__ico">{{ icons[a.type] }}</span>
+            <app-avatar [member]="a.member" size="sm" />
+            <div class="grow">
+              <span class="feed__who">{{ a.member.id === me()?.id ? 'You' : a.member.name }}</span> {{ a.message }}
+              <div class="tiny">{{ a.createdAt | ago }}</div>
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+  </div>
+}

@@ -1,0 +1,81 @@
+@if (trip(); as t) {
+  <header class="topbar">
+    <div class="topbar__inner">
+      <div class="grow">
+        <div class="topbar__title">{{ t.name }}</div>
+        <div class="topbar__sub">{{ t.destination || 'Somewhere great' }} · {{ dates() }}</div>
+      </div>
+      <button class="btn btn--sm" (click)="showInvite.set(true)" aria-label="Invite family">
+        <app-avatar-stack [members]="t.members" [max]="3" /> <span>Invite</span>
+      </button>
+      @if (me(); as m) {
+        <button class="btn btn--ghost btn--icon" (click)="openProfile()" aria-label="Your profile">
+          <app-avatar [member]="m" />
+        </button>
+      }
+    </div>
+  </header>
+
+  <nav class="tabs" aria-label="Trip sections">
+    @for (tab of tabs; track tab.path) {
+      <a [routerLink]="tab.path" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: tab.exact }">
+        <span class="ico" aria-hidden="true">{{ tab.ico }}</span><span>{{ tab.label }}</span>
+      </a>
+    }
+  </nav>
+
+  <router-outlet />
+
+  @if (showInvite()) {
+    <div class="modal-backdrop" (click)="showInvite.set(false)">
+      <div class="modal stack-v" (click)="$event.stopPropagation()" role="dialog" aria-label="Invite family">
+        <h2>Invite the family</h2>
+        <p class="muted">Text them the link or read them the code. They just type their name.</p>
+        <div class="card card--flat" style="text-align:center">
+          <div class="tiny">Invite code</div>
+          <div class="input--code" style="font-size:2rem;font-weight:700">{{ t.inviteCode }}</div>
+        </div>
+        <input class="input" readonly [value]="inviteUrl()" (focus)="$any($event.target).select()" />
+        <div class="row">
+          <button class="btn btn--primary grow" (click)="share()">Share link</button>
+          <button class="btn" (click)="copy(inviteUrl())">Copy</button>
+        </div>
+        <div>
+          <div class="label">Who's in ({{ t.members.length }})</div>
+          <ul class="list-plain stack-v mt" style="gap:6px">
+            @for (m of t.members; track m.id) {
+              <li class="row"><app-avatar [member]="m" size="sm" /> <span>{{ m.name }}</span>
+                @if (m.isOwner) { <span class="chip">organizer</span> }
+              </li>
+            }
+          </ul>
+        </div>
+        <button class="btn btn--ghost" (click)="showInvite.set(false)">Done</button>
+      </div>
+    </div>
+  }
+
+  @if (showProfile()) {
+    <div class="modal-backdrop" (click)="showProfile.set(false)">
+      <form class="modal stack-v" (click)="$event.stopPropagation()" (ngSubmit)="saveProfile()" role="dialog" aria-label="Your profile">
+        <h2>You</h2>
+        <div class="field">
+          <label for="pname">Name</label>
+          <input id="pname" class="input" name="pname" [(ngModel)]="profileName" required maxlength="40" />
+        </div>
+        <div class="field">
+          <span class="label">Avatar</span>
+          <app-emoji-picker [(value)]="profileEmoji" />
+        </div>
+        @if (profileError()) { <p class="error">{{ profileError() }}</p> }
+        <div class="row">
+          <button class="btn btn--primary grow" type="submit" [disabled]="!profileName">Save</button>
+          <button class="btn btn--ghost" type="button" (click)="showProfile.set(false)">Cancel</button>
+        </div>
+        <button class="btn btn--ghost btn--danger btn--sm" type="button" (click)="leave()">Leave trip on this device</button>
+      </form>
+    </div>
+  }
+
+  @if (toast()) { <div class="toast" role="status">{{ toast() }}</div> }
+}

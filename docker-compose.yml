@@ -1,0 +1,13 @@
+services:
+  letsgo:
+    build: .
+    image: letsgo-trip-planner:latest
+    container_name: letsgo
+    restart: unless-stopped
+    ports:
+      - '3001:3001'
+    environment:
+      - PORT=3001
+      - DB_PATH=/data/letsgo.sqlite
+    volumes:
+      - /mnt/user/appdata/letsgo:/data

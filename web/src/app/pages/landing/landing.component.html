@@ -1,0 +1,71 @@
+<div class="page landing">
+  <div class="hero">
+    <p class="chip chip--accent">🌴 LetsGo</p>
+    <h1 class="mt">Plan the family trip<br />together.</h1>
+    <p class="muted mt">One place to pitch ideas, vote on them, see where you're staying, and build the plan day by day.</p>
+  </div>
+
+  <div class="segmented mt-lg" role="tablist">
+    <button role="tab" [class.is-active]="mode() === 'join'" (click)="mode.set('join')">I have a code</button>
+    <button role="tab" [class.is-active]="mode() === 'create'" (click)="mode.set('create')">Start a new trip</button>
+  </div>
+
+  @if (mode() === 'join') {
+    <form class="card mt stack-v" (ngSubmit)="join()">
+      <h2>Join your family's trip</h2>
+      @if (fromLink()) { <p class="muted">You've been invited. Just tell us who you are.</p> }
+      <div class="field">
+        <label for="code">Invite code</label>
+        <input id="code" class="input input--code" name="code" [(ngModel)]="joinCode" required minlength="4"
+          maxlength="12" autocapitalize="characters" autocomplete="off" placeholder="ABC123" />
+      </div>
+      <div class="field">
+        <label for="jname">Your name</label>
+        <input id="jname" class="input" name="jname" [(ngModel)]="joinName" required maxlength="40" placeholder="e.g. Aunt Carol" autocomplete="given-name" />
+      </div>
+      <div class="field">
+        <span class="label">Pick an avatar (optional)</span>
+        <app-emoji-picker [(value)]="joinEmoji" />
+      </div>
+      @if (error()) { <p class="error">{{ error() }}</p> }
+      <button class="btn btn--primary btn--block" type="submit" [disabled]="busy() || !joinCode || !joinName">
+        {{ busy() ? 'Joining…' : "I'm in" }}
+      </button>
+    </form>
+  } @else {
+    <form class="card mt stack-v" (ngSubmit)="create()">
+      <h2>Start a new trip</h2>
+      <div class="field">
+        <label for="tname">Trip name</label>
+        <input id="tname" class="input" name="tname" [(ngModel)]="tripName" required maxlength="80" placeholder="Lake week 2027" />
+      </div>
+      <div class="field">
+        <label for="dest">Where</label>
+        <input id="dest" class="input" name="dest" [(ngModel)]="destination" maxlength="120" placeholder="Lake Tahoe, CA" />
+      </div>
+      <div class="form-grid form-grid--2">
+        <div class="field">
+          <label for="start">First day</label>
+          <input id="start" class="input" type="date" name="start" [(ngModel)]="startDate" required />
+        </div>
+        <div class="field">
+          <label for="end">Last day</label>
+          <input id="end" class="input" type="date" name="end" [(ngModel)]="endDate" required [min]="startDate" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="cname">Your name</label>
+        <input id="cname" class="input" name="cname" [(ngModel)]="memberName" required maxlength="40" placeholder="Mom" autocomplete="given-name" />
+      </div>
+      <div class="field">
+        <span class="label">Pick an avatar (optional)</span>
+        <app-emoji-picker [(value)]="createEmoji" />
+      </div>
+      @if (error()) { <p class="error">{{ error() }}</p> }
+      <button class="btn btn--primary btn--block" type="submit" [disabled]="busy() || !tripName || !memberName || !startDate || !endDate">
+        {{ busy() ? 'Creating…' : 'Create trip & get invite code' }}
+      </button>
+      <p class="tiny">You'll get a short code to text the family. No accounts, no passwords.</p>
+    </form>
+  }
+</div>
