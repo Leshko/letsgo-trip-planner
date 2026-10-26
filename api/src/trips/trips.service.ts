@@ -4,9 +4,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
-import { emptyLodging, Member, Trip } from '../entities';
+import { emptyLodging, Member, TransferCode, Trip } from '../entities';
 import { generateInviteCode, normalizeInviteCode } from '../common/invite-code';
 import { isIsoDate } from '../common/dates';
 import {
@@ -19,10 +19,13 @@ import {
   CreateTripDto,
   JoinTripDto,
   LodgingDto,
+  TransferDto,
   UpdateProfileDto,
   UpdateTripDto,
 } from './trips.dto';
 import { ActivityService } from '../activity/activity.service';
+
+const TRANSFER_TTL_MS = 10 * 60_000;
 
 export interface SessionResult {
   token: string;
@@ -35,6 +38,8 @@ export class TripsService {
   constructor(
     @InjectRepository(Trip) private readonly trips: Repository<Trip>,
     @InjectRepository(Member) private readonly members: Repository<Member>,
+    @InjectRepository(TransferCode)
+    private readonly transfers: Repository<TransferCode>,
     private readonly activity: ActivityService,
   ) {}
 
@@ -141,6 +146,44 @@ export class TripsService {
       this.listMembers(tripId),
     ]);
     return tripView(trip, members);
+  }
+
+  /** A code the person reads off one screen and types into another. 10 minutes, one use. */
+  async createTransferCode(
+    me: Member,
+  ): Promise<{ code: string; expiresAt: number }> {
+    // Any earlier unused codes for this person stop working.
+    await this.transfers.delete({ memberId: me.id, usedAt: IsNull() });
+    let code = generateInviteCode(8);
+    while (await this.transfers.exist({ where: { code } }))
+      code = generateInviteCode(8);
+    const expiresAt = Date.now() + TRANSFER_TTL_MS;
+    await this.transfers.save(
+      this.transfers.create({ code, memberId: me.id, expiresAt, usedAt: null }),
+    );
+    return { code, expiresAt };
+  }
+
+  async redeemTransferCode(dto: TransferDto): Promise<SessionResult> {
+    const code = normalizeInviteCode(dto.code);
+    const t = await this.transfers.findOne({ where: { code } });
+    if (!t || t.usedAt || t.expiresAt < Date.now()) {
+      throw new NotFoundException(
+        'That login code is wrong, used, or has expired',
+      );
+    }
+    t.usedAt = Date.now();
+    await this.transfers.save(t);
+    const member = t.member;
+    const [trip, members] = await Promise.all([
+      this.getTrip(member.tripId),
+      this.listMembers(member.tripId),
+    ]);
+    return {
+      token: member.token,
+      member: memberView(member),
+      trip: tripView(trip, members),
+    };
   }
 
   async updateProfile(me: Member, dto: UpdateProfileDto): Promise<MemberView> {

@@ -14,6 +14,11 @@ import { Vote } from './vote.entity';
 export type IdeaKind = 'activity' | 'food';
 export const IDEA_KINDS: IdeaKind[] = ['activity', 'food'];
 
+export interface IdeaDetail {
+  label: string;
+  value: string;
+}
+
 export type CostLevel = '' | 'free' | '$' | '$$' | '$$$';
 export const COST_LEVELS: CostLevel[] = ['', 'free', '$', '$$', '$$$'];
 
@@ -50,6 +55,10 @@ export class Idea extends Timestamped {
 
   @Column({ default: '' })
   siteName!: string;
+
+  /** Extra facts the family adds: hours, price, phone, booking notes… */
+  @Column({ type: 'simple-json', default: '[]' })
+  details!: IdeaDetail[];
 
   @Column()
   suggestedById!: string;

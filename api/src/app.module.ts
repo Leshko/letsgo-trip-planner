@@ -10,6 +10,7 @@ import {
   ItineraryEntry,
   Member,
   Post,
+  TransferCode,
   Trip,
   Vote,
 } from './entities';
@@ -29,6 +30,7 @@ export const ENTITIES = [
   Comment,
   Post,
   Activity,
+  TransferCode,
 ];
 
 function databasePath(): string {

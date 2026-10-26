@@ -10,7 +10,19 @@
     <button role="tab" [class.is-active]="mode() === 'create'" (click)="mode.set('create')">Start a new trip</button>
   </div>
 
-  @if (mode() === 'join') {
+  @if (mode() === 'code') {
+    <form class="card mt stack-v" (ngSubmit)="redeem()">
+      <h2>Sign in with a login code</h2>
+      <p class="muted">On the device you're already using, open your avatar (top right) and tap “Make a login code”. Type it here.</p>
+      <div class="field">
+        <label for="lcode">Login code</label>
+        <input id="lcode" class="input input--code" name="lcode" [(ngModel)]="loginCode" required minlength="4" maxlength="16" autocapitalize="characters" autocomplete="off" placeholder="ABCD2345" />
+      </div>
+      @if (error()) { <p class="error">{{ error() }}</p> }
+      <button class="btn btn--primary btn--block" type="submit" [disabled]="busy() || !loginCode">{{ busy() ? 'Signing in…' : 'Sign in' }}</button>
+      <button class="btn btn--ghost btn--sm" type="button" (click)="mode.set('join'); error.set('')">Back</button>
+    </form>
+  } @else if (mode() === 'join') {
     <form class="card mt stack-v" (ngSubmit)="join()">
       <h2>Join your family's trip</h2>
       @if (fromLink()) { <p class="muted">You've been invited. Just tell us who you are.</p> }
@@ -31,6 +43,7 @@
       <button class="btn btn--primary btn--block" type="submit" [disabled]="busy() || !joinCode || !joinName">
         {{ busy() ? 'Joining…' : "I'm in" }}
       </button>
+      <button class="btn btn--ghost btn--sm" type="button" (click)="mode.set('code'); error.set('')">Already in on another device? I have a login code</button>
     </form>
   } @else {
     <form class="card mt stack-v" (ngSubmit)="create()">

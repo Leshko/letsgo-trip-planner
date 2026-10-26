@@ -6,7 +6,7 @@ import { SessionService } from '../../core/session.service';
 import { addDays, todayIso } from '../../core/format';
 import { EmojiPickerComponent } from '../../shared/emoji-picker.component';
 
-type Mode = 'join' | 'create';
+type Mode = 'join' | 'create' | 'code';
 
 @Component({
   selector: 'app-landing',
@@ -29,6 +29,9 @@ export class LandingComponent {
   joinCode = '';
   joinName = '';
   joinEmoji = '';
+
+  // login code from another device
+  loginCode = '';
 
   // create form
   tripName = '';
@@ -62,6 +65,20 @@ export class LandingComponent {
       await this.router.navigate(['/trip']);
     } catch (e: unknown) {
       this.error.set(messageOf(e, "Couldn't find a trip with that code"));
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  async redeem() {
+    this.error.set('');
+    this.busy.set(true);
+    try {
+      const s = await this.api.redeemTransferCode(this.loginCode);
+      this.session.start(s);
+      await this.router.navigate(['/trip']);
+    } catch (e: unknown) {
+      this.error.set(messageOf(e, "That code didn't work"));
     } finally {
       this.busy.set(false);
     }

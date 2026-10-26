@@ -13,9 +13,11 @@ import {
   Member,
   Post,
   Session,
+  TransferCode,
   Trip,
   Unfurled,
 } from './models';
+import { IdeaInput } from './models';
 
 /** Thin typed wrapper over the LetsGo API. Every call returns a Promise. */
 @Injectable({ providedIn: 'root' })
@@ -56,6 +58,12 @@ export class ApiService {
   me() {
     return this.get<{ member: Member; trip: Trip }>('/trips/me');
   }
+  createTransferCode() {
+    return this.post<TransferCode>('/trips/me/transfer-code', {});
+  }
+  redeemTransferCode(code: string) {
+    return this.post<Session>('/trips/transfer', { code });
+  }
   updateProfile(body: { name?: string; emoji?: string }) {
     return this.patch<Member>('/trips/me', body);
   }
@@ -73,29 +81,13 @@ export class ApiService {
   listIdeas(tripId: string, kind?: IdeaKind) {
     return this.get<Idea[]>(`/trips/${tripId}/ideas`, kind ? { kind } : undefined);
   }
-  createIdea(
-    tripId: string,
-    body: {
-      kind: IdeaKind;
-      title: string;
-      description?: string;
-      link?: string;
-      address?: string;
-      cost?: CostLevel;
-      imageUrl?: string;
-      siteName?: string;
-    },
-  ) {
+  createIdea(tripId: string, body: { kind: IdeaKind } & Partial<IdeaInput>) {
     return this.post<Idea>(`/trips/${tripId}/ideas`, body);
   }
   unfurl(tripId: string, url: string) {
     return this.get<Unfurled>(`/trips/${tripId}/unfurl`, { url });
   }
-  updateIdea(
-    tripId: string,
-    ideaId: string,
-    body: Partial<Pick<Idea, 'title' | 'description' | 'link' | 'address' | 'cost' | 'imageUrl' | 'siteName'>>,
-  ) {
+  updateIdea(tripId: string, ideaId: string, body: Partial<IdeaInput>) {
     return this.patch<Idea>(`/trips/${tripId}/ideas/${ideaId}`, body);
   }
   deleteIdea(tripId: string, ideaId: string) {

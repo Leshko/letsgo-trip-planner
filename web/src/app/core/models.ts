@@ -36,6 +36,11 @@ export interface Session {
 export type IdeaKind = 'activity' | 'food';
 export type CostLevel = '' | 'free' | '$' | '$$' | '$$$';
 
+export interface IdeaDetail {
+  label: string;
+  value: string;
+}
+
 export interface Idea {
   id: string;
   kind: IdeaKind;
@@ -46,6 +51,7 @@ export interface Idea {
   cost: CostLevel;
   imageUrl: string;
   siteName: string;
+  details: IdeaDetail[];
   suggestedBy: Member;
   voteCount: number;
   voters: Member[];
@@ -113,4 +119,21 @@ export interface Unfurled {
   image: string;
   images: string[];
   icon: string;
+}
+
+export interface TransferCode {
+  code: string;
+  expiresAt: number;
+}
+
+/** Everything the idea form edits; used for both create and update. */
+export interface IdeaInput {
+  title: string;
+  description: string;
+  link: string;
+  address: string;
+  cost: CostLevel;
+  imageUrl: string;
+  siteName: string;
+  details: IdeaDetail[];
 }

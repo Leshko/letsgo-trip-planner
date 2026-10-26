@@ -426,3 +426,135 @@ describe('unfurl endpoint (e2e)', () => {
     expect(bad.body.imageUrl).toBe('');
   });
 });
+
+describe('idea details, editing and login codes (e2e)', () => {
+  let app: INestApplication;
+  let http: ReturnType<typeof request>;
+  let auth: { Authorization: string };
+  let tripId: string;
+  let memberId: string;
+
+  beforeAll(async () => {
+    const moduleRef = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+    app = moduleRef.createNestApplication();
+    configureApp(app);
+    await app.init();
+    http = request(app.getHttpServer());
+    const res = await http
+      .post('/api/trips')
+      .send({
+        name: 'E',
+        startDate: '2027-01-01',
+        endDate: '2027-01-02',
+        memberName: 'Owner',
+      })
+      .expect(201);
+    auth = { Authorization: `Bearer ${res.body.token}` };
+    tripId = res.body.trip.id;
+    memberId = res.body.member.id;
+  });
+
+  afterAll(async () => app.close());
+
+  it('creates and edits an idea with details; anyone in the trip can edit', async () => {
+    const created = await http
+      .post(`/api/trips/${tripId}/ideas`)
+      .set(auth)
+      .send({
+        kind: 'activity',
+        title: 'Zoo',
+        details: [
+          { label: 'Hours', value: '9–5' },
+          { label: ' ', value: 'x' },
+        ],
+      })
+      .expect(201);
+    expect(created.body.details).toEqual([{ label: 'Hours', value: '9–5' }]);
+
+    const trip = await http.get(`/api/trips/${tripId}`).set(auth).expect(200);
+    const other = await http
+      .post('/api/trips/join')
+      .send({ code: trip.body.inviteCode, name: 'Kid' })
+      .expect(201);
+    const edited = await http
+      .patch(`/api/trips/${tripId}/ideas/${created.body.id}`)
+      .set({ Authorization: `Bearer ${other.body.token}` })
+      .send({
+        title: 'City Zoo',
+        cost: '$$',
+        details: [
+          { label: 'Hours', value: '9–5' },
+          { label: 'Tickets', value: '$18 adults' },
+        ],
+      })
+      .expect(200);
+    expect(edited.body.title).toBe('City Zoo');
+    expect(edited.body.cost).toBe('$$');
+    expect(edited.body.details).toHaveLength(2);
+
+    await http
+      .patch(`/api/trips/${tripId}/ideas/${created.body.id}`)
+      .set(auth)
+      .send({ details: [{ label: 'x' }] })
+      .expect(400);
+
+    const feed = await http
+      .get(`/api/trips/${tripId}/activity`)
+      .set(auth)
+      .expect(200);
+    expect(feed.body[0].message).toBe('updated City Zoo');
+  });
+
+  it('moves a session to another device with a single-use login code', async () => {
+    const made = await http
+      .post('/api/trips/me/transfer-code')
+      .set(auth)
+      .expect(201);
+    expect(made.body.code).toMatch(/^[A-Z2-9]{8}$/);
+    expect(made.body.expiresAt).toBeGreaterThan(Date.now());
+
+    const redeemed = await http
+      .post('/api/trips/transfer')
+      .send({ code: made.body.code.toLowerCase() })
+      .expect(201);
+    expect(redeemed.body.member.id).toBe(memberId);
+    expect(redeemed.body.trip.id).toBe(tripId);
+    expect(redeemed.body.token).toBe(auth.Authorization.slice(7));
+
+    // second use fails; a fresh code replaces an unused older one
+    await http
+      .post('/api/trips/transfer')
+      .send({ code: made.body.code })
+      .expect(404);
+    const a = await http
+      .post('/api/trips/me/transfer-code')
+      .set(auth)
+      .expect(201);
+    const b = await http
+      .post('/api/trips/me/transfer-code')
+      .set(auth)
+      .expect(201);
+    await http
+      .post('/api/trips/transfer')
+      .send({ code: a.body.code })
+      .expect(404);
+    await http
+      .post('/api/trips/transfer')
+      .send({ code: b.body.code })
+      .expect(201);
+    await http.post('/api/trips/me/transfer-code').expect(401);
+  });
+
+  it('rate-limits code guessing', async () => {
+    let last = 0;
+    for (let i = 0; i < 12; i++) {
+      const r = await http
+        .post('/api/trips/transfer')
+        .send({ code: 'NOPE' + i });
+      last = r.status;
+    }
+    expect(last).toBe(429);
+  });
+});

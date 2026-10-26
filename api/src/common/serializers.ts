@@ -37,6 +37,7 @@ export interface IdeaView {
   cost: Idea['cost'];
   imageUrl: string;
   siteName: string;
+  details: { label: string; value: string }[];
   suggestedBy: MemberView;
   voteCount: number;
   voters: MemberView[];
@@ -91,6 +92,7 @@ export const ideaView = (i: Idea, meId: string, commentCount = 0): IdeaView => {
     cost: i.cost,
     imageUrl: i.imageUrl ?? '',
     siteName: i.siteName ?? '',
+    details: i.details ?? [],
     suggestedBy: memberView(i.suggestedBy),
     voteCount: votes.length,
     voters: votes.map((v) => memberView(v.member)),

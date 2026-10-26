@@ -72,10 +72,26 @@
           <button class="btn btn--primary grow" type="submit" [disabled]="!profileName">Save</button>
           <button class="btn btn--ghost" type="button" (click)="showProfile.set(false)">Cancel</button>
         </div>
+        <hr style="border:0;border-top:1px solid var(--border);margin:4px 0" />
+        <div>
+          <div class="label">Use LetsGo on another phone or computer</div>
+          <p class="tiny">Make a login code here, then on the other device choose “I have a login code”. It signs in as you, no name typing. Codes work once and expire in 10 minutes.</p>
+          @if (transfer(); as t) {
+            <div class="card card--flat mt" style="text-align:center">
+              <div class="code-big">{{ t.code }}</div>
+              <div class="tiny">expires in {{ transferLeft() }}</div>
+            </div>
+          } @else {
+            <button class="btn btn--sm mt" type="button" (click)="makeTransferCode()" [disabled]="transferBusy()">{{ transferBusy() ? 'Making…' : 'Make a login code' }}</button>
+          }
+        </div>
+        <button class="btn btn--ghost btn--sm" type="button" (click)="startTour()">Show me around again</button>
         <button class="btn btn--ghost btn--danger btn--sm" type="button" (click)="leave()">Leave trip on this device</button>
       </form>
     </div>
   }
+
+  @if (showTour()) { <app-tour (done)="showTour.set(false)" /> }
 
   @if (toast()) { <div class="toast" role="status">{{ toast() }}</div> }
 }

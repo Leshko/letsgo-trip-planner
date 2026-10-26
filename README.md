@@ -17,8 +17,13 @@ What the family can do:
 - **Do** and **Eat** — two idea lists. Paste a link and the title, description
   and photos are pulled from the page (like a share sheet); pick a cover photo.
   Anyone can suggest; everyone votes ("I'm in"); the list sorts by votes; each
-  idea has its own comment thread. Any idea can be dropped straight onto a day
-  of the plan.
+  idea has its own comment thread, and anyone can edit an idea to add
+  "good to know" details like hours, price or parking. Any idea can be dropped
+  straight onto a day of the plan.
+- **First visit** — a short walkthrough shows new members how voting, ideas,
+  comments and the plan work. Replay it any time from your avatar menu.
+- **Login codes** — from your avatar menu, make a one-time code (10 minutes)
+  and type it on another phone or computer to sign in there as you.
 - **Plan** — a day-by-day itinerary generated from the trip dates. Add entries
   from the idea list or write your own, give them a time or leave them "anytime",
   and drag them between days.

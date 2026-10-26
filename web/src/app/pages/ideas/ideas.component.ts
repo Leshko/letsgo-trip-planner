@@ -5,13 +5,13 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
-import { Comment, CostLevel, Idea, IdeaKind, Unfurled } from '../../core/models';
+import { Comment, Idea, IdeaKind } from '../../core/models';
 import { dateRangeDays } from './days';
 import { usePolling } from '../../core/polling';
 import { AvatarComponent } from '../../shared/avatar.component';
 import { AvatarStackComponent } from '../../shared/avatar-stack.component';
 import { AgoPipe, LongDatePipe } from '../../shared/pipes';
-import { messageOf } from '../landing/landing.component';
+import { IdeaFormComponent } from './idea-form.component';
 
 const COPY: Record<IdeaKind, { title: string; blurb: string; placeholder: string; cta: string; empty: string; voteIco: string }> = {
   activity: {
@@ -34,7 +34,7 @@ const COPY: Record<IdeaKind, { title: string; blurb: string; placeholder: string
 
 @Component({
   selector: 'app-ideas',
-  imports: [FormsModule, AvatarComponent, AvatarStackComponent, AgoPipe, LongDatePipe],
+  imports: [FormsModule, AvatarComponent, AvatarStackComponent, AgoPipe, LongDatePipe, IdeaFormComponent],
   templateUrl: './ideas.component.html',
 })
 export class IdeasComponent {
@@ -52,25 +52,8 @@ export class IdeasComponent {
     return t ? dateRangeDays(t.startDate, t.endDate) : [];
   });
 
-  // add form
   readonly adding = signal(false);
-  readonly busy = signal(false);
-  readonly error = signal('');
-  title = '';
-  description = '';
-  link = '';
-  address = '';
-  cost: CostLevel = '';
-  imageUrl = '';
-  siteName = '';
-  readonly costs: CostLevel[] = ['free', '$', '$$', '$$$'];
-
-  // link preview
-  readonly preview = signal<Unfurled | null>(null);
-  readonly previewBusy = signal(false);
-  readonly previewError = signal('');
-  readonly previewImages = computed(() => this.preview()?.images ?? []);
-  private lastUnfurled = '';
+  readonly editing = signal<Idea | null>(null);
 
   // comments
   readonly openComments = signal<string | null>(null);
@@ -97,13 +80,14 @@ export class IdeasComponent {
       this.lastKind = kind;
       this.loaded.set(false);
       this.openComments.set(null);
+      this.adding.set(false);
+      this.editing.set(null);
     }
     this.ideas.set(await this.api.listIdeas(id, kind));
     this.loaded.set(true);
   }
 
   async vote(idea: Idea) {
-    // optimistic flip so the tap feels instant
     this.ideas.update((all) =>
       all.map((i) => (i.id === idea.id ? { ...i, votedByMe: !i.votedByMe, voteCount: i.voteCount + (i.votedByMe ? -1 : 1) } : i)),
     );
@@ -111,71 +95,16 @@ export class IdeasComponent {
     this.ideas.update((all) => all.map((i) => (i.id === updated.id ? updated : i)).sort(byVotes));
   }
 
-  /** Called when the link field changes or is pasted into. */
-  async fetchPreview() {
-    const url = this.link.trim();
-    if (!url || url === this.lastUnfurled) return;
-    if (!/^(https?:\/\/)?[^\s/]+\.[^\s/]+/i.test(url)) return;
-    this.lastUnfurled = url;
-    this.previewBusy.set(true);
-    this.previewError.set('');
-    try {
-      const u = await this.api.unfurl(this.session.tripId(), url);
-      this.preview.set(u);
-      if (!this.title.trim() && u.title) this.title = u.title.slice(0, 120);
-      if (!this.description.trim() && u.description) this.description = u.description.slice(0, 2000);
-      this.siteName = u.siteName;
-      this.imageUrl = u.image;
-    } catch (e: unknown) {
-      this.preview.set(null);
-      this.previewError.set(messageOf(e, "Couldn't read that link, but you can still add it"));
-    } finally {
-      this.previewBusy.set(false);
-    }
+  onAdded(idea: Idea) {
+    this.ideas.update((all) => [...all, idea].sort(byVotes));
+    this.adding.set(false);
+    this.flash('Added ✓');
   }
 
-  onLinkPaste(ev: ClipboardEvent) {
-    const text = ev.clipboardData?.getData('text') ?? '';
-    if (text) {
-      // let ngModel take the paste first, then unfurl
-      setTimeout(() => void this.fetchPreview(), 0);
-    }
-  }
-
-  pickImage(src: string) {
-    this.imageUrl = this.imageUrl === src ? '' : src;
-  }
-
-  resetForm() {
-    this.title = this.description = this.link = this.address = this.imageUrl = this.siteName = '';
-    this.cost = '';
-    this.preview.set(null);
-    this.previewError.set('');
-    this.lastUnfurled = '';
-  }
-
-  async add() {
-    this.busy.set(true);
-    this.error.set('');
-    try {
-      const idea = await this.api.createIdea(this.session.tripId(), {
-        kind: this.kind(),
-        title: this.title,
-        description: this.description,
-        link: this.link,
-        address: this.address,
-        cost: this.cost,
-        imageUrl: this.imageUrl,
-        siteName: this.siteName,
-      });
-      this.ideas.update((all) => [...all, idea].sort(byVotes));
-      this.resetForm();
-      this.adding.set(false);
-    } catch (e: unknown) {
-      this.error.set(messageOf(e, "Couldn't add that"));
-    } finally {
-      this.busy.set(false);
-    }
+  onEdited(idea: Idea) {
+    this.ideas.update((all) => all.map((i) => (i.id === idea.id ? idea : i)).sort(byVotes));
+    this.editing.set(null);
+    this.flash('Saved ✓');
   }
 
   canRemove(idea: Idea): boolean {
@@ -226,7 +155,11 @@ export class IdeasComponent {
     if (!idea || !this.planDate) return;
     await this.api.addEntry(this.session.tripId(), { date: this.planDate, ideaId: idea.id, startTime: this.planTime || undefined });
     this.planning.set(null);
-    this.toast.set(`Added to the plan ✓`);
+    this.flash('Added to the plan ✓');
+  }
+
+  flash(msg: string) {
+    this.toast.set(msg);
     setTimeout(() => this.toast.set(''), 1800);
   }
 

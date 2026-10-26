@@ -71,6 +71,7 @@ export class IdeasService {
         cost: dto.cost ?? '',
         imageUrl: safeImage(dto.imageUrl),
         siteName: (dto.siteName ?? '').trim(),
+        details: cleanDetails(dto.details),
         suggestedById: me.id,
       }),
     );
@@ -102,7 +103,12 @@ export class IdeasService {
     if (dto.cost !== undefined) idea.cost = dto.cost;
     if (dto.imageUrl !== undefined) idea.imageUrl = safeImage(dto.imageUrl);
     if (dto.siteName !== undefined) idea.siteName = dto.siteName.trim();
+    if (dto.details !== undefined) idea.details = cleanDetails(dto.details);
     await this.ideas.save(idea);
+    await this.activity.record(me, 'idea', `updated ${idea.title}`, {
+      kind: 'idea',
+      id: idea.id,
+    });
     return ideaView(
       await this.load(tripId, ideaId),
       me.id,
@@ -150,4 +156,13 @@ export class IdeasService {
 function safeImage(raw?: string): string {
   const s = (raw ?? '').trim();
   return /^https?:\/\//i.test(s) ? s : '';
+}
+
+function cleanDetails(
+  raw?: { label: string; value: string }[],
+): { label: string; value: string }[] {
+  return (raw ?? [])
+    .map((d) => ({ label: d.label.trim(), value: d.value.trim() }))
+    .filter((d) => d.label && d.value)
+    .slice(0, 12);
 }

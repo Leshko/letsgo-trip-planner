@@ -1,0 +1,23 @@
+<div class="modal-backdrop" style="align-items:center">
+  <div class="modal tour" role="dialog" aria-label="Welcome tour">
+    @let s = step();
+    @if (s.demoVote) {
+      <button class="vote tour__demo" [class.is-on]="demoOn()" type="button" (click)="demoOn.set(!demoOn())" aria-label="Try voting">
+        <span class="ico">{{ demoOn() ? '🙌' : '👍' }}</span><span class="n">{{ demoOn() ? 4 : 3 }}</span>
+      </button>
+      <p class="tiny" style="margin-top:6px">Go on, try it ↑</p>
+    } @else {
+      <div class="tour__art">{{ s.art }}</div>
+    }
+    <h2>{{ s.title }}</h2>
+    <p class="muted mt">{{ s.body }}</p>
+    <div class="tour__dots" aria-hidden="true">
+      @for (st of steps(); track $index) { <span [class.is-on]="$index === index()"></span> }
+    </div>
+    <div class="row">
+      @if (index() > 0) { <button class="btn" type="button" (click)="back()">Back</button> }
+      <button class="btn btn--primary grow" type="button" (click)="next()">{{ isLast() ? "Let's go" : 'Next' }}</button>
+    </div>
+    @if (!isLast()) { <button class="btn btn--ghost btn--sm mt" type="button" (click)="finish()">Skip the tour</button> }
+  </div>
+</div>

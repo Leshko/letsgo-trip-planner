@@ -25,6 +25,10 @@ export class JoinTripDto {
   @IsOptional() @IsString() @MaxLength(8) emoji?: string;
 }
 
+export class TransferDto {
+  @IsString() @Length(4, 16) code!: string;
+}
+
 export class UpdateProfileDto {
   @IsOptional() @IsString() @Length(1, 40) name?: string;
   @IsOptional() @IsString() @MaxLength(8) emoji?: string;

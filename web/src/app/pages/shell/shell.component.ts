@@ -9,10 +9,12 @@ import { AvatarComponent } from '../../shared/avatar.component';
 import { AvatarStackComponent } from '../../shared/avatar-stack.component';
 import { EmojiPickerComponent } from '../../shared/emoji-picker.component';
 import { messageOf } from '../landing/landing.component';
+import { TourComponent } from '../../shared/tour.component';
+import { TransferCode } from '../../core/models';
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, FormsModule, AvatarComponent, AvatarStackComponent, EmojiPickerComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, FormsModule, AvatarComponent, AvatarStackComponent, EmojiPickerComponent, TourComponent],
   templateUrl: './shell.component.html',
 })
 export class ShellComponent {
@@ -30,6 +32,11 @@ export class ShellComponent {
 
   readonly showInvite = signal(false);
   readonly showProfile = signal(false);
+  readonly showTour = signal(TourComponent.shouldShow());
+  readonly transfer = signal<TransferCode | null>(null);
+  readonly transferBusy = signal(false);
+  readonly transferLeft = signal('');
+  private transferTimer: ReturnType<typeof setInterval> | null = null;
   readonly toast = signal('');
   readonly profileError = signal('');
   profileName = '';
@@ -79,7 +86,40 @@ export class ShellComponent {
     setTimeout(() => this.toast.set(''), 1800);
   }
 
+  async makeTransferCode() {
+    this.transferBusy.set(true);
+    try {
+      const t = await this.api.createTransferCode();
+      this.transfer.set(t);
+      this.tickTransfer();
+      if (this.transferTimer) clearInterval(this.transferTimer);
+      this.transferTimer = setInterval(() => this.tickTransfer(), 1000);
+    } catch (e: unknown) {
+      this.profileError.set(messageOf(e, "Couldn't make a code"));
+    } finally {
+      this.transferBusy.set(false);
+    }
+  }
+
+  private tickTransfer() {
+    const t = this.transfer();
+    if (!t) return;
+    const left = Math.max(0, Math.round((t.expiresAt - Date.now()) / 1000));
+    if (left === 0) {
+      this.transfer.set(null);
+      if (this.transferTimer) clearInterval(this.transferTimer);
+      return;
+    }
+    this.transferLeft.set(`${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`);
+  }
+
+  startTour() {
+    this.showProfile.set(false);
+    this.showTour.set(true);
+  }
+
   openProfile() {
+    this.transfer.set(null);
     this.profileName = this.me()?.name ?? '';
     this.profileEmoji = this.me()?.emoji ?? '';
     this.profileError.set('');
