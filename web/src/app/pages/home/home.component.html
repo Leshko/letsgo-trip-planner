@@ -30,6 +30,23 @@
       </a>
     }
 
+    @if (photos().length) {
+      <a routerLink="/trip/photos" class="card card--flat mt" style="display:block;text-decoration:none;color:inherit">
+        <div class="row row--between"><span class="tiny">Photos · {{ photos().length }}</span><span class="muted">›</span></div>
+        <div class="home-photos mt" style="margin-top:8px">
+          @for (ph of photos().slice(0, 4); track ph.id) {
+            <img [src]="ph.urls.thumb ?? ph.urls.preview ?? ph.urls.original" alt="" loading="lazy" />
+          }
+        </div>
+      </a>
+    } @else if (loaded()) {
+      <a routerLink="/trip/photos" class="card card--flat row mt" style="text-decoration:none;color:inherit">
+        <span style="font-size:1.6rem">📷</span>
+        <div class="grow"><strong>Start the family album</strong><div class="tiny">Add photos from your phone; everyone can comment and download them</div></div>
+        <span class="muted">›</span>
+      </a>
+    }
+
     @if (latestPost(); as p) {
       <a routerLink="/trip/wall" class="card card--flat mt" style="display:block;text-decoration:none;color:inherit">
         <div class="tiny">Latest on the wall</div>
@@ -42,9 +59,9 @@
       </a>
     }
 
-    <div class="section-title"><h2>🎯 Top things to do</h2><a routerLink="/trip/do">All ideas ›</a></div>
+    <div class="section-title"><h2>🎯 Top things to do</h2><a routerLink="/trip/ideas/do">All ideas ›</a></div>
     @if (topDo().length === 0 && loaded()) {
-      <a routerLink="/trip/do" class="card card--flat empty" style="display:block;text-decoration:none;color:inherit">
+      <a routerLink="/trip/ideas/do" class="card card--flat empty" style="display:block;text-decoration:none;color:inherit">
         <div class="big">💡</div>Nobody has pitched an activity yet. Be the first.
       </a>
     }
@@ -63,9 +80,9 @@
       }
     </div>
 
-    <div class="section-title"><h2>🍽️ Top places to eat</h2><a routerLink="/trip/eat">All places ›</a></div>
+    <div class="section-title"><h2>🍽️ Top places to eat</h2><a routerLink="/trip/ideas/eat">All places ›</a></div>
     @if (topEat().length === 0 && loaded()) {
-      <a routerLink="/trip/eat" class="card card--flat empty" style="display:block;text-decoration:none;color:inherit">
+      <a routerLink="/trip/ideas/eat" class="card card--flat empty" style="display:block;text-decoration:none;color:inherit">
         <div class="big">🌮</div>No restaurants yet. Where should we eat?
       </a>
     }

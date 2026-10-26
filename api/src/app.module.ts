@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ServeStaticModule } from '@nestjs/serve-static';
-import { existsSync, mkdirSync } from 'fs';
-import { dirname, join } from 'path';
+import { existsSync } from 'fs';
+import { join } from 'path';
+import { databasePath } from './common/paths';
 import {
   Activity,
   Comment,
@@ -10,6 +11,8 @@ import {
   ItineraryEntry,
   Member,
   Post,
+  Photo,
+  PhotoComment,
   TransferCode,
   Trip,
   Vote,
@@ -17,6 +20,7 @@ import {
 import { SocialModule } from './social/social.module';
 import { ActivityModule } from './activity/activity.module';
 import { UnfurlModule } from './unfurl/unfurl.module';
+import { PhotosModule } from './photos/photos.module';
 import { TripsModule } from './trips/trips.module';
 import { IdeasModule } from './ideas/ideas.module';
 import { ItineraryModule } from './itinerary/itinerary.module';
@@ -31,13 +35,9 @@ export const ENTITIES = [
   Post,
   Activity,
   TransferCode,
+  Photo,
+  PhotoComment,
 ];
-
-function databasePath(): string {
-  const p = process.env.DB_PATH ?? join(process.cwd(), 'data', 'letsgo.sqlite');
-  if (p !== ':memory:') mkdirSync(dirname(p), { recursive: true });
-  return p;
-}
 
 /** The built Angular app, when present, is served by the API so one process is the whole deploy. */
 const webDist = join(__dirname, '..', '..', 'web', 'dist', 'web', 'browser');
@@ -55,6 +55,18 @@ const webDist = join(__dirname, '..', '..', 'web', 'dist', 'web', 'browser');
           ServeStaticModule.forRoot({
             rootPath: webDist,
             exclude: ['/api/{*splat}'],
+            serveStaticOptions: {
+              // The service worker's manifest must always be revalidated or updates never land.
+              setHeaders: (res: import('express').Response, path: string) => {
+                if (
+                  /ngsw\.json$|ngsw-worker\.js$|index\.html$|manifest\.webmanifest$/.test(
+                    path,
+                  )
+                ) {
+                  res.setHeader('Cache-Control', 'no-cache');
+                }
+              },
+            },
           }),
         ]
       : []),
@@ -64,6 +76,7 @@ const webDist = join(__dirname, '..', '..', 'web', 'dist', 'web', 'browser');
     ItineraryModule,
     SocialModule,
     UnfurlModule,
+    PhotosModule,
   ],
 })
 export class AppModule {}

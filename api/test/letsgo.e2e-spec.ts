@@ -3,6 +3,9 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
+import { existsSync } from 'fs';
+import { join } from 'path';
+import { photosDir } from '../src/common/paths';
 
 describe('LetsGo API (e2e)', () => {
   let app: INestApplication;
@@ -640,5 +643,316 @@ describe('profile photos (e2e)', () => {
       .expect(200);
     expect(gone.body.avatarUrl).toBe('');
     await http.get(`/api/avatars/${memberId}`).expect(404);
+  });
+});
+
+describe('shared photos (e2e)', () => {
+  let app: INestApplication;
+  let http: ReturnType<typeof request>;
+  let owner: { Authorization: string };
+  let kid: { Authorization: string };
+  let stranger: { Authorization: string };
+  let ownerToken: string;
+  let tripId: string;
+  let inviteCode: string;
+  // tiny real PNG and a minimal JPEG header (sniffed by magic bytes only)
+  const png = Buffer.concat([
+    Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+      'base64',
+    ),
+    Buffer.alloc(300),
+  ]);
+  const jpg = Buffer.concat([
+    Buffer.from([
+      0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01,
+    ]),
+    Buffer.alloc(200),
+    Buffer.from([0xff, 0xd9]),
+  ]);
+  const binary = (
+    res: request.Response,
+    cb: (err: Error | null, body: Buffer) => void,
+  ) => {
+    const chunks: Buffer[] = [];
+    res.on('data', (c: Buffer) => chunks.push(c));
+    res.on('end', () => cb(null, Buffer.concat(chunks)));
+  };
+
+  beforeAll(async () => {
+    const moduleRef = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+    app = moduleRef.createNestApplication();
+    configureApp(app);
+    await app.init();
+    http = request(app.getHttpServer());
+    const res = await http
+      .post('/api/trips')
+      .send({
+        name: 'Photo: Trip/2027',
+        startDate: '2027-01-01',
+        endDate: '2027-01-02',
+        memberName: 'Owner',
+      })
+      .expect(201);
+    ownerToken = res.body.token;
+    owner = { Authorization: `Bearer ${ownerToken}` };
+    tripId = res.body.trip.id;
+    inviteCode = res.body.trip.inviteCode;
+    const k = await http
+      .post('/api/trips/join')
+      .send({ code: inviteCode, name: 'Kid' })
+      .expect(201);
+    kid = { Authorization: `Bearer ${k.body.token}` };
+    const s = await http
+      .post('/api/trips')
+      .send({
+        name: 'Other',
+        startDate: '2027-01-01',
+        endDate: '2027-01-02',
+        memberName: 'S',
+      })
+      .expect(201);
+    stranger = { Authorization: `Bearer ${s.body.token}` };
+  });
+
+  afterAll(async () => app.close());
+
+  let first: string;
+  let second: string;
+  const batch = 'batch-0001-aaaa';
+
+  it('uploads originals with and without derivatives', async () => {
+    const a = await http
+      .post(`/api/trips/${tripId}/photos`)
+      .set(owner)
+      .field('batchId', batch)
+      .field('caption', 'Beach day')
+      .field('width', '1')
+      .field('height', '1')
+      .attach('original', png, {
+        filename: 'IMG_0001.png',
+        contentType: 'image/png',
+      })
+      .attach('thumb', jpg, { filename: 't.jpg', contentType: 'image/jpeg' })
+      .expect(201);
+    expect(a.body.hasThumb).toBe(true);
+    expect(a.body.hasPreview).toBe(false);
+    expect(a.body.urls.thumb).toBe(`/api/photo-files/${a.body.id}/thumb`);
+    expect(a.body.caption).toBe('Beach day');
+    expect(a.body.mimeType).toBe('image/png');
+    expect(a.body.width).toBe(1);
+    expect(a.body.uploadedBy.name).toBe('Owner');
+    first = a.body.id;
+
+    const b = await http
+      .post(`/api/trips/${tripId}/photos`)
+      .set(kid)
+      .field('batchId', batch)
+      .attach('original', png, {
+        filename: 'IMG_0002.png',
+        contentType: 'image/png',
+      })
+      .expect(201);
+    expect(b.body.hasThumb).toBe(false);
+    expect(b.body.urls.thumb).toBeNull();
+    second = b.body.id;
+    expect(existsSync(join(photosDir(), tripId, `${second}.png`))).toBe(true);
+  });
+
+  it('rejects non-images and empty uploads', async () => {
+    await http
+      .post(`/api/trips/${tripId}/photos`)
+      .set(owner)
+      .field('batchId', batch)
+      .attach('original', Buffer.from('hello world, definitely not an image'), {
+        filename: 'x.png',
+        contentType: 'image/png',
+      })
+      .expect(400);
+    await http
+      .post(`/api/trips/${tripId}/photos`)
+      .set(owner)
+      .field('batchId', batch)
+      .expect(400);
+    await http
+      .post(`/api/trips/${tripId}/photos`)
+      .set(stranger)
+      .field('batchId', batch)
+      .attach('original', png, 'a.png')
+      .expect(403);
+  });
+
+  it('lists newest first and serves files with cache headers', async () => {
+    const list = await http
+      .get(`/api/trips/${tripId}/photos`)
+      .set(kid)
+      .expect(200);
+    expect(list.body.map((p: { id: string }) => p.id)).toEqual([second, first]);
+    expect(list.body[1].commentCount).toBe(0);
+
+    const img = await http
+      .get(`/api/photo-files/${first}/original`)
+      .buffer(true)
+      .parse(binary)
+      .expect(200);
+    expect(img.headers['content-type']).toContain('image/png');
+    expect(img.headers['cache-control']).toContain('immutable');
+    expect(Buffer.compare(img.body as Buffer, png)).toBe(0);
+    const dl = await http
+      .get(`/api/photo-files/${first}/original?download=1`)
+      .buffer(true)
+      .parse(binary)
+      .expect(200);
+    expect(dl.headers['content-disposition']).toContain('attachment');
+    expect(dl.headers['content-disposition']).toContain('IMG_0001.png');
+    const th = await http
+      .get(`/api/photo-files/${first}/thumb`)
+      .buffer(true)
+      .parse(binary)
+      .expect(200);
+    expect(th.headers['content-type']).toContain('image/jpeg');
+    await http.get(`/api/photo-files/${second}/thumb`).expect(404);
+    await http.get(`/api/photo-files/${first}/nope`).expect(404);
+    await http.get(`/api/photo-files/not-a-uuid/original`).expect(404);
+  });
+
+  it('comments with ownership rules and counts', async () => {
+    const c = await http
+      .post(`/api/trips/${tripId}/photos/${first}/comments`)
+      .set(kid)
+      .send({ body: 'Love this' })
+      .expect(201);
+    expect(c.body.member.name).toBe('Kid');
+    const list = await http
+      .get(`/api/trips/${tripId}/photos/${first}/comments`)
+      .set(owner)
+      .expect(200);
+    expect(list.body).toHaveLength(1);
+    const photos = await http
+      .get(`/api/trips/${tripId}/photos`)
+      .set(owner)
+      .expect(200);
+    expect(
+      photos.body.find((p: { id: string }) => p.id === first).commentCount,
+    ).toBe(1);
+    const other = await http
+      .post('/api/trips/join')
+      .send({ code: inviteCode, name: 'Aunt' })
+      .expect(201);
+    await http
+      .delete(`/api/trips/${tripId}/photo-comments/${c.body.id}`)
+      .set({ Authorization: `Bearer ${other.body.token}` })
+      .expect(403);
+    await http
+      .delete(`/api/trips/${tripId}/photo-comments/${c.body.id}`)
+      .set(kid)
+      .expect(204);
+  });
+
+  it('writes one feed line per batch plus comment lines', async () => {
+    const feed = await http
+      .get(`/api/trips/${tripId}/activity`)
+      .set(owner)
+      .expect(200);
+    const lines = feed.body.map(
+      (a: { member: { name: string }; message: string; type: string }) =>
+        `${a.type}|${a.member.name} ${a.message}`,
+    );
+    expect(lines.filter((l: string) => l.startsWith('photo|'))).toEqual([
+      'photo|Kid added a photo',
+      'photo|Owner added a photo',
+    ]);
+    expect(lines).toContain('comment|Kid commented on a photo');
+  });
+
+  it('caption edits are limited to uploader or owner', async () => {
+    await http
+      .patch(`/api/trips/${tripId}/photos/${first}`)
+      .set(kid)
+      .send({ caption: 'nope' })
+      .expect(403);
+    const ok = await http
+      .patch(`/api/trips/${tripId}/photos/${second}`)
+      .set(owner)
+      .send({ caption: 'Owner can' })
+      .expect(200);
+    expect(ok.body.caption).toBe('Owner can');
+  });
+
+  it('streams a zip only with a token on GET', async () => {
+    await http.get(`/api/trips/${tripId}/photos.zip`).expect(401);
+    await http
+      .get(
+        `/api/trips/${tripId}/photos.zip?token=${stranger.Authorization.slice(7)}`,
+      )
+      .expect(403);
+    await http
+      .post(`/api/trips/${tripId}/photos?token=${ownerToken}`)
+      .field('batchId', batch)
+      .expect(401);
+
+    const zip = await http
+      .get(`/api/trips/${tripId}/photos.zip?token=${ownerToken}`)
+      .buffer(true)
+      .parse(binary)
+      .expect(200);
+    expect(zip.headers['content-type']).toContain('application/zip');
+    expect(zip.headers['content-disposition']).toContain(
+      'LetsGo - Photo Trip2027.zip',
+    );
+    const body = zip.body as Buffer;
+    expect(body.subarray(0, 4)).toEqual(Buffer.from([0x50, 0x4b, 0x03, 0x04]));
+    expect(body.length).toBeGreaterThan(png.length * 2);
+    const eocd = body.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]));
+    expect(eocd).toBeGreaterThan(0);
+    expect(body.readUInt16LE(eocd + 10)).toBe(2);
+    expect(body.includes(Buffer.from('001-Owner-IMG_0001.png'))).toBe(true);
+    expect(body.includes(Buffer.from('002-Kid-IMG_0002.png'))).toBe(true);
+  });
+
+  it('deletes with permission checks and removes files', async () => {
+    await http
+      .post(`/api/trips/${tripId}/photos/${second}/comments`)
+      .set(owner)
+      .send({ body: 'bye' })
+      .expect(201);
+    const aunt = await http
+      .post('/api/trips/join')
+      .send({ code: inviteCode, name: 'Aunt' })
+      .expect(201);
+    await http
+      .delete(`/api/trips/${tripId}/photos/${second}`)
+      .set({ Authorization: `Bearer ${aunt.body.token}` })
+      .expect(403);
+    await http
+      .delete(`/api/trips/${tripId}/photos/${second}`)
+      .set(kid)
+      .expect(204);
+    expect(existsSync(join(photosDir(), tripId, `${second}.png`))).toBe(false);
+    await http
+      .get(`/api/trips/${tripId}/photos/${second}/comments`)
+      .set(owner)
+      .expect(404);
+    await http.get(`/api/photo-files/${second}/original`).expect(404);
+    const zip = await http
+      .get(`/api/trips/${tripId}/photos.zip?token=${ownerToken}`)
+      .buffer(true)
+      .parse(binary)
+      .expect(200);
+    const body = zip.body as Buffer;
+    expect(
+      body.readUInt16LE(
+        body.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06])) + 10,
+      ),
+    ).toBe(1);
+    await http
+      .delete(`/api/trips/${tripId}/photos/${first}`)
+      .set(owner)
+      .expect(204);
+    await http
+      .get(`/api/trips/${tripId}/photos.zip?token=${ownerToken}`)
+      .expect(404);
   });
 });

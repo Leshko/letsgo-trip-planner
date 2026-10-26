@@ -4,6 +4,8 @@ import {
   Idea,
   ItineraryEntry,
   Member,
+  Photo,
+  PhotoComment,
   Post,
   Trip,
 } from '../entities';
@@ -188,4 +190,56 @@ export const activityView = (a: Activity): ActivityView => ({
   refKind: a.refKind,
   refId: a.refId,
   createdAt: new Date(a.createdAt).toISOString(),
+});
+
+export interface PhotoView {
+  id: string;
+  caption: string;
+  originalName: string;
+  mimeType: string;
+  bytes: number;
+  width: number | null;
+  height: number | null;
+  hasThumb: boolean;
+  hasPreview: boolean;
+  urls: { original: string; thumb: string | null; preview: string | null };
+  uploadedBy: MemberView;
+  commentCount: number;
+  createdAt: string;
+}
+
+export interface PhotoCommentView {
+  id: string;
+  photoId: string;
+  body: string;
+  member: MemberView;
+  createdAt: string;
+}
+
+export const photoView = (p: Photo, commentCount = 0): PhotoView => ({
+  id: p.id,
+  caption: p.caption,
+  originalName: p.originalName,
+  mimeType: p.mimeType,
+  bytes: p.bytes,
+  width: p.width,
+  height: p.height,
+  hasThumb: p.hasThumb,
+  hasPreview: p.hasPreview,
+  urls: {
+    original: `/api/photo-files/${p.id}/original`,
+    thumb: p.hasThumb ? `/api/photo-files/${p.id}/thumb` : null,
+    preview: p.hasPreview ? `/api/photo-files/${p.id}/preview` : null,
+  },
+  uploadedBy: memberView(p.member),
+  commentCount,
+  createdAt: new Date(p.createdAt).toISOString(),
+});
+
+export const photoCommentView = (c: PhotoComment): PhotoCommentView => ({
+  id: c.id,
+  photoId: c.photoId,
+  body: c.body,
+  member: memberView(c.member),
+  createdAt: new Date(c.createdAt).toISOString(),
 });

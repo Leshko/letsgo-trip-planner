@@ -10,7 +10,14 @@ import { Timestamped } from './created-at';
 import { Member } from './member.entity';
 
 export type ActivityType =
-  'joined' | 'idea' | 'vote' | 'comment' | 'itinerary' | 'lodging' | 'trip';
+  | 'joined'
+  | 'idea'
+  | 'vote'
+  | 'comment'
+  | 'itinerary'
+  | 'lodging'
+  | 'trip'
+  | 'photo';
 
 /** One line in the "what's happening" feed: "Sam suggested Kayaking". */
 @Entity()
@@ -38,7 +45,7 @@ export class Activity extends Timestamped {
 
   /** What the line is about, so the UI can link to it. */
   @Column({ type: 'varchar', nullable: true })
-  refKind!: 'idea' | 'itinerary' | 'lodging' | null;
+  refKind!: 'idea' | 'itinerary' | 'lodging' | 'photo' | null;
 
   @Column({ type: 'varchar', nullable: true })
   refId!: string | null;

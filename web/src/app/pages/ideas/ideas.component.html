@@ -1,7 +1,11 @@
 <div class="page">
   @let c = copy();
-  <h1>{{ c.title }}</h1>
-  <p class="muted">{{ c.blurb }}</p>
+  <h1>Ideas</h1>
+  <div class="segmented segmented--wide mt" role="tablist" aria-label="Ideas">
+    <button role="tab" [attr.aria-selected]="seg() !== 'eat'" [class.is-active]="seg() !== 'eat'" (click)="switchTo('do')">🎯 To do</button>
+    <button role="tab" [attr.aria-selected]="seg() === 'eat'" [class.is-active]="seg() === 'eat'" (click)="switchTo('eat')">🍽️ To eat</button>
+  </div>
+  <p class="muted mt">{{ c.blurb }}</p>
 
   @if (!adding()) {
     <button class="btn btn--primary btn--block mt" (click)="adding.set(true)">＋ {{ c.cta }}</button>

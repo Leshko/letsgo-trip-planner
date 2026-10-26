@@ -1,0 +1,61 @@
+<div class="page">
+  <div class="row row--between row--wrap">
+    <div>
+      <h1>Photos</h1>
+      <p class="muted">{{ photos().length ? photos().length + (photos().length === 1 ? ' photo · ' : ' photos · ') + totalLabel() : 'The family album.' }}</p>
+    </div>
+  </div>
+
+  <div class="row mt" style="gap:8px">
+    <label class="btn btn--primary grow" style="cursor:pointer">
+      <app-icon name="camera" [size]="20" /> Add photos
+      <input type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif" style="display:none" (change)="onPicked($event)" data-testid="photo-picker" />
+    </label>
+    @if (photos().length) {
+      <a class="btn btn--tinted" [href]="zipUrl()" download data-testid="zip-link"><app-icon name="download" [size]="20" /> All as zip</a>
+    }
+  </div>
+
+  @if (uploads().length) {
+    <div class="card mt stack-v upload-list" style="gap:8px">
+      @for (u of uploads(); track u) {
+        <div class="upload-row">
+          <div class="row row--between">
+            <span class="upload-row__name">{{ u.name }}</span>
+            <span class="tiny">
+              @switch (u.status) {
+                @case ('resizing') { Preparing… }
+                @case ('uploading') { {{ u.pct }}% }
+                @case ('done') { ✓ Done }
+                @case ('error') { <span style="color:var(--red)">{{ u.error }}</span> <button class="btn btn--ghost btn--sm" (click)="dismissUpload(u)">✕</button> }
+              }
+            </span>
+          </div>
+          @if (u.status !== 'error') { <div class="progress"><i [style.width.%]="u.status === 'resizing' ? 8 : u.pct"></i></div> }
+        </div>
+      }
+    </div>
+  }
+
+  @if (!loaded()) { <p class="spinner">Loading…</p> }
+  @if (loaded() && !photos().length && !uploads().length) {
+    <div class="card card--flat empty mt"><div class="big">📷</div>No photos yet. Add the first ones and the family can comment and download them.</div>
+  }
+
+  <div class="gallery mt">
+    @for (p of photos(); track p.id; let i = $index) {
+      <button class="gallery__tile" [class.gallery__tile--placeholder]="!p.urls.thumb && !p.urls.preview" (click)="viewing.set(i)" [attr.aria-label]="p.caption || p.originalName">
+        @if (p.urls.thumb ?? p.urls.preview; as src) {
+          <img [src]="src" alt="" loading="lazy" decoding="async" />
+        } @else {
+          <app-icon name="camera" [size]="28" />
+        }
+        @if (p.commentCount) { <span class="gallery__badge">💬 {{ p.commentCount }}</span> }
+      </button>
+    }
+  </div>
+
+  @if (viewing() !== null) {
+    <app-photo-viewer [photos]="photos()" [(index)]="viewing" (closed)="viewing.set(null)" (deleted)="onDeleted($event)" (updated)="onUpdated($event)" />
+  }
+</div>

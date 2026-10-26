@@ -86,10 +86,10 @@ export interface Post {
 
 export interface Activity {
   id: string;
-  type: 'joined' | 'idea' | 'vote' | 'comment' | 'itinerary' | 'lodging' | 'trip';
+  type: 'joined' | 'idea' | 'vote' | 'comment' | 'itinerary' | 'lodging' | 'trip' | 'photo';
   message: string;
   member: Member;
-  refKind: 'idea' | 'itinerary' | 'lodging' | null;
+  refKind: 'idea' | 'itinerary' | 'lodging' | 'photo' | null;
   refId: string | null;
   createdAt: string;
 }
@@ -137,4 +137,28 @@ export interface IdeaInput {
   imageUrl: string;
   siteName: string;
   details: IdeaDetail[];
+}
+
+export interface Photo {
+  id: string;
+  caption: string;
+  originalName: string;
+  mimeType: string;
+  bytes: number;
+  width: number | null;
+  height: number | null;
+  hasThumb: boolean;
+  hasPreview: boolean;
+  urls: { original: string; thumb: string | null; preview: string | null };
+  uploadedBy: Member;
+  commentCount: number;
+  createdAt: string;
+}
+
+export interface PhotoComment {
+  id: string;
+  photoId: string;
+  body: string;
+  member: Member;
+  createdAt: string;
 }

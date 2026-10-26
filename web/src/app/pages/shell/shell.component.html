@@ -98,6 +98,9 @@
             <button class="btn btn--sm mt" type="button" (click)="makeTransferCode()" [disabled]="transferBusy()">{{ transferBusy() ? 'Making…' : 'Make a login code' }}</button>
           }
         </div>
+        @if (install.available) {
+          <button class="btn btn--tinted btn--sm" type="button" (click)="installApp()">📲 Install the app on this device</button>
+        }
         <button class="btn btn--ghost btn--sm" type="button" (click)="startTour()">Show me around again</button>
         <button class="btn btn--ghost btn--danger btn--sm" type="button" (click)="leave()">Leave trip on this device</button>
       </form>
@@ -105,6 +108,33 @@
   }
 
   @if (showTour()) { <app-tour (done)="showTour.set(false)" /> }
+
+  @if (showIosHelp()) {
+    <div class="modal-backdrop" (click)="showIosHelp.set(false)">
+      <div class="modal stack-v" (click)="$event.stopPropagation()" role="dialog" aria-label="Add to Home Screen">
+        <div class="row" style="gap:12px"><img src="icons/icon-192.png" alt="" width="56" height="56" style="border-radius:14px" /><h2>Add LetsGo to your Home Screen</h2></div>
+        <ol class="ios-steps">
+          <li>Tap the <strong>Share</strong> button at the bottom of Safari <span class="ios-share" aria-hidden="true">⬆︎</span></li>
+          <li>Scroll down and tap <strong>Add to Home Screen</strong></li>
+          <li>Tap <strong>Add</strong>. LetsGo opens full-screen like an app from now on.</li>
+        </ol>
+        <button class="btn btn--primary" type="button" (click)="showIosHelp.set(false)">Got it</button>
+      </div>
+    </div>
+  }
+
+  @if (updateReady()) {
+    <button class="toast toast--action" (click)="reloadForUpdate()">A new version is ready · Tap to update</button>
+  }
+
+  @if (install.available && !install.bannerDismissed() && !showTour()) {
+    <div class="install-banner" role="region" aria-label="Install LetsGo">
+      <img src="icons/icon-192.png" alt="" width="40" height="40" style="border-radius:10px" />
+      <div class="grow"><strong>Add LetsGo to your home screen</strong><div class="tiny">Opens like an app, no browser bar.</div></div>
+      <button class="btn btn--primary btn--sm" (click)="installApp()">Install</button>
+      <button class="btn btn--ghost btn--icon" (click)="install.dismissBanner()" aria-label="Not now">✕</button>
+    </div>
+  }
 
   @if (toast()) { <div class="toast" role="status">{{ toast() }}</div> }
 }

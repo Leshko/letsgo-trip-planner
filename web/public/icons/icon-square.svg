@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="teal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#14A3C7"/>
+      <stop offset="1" stop-color="#0B6E96"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="0" fill="#FFFFFF"/>
+
+  <!-- motion lines (trailing behind, left side) -->
+  <g stroke="#14A3C7" stroke-width="40" stroke-linecap="round" fill="none">
+    <line x1="150" y1="400" x2="300" y2="400" opacity="0.35"/>
+    <line x1="110" y1="500" x2="330" y2="500" opacity="0.6"/>
+    <line x1="190" y1="600" x2="330" y2="600" opacity="0.35"/>
+  </g>
+
+  <!-- pin, leaning forward (rotated), shifted right -->
+  <g transform="translate(560 500) rotate(15) translate(-512 -490)">
+    <path d="M512 176 C 388 176, 290 272, 290 392 C 290 520, 440 650, 496 790 C 502 806, 522 806, 528 790 C 584 650, 734 520, 734 392 C 734 272, 636 176, 512 176 Z"
+          fill="none" stroke="url(#teal)" stroke-width="54" stroke-linejoin="round"/>
+    <path transform="translate(512 405) rotate(-15) scale(1.9) translate(-512 -420)" d="M512 492 C 440 440, 428 372, 474 358 C 496 352, 510 366, 512 380 C 514 366, 528 352, 550 358 C 596 372, 584 440, 512 492 Z"
+          fill="#FF5A5F"/>
+  </g>
+</svg>

@@ -14,7 +14,7 @@ What the family can do:
 - **Stay** — the hotel / cabin / rental: photos, address with an embedded map and
   one-tap directions, check-in and check-out, the listing link, and notes for the
   family (door code, parking, who sleeps where).
-- **Do** and **Eat** — two idea lists. Paste a link and the title, description
+- **Ideas** — To do and To eat lists. Paste a link and the title, description
   and photos are pulled from the page (like a share sheet); pick a cover photo.
   Anyone can suggest; everyone votes ("I'm in"); the list sorts by votes; each
   idea has its own comment thread, and anyone can edit an idea to add
@@ -30,6 +30,11 @@ What the family can do:
   from the idea list or write your own, give them a time or leave them "anytime",
   and drag them between days.
 - **Wall** — a shared message board with emoji reactions.
+- **Photos** — the family album. Anyone adds photos from their phone (originals
+  are kept; thumbnails and previews are made on the phone before upload), everyone
+  can view, comment, download one, or grab them all as a zip.
+- **Install it** — LetsGo is a PWA: on Android/desktop Chrome tap Install; on
+  iPhone use Share → Add to Home Screen. Updates arrive with a tap.
 
 Screens poll every few seconds so everyone's phone stays in sync.
 
@@ -51,7 +56,8 @@ pnpm --filter @letsgo/web build     # once; the API serves the built app
 pnpm --filter @letsgo/api start     # http://localhost:3001
 ```
 
-Data lives in a SQLite file at `api/data/letsgo.sqlite`. Nothing else to set up.
+Data lives in a SQLite file at `api/data/letsgo.sqlite`, with uploaded photos
+next to it under `api/data/photos/`. Nothing else to set up.
 
 ### Develop
 
@@ -71,7 +77,8 @@ pnpm --filter @letsgo/api test      # end-to-end API suite against an in-memory 
 
 ```
 api/   NestJS 11 + TypeORM + SQLite. Trips, members, ideas, votes, comments,
-       posts, activity feed, itinerary. Serves web/dist in production.
+       posts, activity feed, itinerary, photos (files on disk, zip streaming).
+       Serves web/dist in production.
 web/   Angular 20 (standalone, signals). iOS-style look: system font, translucent
        nav and tab bars, grouped cards, bottom sheets. Light theme only.
 ```

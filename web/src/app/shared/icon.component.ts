@@ -1,6 +1,8 @@
 import { Component, input } from '@angular/core';
 
-export type IconName = 'home' | 'bed' | 'sparkles' | 'fork' | 'calendar' | 'bubble' | 'chevron' | 'plus' | 'pencil' | 'share';
+export type IconName =
+  | 'home' | 'bed' | 'sparkles' | 'fork' | 'calendar' | 'bubble' | 'chevron' | 'plus' | 'pencil' | 'share'
+  | 'camera' | 'download' | 'trash' | 'close' | 'left' | 'right';
 
 /** SF-Symbols-style line icons, drawn inline so they tint with `currentColor`. */
 @Component({
@@ -18,6 +20,12 @@ export type IconName = 'home' | 'bed' | 'sparkles' | 'fork' | 'calendar' | 'bubb
         @case ('chevron') { <path d="m9 6 6 6-6 6" /> }
         @case ('plus') { <path d="M12 5v14" /><path d="M5 12h14" /> }
         @case ('pencil') { <path d="M4 20h4l10.5-10.5a1.5 1.5 0 0 0 0-2.1l-1.9-1.9a1.5 1.5 0 0 0-2.1 0L4 16z" /><path d="m13 7 4 4" /> }
+        @case ('camera') { <path d="M4 8.5A2.5 2.5 0 0 1 6.5 6H8l1.2-1.8c.3-.4.7-.7 1.2-.7h3.2c.5 0 .9.3 1.2.7L16 6h1.5A2.5 2.5 0 0 1 20 8.5v8a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5z" /><circle cx="12" cy="12.5" r="3.3" /> }
+        @case ('download') { <path d="M12 4v11" /><path d="m8 11 4 4 4-4" /><path d="M5 17v1.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V17" /> }
+        @case ('trash') { <path d="M5 7h14" /><path d="M9.5 7V5.5A1.5 1.5 0 0 1 11 4h2a1.5 1.5 0 0 1 1.5 1.5V7" /><path d="M7 7l.8 11.2A2 2 0 0 0 9.8 20h4.4a2 2 0 0 0 2-1.8L17 7" /><path d="M10 11v5" /><path d="M14 11v5" /> }
+        @case ('close') { <path d="m6 6 12 12" /><path d="M18 6 6 18" /> }
+        @case ('left') { <path d="m15 6-6 6 6 6" /> }
+        @case ('right') { <path d="m9 6 6 6-6 6" /> }
         @case ('share') { <path d="M12 3v12" /><path d="m8 7 4-4 4 4" /><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" /> }
       }
     </svg>

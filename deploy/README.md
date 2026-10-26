@@ -16,6 +16,22 @@ open your profile → Packages → `letsgo-trip-planner` → Package settings �
 Public. (Or `docker login ghcr.io` on the box with a personal access token that
 has `read:packages`.)
 
+## Photos and disk space
+
+Uploaded photos are stored as files under `/data/photos` next to the SQLite
+database, so backing up `/mnt/user/appdata/letsgo` covers everything. Originals
+are kept at full size (up to 25 MB each).
+
+If you put a reverse proxy in front (Nginx Proxy Manager, SWAG, nginx), raise
+its upload limit or large photos will fail with 413:
+
+```
+client_max_body_size 30m;
+proxy_read_timeout 300s;
+```
+
+Cloudflare Tunnel's 100 MB request limit is fine as is.
+
 ## Build from source instead
 
 On any box with Docker:

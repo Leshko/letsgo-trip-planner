@@ -1,0 +1,71 @@
+@if (current(); as p) {
+  <div class="viewer" role="dialog" aria-label="Photo" (touchstart)="onTouchStart($event)" (touchend)="onTouchEnd($event)">
+    <div class="viewer__bar viewer__bar--top">
+      <button class="btn btn--icon" (click)="closed.emit()" aria-label="Close"><app-icon name="close" [size]="22" /></button>
+      <span class="viewer__count">{{ position() }}</span>
+      <span class="grow"></span>
+      <a class="btn btn--icon" [href]="p.urls.original + '?download=1'" download aria-label="Download original" title="Download original ({{ sizeLabel() }})"><app-icon name="download" [size]="22" /></a>
+      @if (canManage()) { <button class="btn btn--icon" (click)="remove()" aria-label="Delete photo"><app-icon name="trash" [size]="22" /></button> }
+    </div>
+
+    <div class="viewer__stage">
+      @if (p.urls.preview ?? p.urls.thumb; as src) {
+        <img [src]="src" [alt]="p.caption || p.originalName" />
+      } @else {
+        <div class="viewer__nopreview">
+          <app-icon name="camera" [size]="40" />
+          <p>This format can't be previewed here.</p>
+          <a class="btn btn--tinted" [href]="p.urls.original + '?download=1'" download>Download it</a>
+        </div>
+      }
+      @if (photos().length > 1) {
+        <button class="viewer__nav viewer__nav--left" (click)="step(-1)" [disabled]="(index() ?? 0) === 0" aria-label="Previous"><app-icon name="left" /></button>
+        <button class="viewer__nav viewer__nav--right" (click)="step(1)" [disabled]="(index() ?? 0) >= photos().length - 1" aria-label="Next"><app-icon name="right" /></button>
+      }
+    </div>
+
+    <div class="viewer__bar viewer__bar--bottom">
+      <app-avatar [member]="p.uploadedBy" size="sm" />
+      <div class="grow" style="min-width:0">
+        <div class="viewer__who">{{ p.uploadedBy.id === me()?.id ? 'You' : p.uploadedBy.name }} <span class="viewer__dim">· {{ p.createdAt | ago }}</span></div>
+        @if (editingCaption()) {
+          <form class="row" (ngSubmit)="saveCaption()" style="margin-top:4px">
+            <input class="input" name="cap" [(ngModel)]="captionDraft" maxlength="500" placeholder="Add a caption" autofocus />
+            <button class="btn btn--sm btn--primary" type="submit">Save</button>
+            <button class="btn btn--sm" type="button" (click)="editingCaption.set(false)">Cancel</button>
+          </form>
+        } @else {
+          <div class="viewer__caption" (click)="canManage() && startCaption()" [class.viewer__caption--edit]="canManage()">
+            {{ p.caption || (canManage() ? 'Add a caption…' : '') }}
+          </div>
+        }
+      </div>
+      <button class="btn btn--sm" (click)="openComments()"><app-icon name="bubble" [size]="18" /> {{ p.commentCount || '' }}</button>
+    </div>
+
+    @if (showComments()) {
+      <div class="modal-backdrop" (click)="showComments.set(false)">
+        <div class="modal stack-v" (click)="$event.stopPropagation()" role="dialog" aria-label="Comments">
+          <h2>Comments</h2>
+          <div class="stack-v" style="gap:10px">
+            @for (c of comments(); track c.id) {
+              <div class="comment">
+                <app-avatar [member]="c.member" size="sm" />
+                <div class="comment__body">
+                  <span class="comment__who">{{ c.member.id === me()?.id ? 'You' : c.member.name }}</span><span class="tiny">{{ c.createdAt | ago }}</span>
+                  <div>{{ c.body }}</div>
+                </div>
+                @if (canDeleteComment(c)) { <button class="btn btn--ghost btn--sm" (click)="deleteComment(c)" aria-label="Delete comment">✕</button> }
+              </div>
+            } @empty { <p class="tiny">No comments yet. Say something nice.</p> }
+          </div>
+          <form class="row" (ngSubmit)="addComment()">
+            <input class="input grow" name="pcdraft" [(ngModel)]="commentDraft" maxlength="1000" placeholder="Add a comment…" autocomplete="off" />
+            <button class="btn btn--primary btn--sm" type="submit" [disabled]="!commentDraft.trim()">Post</button>
+          </form>
+          <button class="btn btn--ghost" type="button" (click)="showComments.set(false)">Done</button>
+        </div>
+      </div>
+    }
+  </div>
+}

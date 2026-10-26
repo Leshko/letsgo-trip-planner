@@ -27,7 +27,16 @@ export class MemberGuard implements CanActivate {
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
     const req = ctx.switchToHttp().getRequest<AuthedRequest>();
     const header = req.headers.authorization ?? '';
-    const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+    let token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+    // Downloads (<a href>) can't set headers, so GET may carry ?token=. Trade-off: the token can
+    // show up in proxy logs and browser history; it is the same long-lived bearer the app stores.
+    if (
+      !token &&
+      req.method === 'GET' &&
+      typeof req.query['token'] === 'string'
+    ) {
+      token = req.query['token'].trim();
+    }
     if (!token) throw new UnauthorizedException('Missing token');
 
     const member = await this.members.findOne({

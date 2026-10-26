@@ -7,3 +7,5 @@ export * from './comment.entity';
 export * from './post.entity';
 export * from './activity.entity';
 export * from './transfer-code.entity';
+export * from './photo.entity';
+export * from './photo-comment.entity';

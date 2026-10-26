@@ -28,6 +28,30 @@ export class ActivityService {
     );
   }
 
+  /** One feed line per upload batch, updated as more photos in that batch arrive. */
+  async recordBatch(
+    member: Member,
+    batchId: string,
+    count: number,
+  ): Promise<void> {
+    const message = count === 1 ? 'added a photo' : `added ${count} photos`;
+    const existing = await this.activity.findOne({
+      where: {
+        tripId: member.tripId,
+        memberId: member.id,
+        type: 'photo',
+        refKind: 'photo',
+        refId: batchId,
+      },
+    });
+    if (existing) {
+      existing.message = message;
+      await this.activity.save(existing);
+      return;
+    }
+    await this.record(member, 'photo', message, { kind: 'photo', id: batchId });
+  }
+
   async recent(tripId: string, limit = 40): Promise<ActivityView[]> {
     const rows = await this.activity.find({
       where: { tripId },

@@ -38,7 +38,7 @@ export class TourComponent {
       {
         art: '💡',
         title: 'Add your own ideas',
-        body: 'On the Do and Eat tabs, hit the orange button. Paste a link to a place and we pull in the photos and details for you.',
+        body: 'On the Ideas tab, switch between To do and To eat and hit the big button. Paste a link to a place and we pull in the photos and details for you.',
       },
       {
         art: '💬',
@@ -49,6 +49,11 @@ export class TourComponent {
         art: '🗓️',
         title: 'Build the plan',
         body: 'The Plan tab has a slot for every day of the trip. Add ideas straight from the list, give them a time, and drag them between days.',
+      },
+      {
+        art: '📷',
+        title: 'Share the photos',
+        body: 'The Photos tab is the family album. Add pictures from your phone, comment on them, and grab everything as one download.',
       },
       {
         art: '🏡',

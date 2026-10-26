@@ -1,4 +1,5 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpEvent, HttpParams } from '@angular/common/http';
+import { Observable } from 'rxjs';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import {
@@ -11,6 +12,8 @@ import {
   ItineraryEntry,
   Lodging,
   Member,
+  Photo,
+  PhotoComment,
   Post,
   Session,
   TransferCode,
@@ -144,5 +147,29 @@ export class ApiService {
   }
   reorder(tripId: string, date: string, entryIds: string[]) {
     return this.put<ItineraryDay[]>(`/trips/${tripId}/itinerary/reorder`, { date, entryIds });
+  }
+
+  // photos
+  listPhotos(tripId: string) {
+    return this.get<Photo[]>(`/trips/${tripId}/photos`);
+  }
+  /** Multipart upload with progress events; the auth interceptor adds the bearer. */
+  uploadPhoto(tripId: string, form: FormData): Observable<HttpEvent<Photo>> {
+    return this.http.post<Photo>(`${this.base}/trips/${tripId}/photos`, form, { reportProgress: true, observe: 'events' });
+  }
+  updatePhotoCaption(tripId: string, photoId: string, caption: string) {
+    return this.patch<Photo>(`/trips/${tripId}/photos/${photoId}`, { caption });
+  }
+  deletePhoto(tripId: string, photoId: string) {
+    return this.delete(`/trips/${tripId}/photos/${photoId}`);
+  }
+  listPhotoComments(tripId: string, photoId: string) {
+    return this.get<PhotoComment[]>(`/trips/${tripId}/photos/${photoId}/comments`);
+  }
+  addPhotoComment(tripId: string, photoId: string, body: string) {
+    return this.post<PhotoComment>(`/trips/${tripId}/photos/${photoId}/comments`, { body });
+  }
+  deletePhotoComment(tripId: string, commentId: string) {
+    return this.delete(`/trips/${tripId}/photo-comments/${commentId}`);
   }
 }

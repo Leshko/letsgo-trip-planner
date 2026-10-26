@@ -1,8 +1,6 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { map } from 'rxjs';
+import { Router } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { Comment, Idea, IdeaKind } from '../../core/models';
@@ -39,10 +37,12 @@ const COPY: Record<IdeaKind, { title: string; blurb: string; placeholder: string
 })
 export class IdeasComponent {
   private readonly api = inject(ApiService);
-  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   readonly session = inject(SessionService);
 
-  readonly kind = toSignal(this.route.data.pipe(map((d) => d['kind'] as IdeaKind)), { initialValue: 'activity' as IdeaKind });
+  /** Route segment: /trip/ideas/do or /trip/ideas/eat (bound by the router). */
+  readonly seg = input<string>('do', { alias: 'kind' });
+  readonly kind = computed<IdeaKind>(() => (this.seg() === 'eat' ? 'food' : 'activity'));
   readonly copy = computed(() => COPY[this.kind()]);
   readonly me = this.session.member;
   readonly ideas = signal<Idea[]>([]);
@@ -70,6 +70,15 @@ export class IdeasComponent {
 
   constructor() {
     usePolling(() => this.load());
+    // Same component instance serves both segments, so reload when the switch flips.
+    effect(() => {
+      this.kind();
+      untracked(() => void this.load());
+    });
+  }
+
+  switchTo(seg: 'do' | 'eat') {
+    void this.router.navigate(['/trip/ideas', seg], { replaceUrl: true });
   }
 
   async load() {

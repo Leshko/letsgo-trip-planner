@@ -13,6 +13,8 @@ import { TourComponent } from '../../shared/tour.component';
 import { IconComponent, IconName } from '../../shared/icon.component';
 import { TransferCode } from '../../core/models';
 import { squareThumbnail } from '../../core/image';
+import { InstallService } from '../../core/install.service';
+import { SwUpdate } from '@angular/service-worker';
 
 @Component({
   selector: 'app-shell',
@@ -23,6 +25,10 @@ export class ShellComponent {
   readonly session = inject(SessionService);
   private readonly api = inject(ApiService);
   private readonly router = inject(Router);
+  readonly install = inject(InstallService);
+  private readonly updates = inject(SwUpdate);
+  readonly updateReady = signal(false);
+  readonly showIosHelp = signal(false);
 
   readonly trip = this.session.trip;
   readonly me = this.session.member;
@@ -47,15 +53,38 @@ export class ShellComponent {
   readonly tabs: { path: string; label: string; ico: IconName; exact: boolean }[] = [
     { path: '/trip', label: 'Home', ico: 'home', exact: true },
     { path: '/trip/stay', label: 'Stay', ico: 'bed', exact: false },
-    { path: '/trip/do', label: 'Do', ico: 'sparkles', exact: false },
-    { path: '/trip/eat', label: 'Eat', ico: 'fork', exact: false },
+    { path: '/trip/ideas', label: 'Ideas', ico: 'sparkles', exact: false },
     { path: '/trip/plan', label: 'Plan', ico: 'calendar', exact: false },
     { path: '/trip/wall', label: 'Wall', ico: 'bubble', exact: false },
+    { path: '/trip/photos', label: 'Photos', ico: 'camera', exact: false },
   ];
 
   constructor() {
     // Keeps the member list (who's joined) fresh across every page.
     usePolling(() => this.session.refreshTrip(), 20_000);
+    if (this.updates.isEnabled) {
+      this.updates.versionUpdates.subscribe((e) => {
+        if (e.type === 'VERSION_READY') this.updateReady.set(true);
+      });
+    }
+  }
+
+  async reloadForUpdate() {
+    try {
+      await this.updates.activateUpdate();
+    } finally {
+      document.location.reload();
+    }
+  }
+
+  async installApp() {
+    if (this.install.canPrompt()) {
+      const ok = await this.install.prompt();
+      if (ok) this.flash('Installed! Find LetsGo on your home screen');
+      return;
+    }
+    this.showProfile.set(false);
+    this.showIosHelp.set(true);
   }
 
   async share() {

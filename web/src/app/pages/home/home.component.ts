@@ -2,7 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
-import { Activity, Idea, Post } from '../../core/models';
+import { Activity, Idea, Photo, Post } from '../../core/models';
 import { daysUntil, nights, todayIso } from '../../core/format';
 import { usePolling } from '../../core/polling';
 import { AvatarComponent } from '../../shared/avatar.component';
@@ -17,6 +17,7 @@ const ICONS: Record<Activity['type'], string> = {
   itinerary: '🗓️',
   lodging: '🏡',
   trip: '✈️',
+  photo: '📷',
 };
 
 @Component({
@@ -33,6 +34,7 @@ export class HomeComponent {
   readonly ideas = signal<Idea[]>([]);
   readonly feed = signal<Activity[]>([]);
   readonly posts = signal<Post[]>([]);
+  readonly photos = signal<Photo[]>([]);
   readonly loaded = signal(false);
 
   readonly topDo = computed(() => this.ideas().filter((i) => i.kind === 'activity').slice(0, 3));
@@ -59,10 +61,16 @@ export class HomeComponent {
   async load() {
     const id = this.session.tripId();
     if (!id) return;
-    const [ideas, feed, posts] = await Promise.all([this.api.listIdeas(id), this.api.activity(id, 25), this.api.listPosts(id)]);
+    const [ideas, feed, posts, photos] = await Promise.all([
+      this.api.listIdeas(id),
+      this.api.activity(id, 25),
+      this.api.listPosts(id),
+      this.api.listPhotos(id),
+    ]);
     this.ideas.set(ideas);
     this.feed.set(feed);
     this.posts.set(posts);
+    this.photos.set(photos);
     this.loaded.set(true);
   }
 

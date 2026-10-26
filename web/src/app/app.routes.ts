@@ -18,16 +18,14 @@ export const routes: Routes = [
     children: [
       { path: '', loadComponent: () => import('./pages/home/home.component').then((m) => m.HomeComponent) },
       { path: 'stay', loadComponent: () => import('./pages/stay/stay.component').then((m) => m.StayComponent) },
+      { path: 'ideas', pathMatch: 'full', redirectTo: 'ideas/do' },
+      { path: 'do', redirectTo: 'ideas/do' },
+      { path: 'eat', redirectTo: 'ideas/eat' },
       {
-        path: 'do',
+        path: 'ideas/:kind',
         loadComponent: () => import('./pages/ideas/ideas.component').then((m) => m.IdeasComponent),
-        data: { kind: 'activity' },
       },
-      {
-        path: 'eat',
-        loadComponent: () => import('./pages/ideas/ideas.component').then((m) => m.IdeasComponent),
-        data: { kind: 'food' },
-      },
+      { path: 'photos', loadComponent: () => import('./pages/photos/photos.component').then((m) => m.PhotosComponent) },
       { path: 'plan', loadComponent: () => import('./pages/itinerary/itinerary.component').then((m) => m.ItineraryComponent) },
       { path: 'wall', loadComponent: () => import('./pages/wall/wall.component').then((m) => m.WallComponent) },
     ],
