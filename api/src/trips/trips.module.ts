@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Member, TransferCode, Trip } from '../entities';
-import { TripsController } from './trips.controller';
+import { AvatarsController, TripsController } from './trips.controller';
 import { TripsService } from './trips.service';
 import { ActivityModule } from '../activity/activity.module';
 
@@ -10,7 +10,7 @@ import { ActivityModule } from '../activity/activity.module';
     TypeOrmModule.forFeature([Trip, Member, TransferCode]),
     ActivityModule,
   ],
-  controllers: [TripsController],
+  controllers: [TripsController, AvatarsController],
   providers: [TripsService],
   exports: [TripsService],
 })

@@ -7,9 +7,12 @@ import {
   Post,
   Put,
   Req,
+  Res,
+  Delete,
+  NotFoundException,
   UseGuards,
 } from '@nestjs/common';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import { MemberGuard } from '../common/member.guard';
 import { CurrentMember } from '../common/current-member.decorator';
 import { Member } from '../entities';
@@ -17,6 +20,7 @@ import { memberView } from '../common/serializers';
 import {
   CreateTripDto,
   JoinTripDto,
+  AvatarDto,
   LodgingDto,
   TransferDto,
   UpdateProfileDto,
@@ -70,6 +74,18 @@ export class TripsController {
     return this.trips.updateProfile(me, dto);
   }
 
+  @Put('me/avatar')
+  @UseGuards(MemberGuard)
+  setAvatar(@CurrentMember() me: Member, @Body() dto: AvatarDto) {
+    return this.trips.setAvatar(me, dto);
+  }
+
+  @Delete('me/avatar')
+  @UseGuards(MemberGuard)
+  clearAvatar(@CurrentMember() me: Member) {
+    return this.trips.setAvatar(me, null);
+  }
+
   @Get(':tripId')
   @UseGuards(MemberGuard)
   get(@Param('tripId') tripId: string) {
@@ -94,5 +110,20 @@ export class TripsController {
     @Body() dto: LodgingDto,
   ) {
     return this.trips.updateLodging(tripId, me, dto);
+  }
+}
+
+/** Photos are fetched by <img>, which can't send a bearer token; the member id is an unguessable UUID. */
+@Controller('avatars')
+export class AvatarsController {
+  constructor(private readonly trips: TripsService) {}
+
+  @Get(':memberId')
+  async get(@Param('memberId') memberId: string, @Res() res: Response) {
+    const a = await this.trips.getAvatar(memberId);
+    if (!a) throw new NotFoundException();
+    res.setHeader('Content-Type', a.type);
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    res.send(a.bytes);
   }
 }

@@ -3,6 +3,7 @@ export interface Member {
   name: string;
   isOwner: boolean;
   emoji: string;
+  avatarUrl: string;
 }
 
 export interface Lodging {

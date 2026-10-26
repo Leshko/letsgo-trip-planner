@@ -10,11 +10,13 @@ import { AvatarStackComponent } from '../../shared/avatar-stack.component';
 import { EmojiPickerComponent } from '../../shared/emoji-picker.component';
 import { messageOf } from '../landing/landing.component';
 import { TourComponent } from '../../shared/tour.component';
+import { IconComponent, IconName } from '../../shared/icon.component';
 import { TransferCode } from '../../core/models';
+import { squareThumbnail } from '../../core/image';
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, FormsModule, AvatarComponent, AvatarStackComponent, EmojiPickerComponent, TourComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, FormsModule, AvatarComponent, AvatarStackComponent, EmojiPickerComponent, TourComponent, IconComponent],
   templateUrl: './shell.component.html',
 })
 export class ShellComponent {
@@ -42,13 +44,13 @@ export class ShellComponent {
   profileName = '';
   profileEmoji = '';
 
-  readonly tabs = [
-    { path: '/trip', label: 'Home', ico: '🏠', exact: true },
-    { path: '/trip/stay', label: 'Stay', ico: '🏡', exact: false },
-    { path: '/trip/do', label: 'Do', ico: '🎯', exact: false },
-    { path: '/trip/eat', label: 'Eat', ico: '🍽️', exact: false },
-    { path: '/trip/plan', label: 'Plan', ico: '🗓️', exact: false },
-    { path: '/trip/wall', label: 'Wall', ico: '💬', exact: false },
+  readonly tabs: { path: string; label: string; ico: IconName; exact: boolean }[] = [
+    { path: '/trip', label: 'Home', ico: 'home', exact: true },
+    { path: '/trip/stay', label: 'Stay', ico: 'bed', exact: false },
+    { path: '/trip/do', label: 'Do', ico: 'sparkles', exact: false },
+    { path: '/trip/eat', label: 'Eat', ico: 'fork', exact: false },
+    { path: '/trip/plan', label: 'Plan', ico: 'calendar', exact: false },
+    { path: '/trip/wall', label: 'Wall', ico: 'bubble', exact: false },
   ];
 
   constructor() {
@@ -84,6 +86,38 @@ export class ShellComponent {
   flash(msg: string) {
     this.toast.set(msg);
     setTimeout(() => this.toast.set(''), 1800);
+  }
+
+  readonly photoBusy = signal(false);
+
+  async onPhotoPicked(ev: Event) {
+    const input = ev.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    this.photoBusy.set(true);
+    this.profileError.set('');
+    try {
+      const dataUrl = await squareThumbnail(file);
+      const m = await this.api.uploadAvatar(dataUrl);
+      this.session.setMember(m);
+      await this.session.refreshTrip();
+    } catch (e: unknown) {
+      this.profileError.set(messageOf(e, "Couldn't use that photo"));
+    } finally {
+      this.photoBusy.set(false);
+    }
+  }
+
+  async removePhoto() {
+    this.photoBusy.set(true);
+    try {
+      const m = await this.api.removeAvatar();
+      this.session.setMember(m);
+      await this.session.refreshTrip();
+    } finally {
+      this.photoBusy.set(false);
+    }
   }
 
   async makeTransferCode() {

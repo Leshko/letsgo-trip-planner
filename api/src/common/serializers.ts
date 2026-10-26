@@ -13,6 +13,8 @@ export interface MemberView {
   name: string;
   isOwner: boolean;
   emoji: string;
+  /** Versioned URL of the uploaded photo, or '' when there is none. */
+  avatarUrl: string;
 }
 
 export interface TripView {
@@ -66,6 +68,7 @@ export const memberView = (m: Member): MemberView => ({
   name: m.name,
   isOwner: m.isOwner,
   emoji: m.emoji ?? '',
+  avatarUrl: m.avatarVersion ? `/api/avatars/${m.id}?v=${m.avatarVersion}` : '',
 });
 
 export const tripView = (t: Trip, members: Member[]): TripView => ({

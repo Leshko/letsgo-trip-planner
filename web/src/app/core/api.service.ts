@@ -64,6 +64,12 @@ export class ApiService {
   redeemTransferCode(code: string) {
     return this.post<Session>('/trips/transfer', { code });
   }
+  uploadAvatar(dataUrl: string) {
+    return this.put<Member>('/trips/me/avatar', { dataUrl });
+  }
+  removeAvatar() {
+    return firstValueFrom(this.http.delete<Member>(this.base + '/trips/me/avatar'));
+  }
   updateProfile(body: { name?: string; emoji?: string }) {
     return this.patch<Member>('/trips/me', body);
   }

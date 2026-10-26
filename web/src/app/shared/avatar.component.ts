@@ -7,7 +7,8 @@ import { Member } from '../core/models';
   template: `
     <span class="avatar" [class.avatar--sm]="size() === 'sm'" [class.avatar--lg]="size() === 'lg'"
       [style.--hue]="hue()" [title]="member().name" [attr.aria-label]="member().name">
-      @if (member().emoji) { <span class="avatar__emoji">{{ member().emoji }}</span> }
+      @if (member().avatarUrl) { <img class="avatar__img" [src]="member().avatarUrl" alt="" /> }
+      @else if (member().emoji) { <span class="avatar__emoji">{{ member().emoji }}</span> }
       @else { {{ initials() }} }
     </span>
   `,

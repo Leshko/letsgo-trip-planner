@@ -558,3 +558,87 @@ describe('idea details, editing and login codes (e2e)', () => {
     expect(last).toBe(429);
   });
 });
+
+describe('profile photos (e2e)', () => {
+  let app: INestApplication;
+  let http: ReturnType<typeof request>;
+  let auth: { Authorization: string };
+  let memberId: string;
+  // 1x1 PNG padded with a comment-free zero buffer so it clears the minimum size
+  const png = Buffer.concat([
+    Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+      'base64',
+    ),
+    Buffer.alloc(200),
+  ]);
+
+  beforeAll(async () => {
+    const moduleRef = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+    app = moduleRef.createNestApplication();
+    configureApp(app);
+    await app.init();
+    http = request(app.getHttpServer());
+    const res = await http
+      .post('/api/trips')
+      .send({
+        name: 'P',
+        startDate: '2027-01-01',
+        endDate: '2027-01-02',
+        memberName: 'Pic',
+      })
+      .expect(201);
+    auth = { Authorization: `Bearer ${res.body.token}` };
+    memberId = res.body.member.id;
+    expect(res.body.member.avatarUrl).toBe('');
+  });
+
+  afterAll(async () => app.close());
+
+  it('uploads, serves, versions and removes a photo', async () => {
+    const up = await http
+      .put('/api/trips/me/avatar')
+      .set(auth)
+      .send({ dataUrl: 'data:image/png;base64,' + png.toString('base64') })
+      .expect(200);
+    expect(up.body.avatarUrl).toBe(`/api/avatars/${memberId}?v=1`);
+
+    const img = await http.get(`/api/avatars/${memberId}`).expect(200);
+    expect(img.headers['content-type']).toBe('image/png');
+    expect(Buffer.compare(img.body as Buffer, png)).toBe(0);
+
+    const me = await http.get('/api/trips/me').set(auth).expect(200);
+    expect(me.body.member.avatarUrl).toContain('?v=1');
+    expect(me.body.trip.members[0].avatarUrl).toContain('?v=1');
+
+    const again = await http
+      .put('/api/trips/me/avatar')
+      .set(auth)
+      .send({ dataUrl: 'data:image/png;base64,' + png.toString('base64') })
+      .expect(200);
+    expect(again.body.avatarUrl).toContain('?v=2');
+
+    await http
+      .put('/api/trips/me/avatar')
+      .set(auth)
+      .send({ dataUrl: 'data:text/html;base64,PGI+' })
+      .expect(400);
+    await http
+      .put('/api/trips/me/avatar')
+      .set(auth)
+      .send({
+        dataUrl:
+          'data:image/png;base64,' + Buffer.alloc(300_000).toString('base64'),
+      })
+      .expect(400);
+
+    const gone = await http
+      .delete('/api/trips/me/avatar')
+      .set(auth)
+      .expect(200);
+    expect(gone.body.avatarUrl).toBe('');
+    await http.get(`/api/avatars/${memberId}`).expect(404);
+  });
+});

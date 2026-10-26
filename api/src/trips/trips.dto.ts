@@ -29,6 +29,11 @@ export class TransferDto {
   @IsString() @Length(4, 16) code!: string;
 }
 
+export class AvatarDto {
+  /** data:image/...;base64,... — the client has already shrunk it to ~256px. */
+  @IsString() @MaxLength(400_000) dataUrl!: string;
+}
+
 export class UpdateProfileDto {
   @IsOptional() @IsString() @Length(1, 40) name?: string;
   @IsOptional() @IsString() @MaxLength(8) emoji?: string;

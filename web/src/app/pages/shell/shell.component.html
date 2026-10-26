@@ -1,15 +1,15 @@
 @if (trip(); as t) {
   <header class="topbar">
     <div class="topbar__inner">
-      <div class="grow">
+      <button class="btn btn--sm btn--tinted topbar__left" (click)="showInvite.set(true)" aria-label="Invite family">
+        <app-avatar-stack [members]="t.members" [max]="3" /> <span>Invite</span>
+      </button>
+      <div class="topbar__center">
         <div class="topbar__title">{{ t.name }}</div>
         <div class="topbar__sub">{{ t.destination || 'Somewhere great' }} · {{ dates() }}</div>
       </div>
-      <button class="btn btn--sm" (click)="showInvite.set(true)" aria-label="Invite family">
-        <app-avatar-stack [members]="t.members" [max]="3" /> <span>Invite</span>
-      </button>
       @if (me(); as m) {
-        <button class="btn btn--ghost btn--icon" (click)="openProfile()" aria-label="Your profile">
+        <button class="btn btn--ghost btn--icon topbar__right" (click)="openProfile()" aria-label="Your profile">
           <app-avatar [member]="m" />
         </button>
       }
@@ -19,7 +19,7 @@
   <nav class="tabs" aria-label="Trip sections">
     @for (tab of tabs; track tab.path) {
       <a [routerLink]="tab.path" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: tab.exact }">
-        <span class="ico" aria-hidden="true">{{ tab.ico }}</span><span>{{ tab.label }}</span>
+        <app-icon [name]="tab.ico" [size]="26" /><span>{{ tab.label }}</span>
       </a>
     }
   </nav>
@@ -59,6 +59,19 @@
     <div class="modal-backdrop" (click)="showProfile.set(false)">
       <form class="modal stack-v" (click)="$event.stopPropagation()" (ngSubmit)="saveProfile()" role="dialog" aria-label="Your profile">
         <h2>You</h2>
+        @if (me(); as m) {
+          <div class="row" style="gap:14px">
+            <app-avatar [member]="m" size="lg" />
+            <div class="grow stack-v" style="gap:6px">
+              <label class="btn btn--sm btn--tinted" style="align-self:flex-start;cursor:pointer">
+                {{ photoBusy() ? 'Uploading…' : m.avatarUrl ? 'Change photo' : 'Upload a photo' }}
+                <input type="file" accept="image/*" style="display:none" (change)="onPhotoPicked($event)" [disabled]="photoBusy()" data-testid="photo-input" />
+              </label>
+              @if (m.avatarUrl) { <button class="btn btn--ghost btn--sm btn--danger" type="button" style="align-self:flex-start" (click)="removePhoto()" [disabled]="photoBusy()">Remove photo</button> }
+              @else { <span class="tiny">Or pick an emoji below.</span> }
+            </div>
+          </div>
+        }
         <div class="field">
           <label for="pname">Name</label>
           <input id="pname" class="input" name="pname" [(ngModel)]="profileName" required maxlength="40" />

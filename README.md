@@ -24,6 +24,8 @@ What the family can do:
   comments and the plan work. Replay it any time from your avatar menu.
 - **Login codes** — from your avatar menu, make a one-time code (10 minutes)
   and type it on another phone or computer to sign in there as you.
+- **Profiles** — pick an emoji or upload a photo; it's shrunk on the phone
+  before upload and stored with everything else in the SQLite file.
 - **Plan** — a day-by-day itinerary generated from the trip dates. Add entries
   from the idea list or write your own, give them a time or leave them "anytime",
   and drag them between days.
@@ -70,8 +72,8 @@ pnpm --filter @letsgo/api test      # end-to-end API suite against an in-memory 
 ```
 api/   NestJS 11 + TypeORM + SQLite. Trips, members, ideas, votes, comments,
        posts, activity feed, itinerary. Serves web/dist in production.
-web/   Angular 20 (standalone, signals). Mobile-first; bottom tabs on phones,
-       top tabs on desktop; always light theme.
+web/   Angular 20 (standalone, signals). iOS-style look: system font, translucent
+       nav and tab bars, grouped cards, bottom sheets. Light theme only.
 ```
 
 ### Environment

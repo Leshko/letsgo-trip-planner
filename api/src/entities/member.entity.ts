@@ -39,4 +39,14 @@ export class Member extends Timestamped {
   /** Optional emoji the person picked as their avatar. */
   @Column({ default: '' })
   emoji!: string;
+
+  /** Uploaded profile photo (small JPEG/PNG/WebP), stored inline so the SQLite file is the whole backup. */
+  @Column({ type: 'blob', nullable: true, select: false })
+  avatar!: Buffer | null;
+
+  @Column({ default: '' })
+  avatarType!: string;
+
+  @Column({ type: 'integer', default: 0 })
+  avatarVersion!: number;
 }

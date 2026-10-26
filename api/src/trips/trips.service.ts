@@ -18,6 +18,7 @@ import {
 import {
   CreateTripDto,
   JoinTripDto,
+  AvatarDto,
   LodgingDto,
   TransferDto,
   UpdateProfileDto,
@@ -26,6 +27,7 @@ import {
 import { ActivityService } from '../activity/activity.service';
 
 const TRANSFER_TTL_MS = 10 * 60_000;
+const AVATAR_MAX_BYTES = 250_000;
 
 export interface SessionResult {
   token: string;
@@ -184,6 +186,41 @@ export class TripsService {
       member: memberView(member),
       trip: tripView(trip, members),
     };
+  }
+
+  async setAvatar(me: Member, dto: AvatarDto | null): Promise<MemberView> {
+    if (!dto) {
+      me.avatar = null;
+      me.avatarType = '';
+      me.avatarVersion = 0;
+      await this.members.save(me);
+      return memberView(me);
+    }
+    const m = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(
+      dto.dataUrl,
+    );
+    if (!m) throw new BadRequestException('Send a JPEG, PNG or WebP image');
+    const bytes = Buffer.from(m[2], 'base64');
+    if (bytes.length < 100 || bytes.length > AVATAR_MAX_BYTES)
+      throw new BadRequestException('Image must be under 250 KB');
+    me.avatar = bytes;
+    me.avatarType = m[1];
+    me.avatarVersion = (me.avatarVersion ?? 0) + 1;
+    await this.members.save(me);
+    return memberView(me);
+  }
+
+  /** Raw bytes for <img src>; null when the member has no photo. */
+  async getAvatar(
+    memberId: string,
+  ): Promise<{ bytes: Buffer; type: string } | null> {
+    const row = await this.members
+      .createQueryBuilder('m')
+      .addSelect('m.avatar')
+      .where('m.id = :id', { id: memberId })
+      .getOne();
+    if (!row?.avatar || !row.avatarType) return null;
+    return { bytes: Buffer.from(row.avatar), type: row.avatarType };
   }
 
   async updateProfile(me: Member, dto: UpdateProfileDto): Promise<MemberView> {
