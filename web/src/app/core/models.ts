@@ -111,6 +111,24 @@ export interface ItineraryDay {
   entries: ItineraryEntry[];
 }
 
+export type AiStatus = 'ok' | 'off' | 'cached' | 'capped' | 'error';
+
+/** What the AI read off the page, already sanitized by the server. */
+export interface AiPreview {
+  title: string;
+  kind: 'activity' | 'food' | 'other';
+  summary: string;
+  address: string;
+  phone: string;
+  hours: string;
+  priceLevel: CostLevel;
+  details: IdeaDetail[];
+  goodFor: string;
+  bookingNote: string;
+  coverImage: string;
+  confidence: number;
+}
+
 /** What the server pulled out of a pasted link. */
 export interface Unfurled {
   url: string;
@@ -120,6 +138,20 @@ export interface Unfurled {
   image: string;
   images: string[];
   icon: string;
+  ai: AiPreview | null;
+  aiStatus: AiStatus;
+}
+
+export interface AiStatusInfo {
+  enabled: boolean;
+  model: string;
+}
+
+/** Carried across the To do / To eat switch so nothing is retyped. */
+export interface FormCarry {
+  kind: IdeaKind;
+  form: IdeaInput;
+  preview: Unfurled | null;
 }
 
 export interface TransferCode {

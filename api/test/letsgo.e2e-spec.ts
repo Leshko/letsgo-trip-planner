@@ -8,6 +8,11 @@ import { join } from 'path';
 import { photosDir } from '../src/common/paths';
 import { PUSH_SENDER } from '../src/notifications/push.service';
 import { NotificationsService } from '../src/notifications/notifications.service';
+import { AI_CLIENT } from '../src/ai/ai.client';
+import { UnfurlCache } from '../src/entities';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import * as nodeHttp from 'http';
 
 describe('LetsGo API (e2e)', () => {
   let app: INestApplication;
@@ -1468,5 +1473,198 @@ describe('idea detail (e2e)', () => {
       .get(`/api/trips/${tripId}/ideas/${created.body.id}`)
       .set({ Authorization: `Bearer ${other.body.token}` })
       .expect(403);
+  });
+});
+
+describe('AI link previews (e2e)', () => {
+  let app: INestApplication;
+  let http: ReturnType<typeof request>;
+  let auth: { Authorization: string };
+  let tripId: string;
+  let fixture: nodeHttp.Server;
+  let base: string;
+  const stub = { summarize: jest.fn() };
+  const canned = {
+    title: 'Marina Taco Truck',
+    kind: 'food',
+    summary: 'Fish tacos by the water. Casual, cash only, good with kids.',
+    address: '700 N Lake Blvd, Tahoe City, CA',
+    phone: '+1 530-555-0199',
+    hours: 'Mon-Sun 11-8',
+    priceLevel: '$$',
+    details: [
+      { label: 'Hours', value: 'Mon-Sun 11-8' },
+      { label: 'Hours', value: 'dupe' },
+      { label: 'Kids', value: 'High chairs available' },
+    ],
+    goodFor: 'kids, sunset',
+    bookingNote: '',
+    coverImage: 'https://not-a-candidate.example/x.jpg',
+    confidence: 0.8,
+  };
+  const page = (title: string, extra = '') =>
+    `<html><head><title>${title}</title><meta property="og:title" content="${title}"><meta property="og:image" content="/c.jpg"></head><body><main>${extra}<p>${'Fresh fish tacos, agua fresca and a deck right on the marina. '.repeat(8)}</p></main></body></html>`;
+  const ld = `<script type="application/ld+json">{"@type":"Restaurant","name":"Marina Taco Truck","telephone":"+1 530-555-0199"}</script>`;
+
+  beforeAll(async () => {
+    fixture = nodeHttp
+      .createServer((req, res) => {
+        res.setHeader('content-type', 'text/html');
+        if (req.url?.startsWith('/r'))
+          return res.end(page('Marina Taco Truck', ld));
+        if (req.url?.startsWith('/a')) return res.end(page('Emerald Bay Hike'));
+        res.statusCode = 404;
+        res.end('no');
+      })
+      .listen(0, '127.0.0.1');
+    await new Promise((r) => fixture.once('listening', r));
+    base = `http://127.0.0.1:${(fixture.address() as { port: number }).port}`;
+    process.env.UNFURL_ALLOW_PRIVATE = '1';
+    process.env.ANTHROPIC_API_KEY = 'test-key';
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+      .overrideProvider(AI_CLIENT)
+      .useValue(stub)
+      .compile();
+    app = moduleRef.createNestApplication();
+    configureApp(app);
+    await app.init();
+    http = request(app.getHttpServer());
+    const res = await http
+      .post('/api/trips')
+      .send({
+        name: 'AI',
+        startDate: '2027-01-01',
+        endDate: '2027-01-02',
+        memberName: 'Me',
+      })
+      .expect(201);
+    auth = { Authorization: `Bearer ${res.body.token}` };
+    tripId = res.body.trip.id;
+  });
+
+  afterAll(async () => {
+    delete process.env.ANTHROPIC_API_KEY;
+    delete process.env.AI_ENRICH;
+    delete process.env.AI_DAILY_CAP;
+    delete process.env.UNFURL_ALLOW_PRIVATE;
+    fixture.close();
+    await app.close();
+  });
+
+  beforeEach(() => {
+    stub.summarize.mockReset();
+    stub.summarize.mockResolvedValue({
+      parsed: canned,
+      stopReason: 'end_turn',
+    });
+  });
+
+  it('reports status without a token and honours the kill switch', async () => {
+    const on = await http.get('/api/ai/status').expect(200);
+    expect(on.body).toEqual({ enabled: true, model: 'claude-haiku-5-5' });
+    process.env.AI_ENRICH = '0';
+    const off = await http.get('/api/ai/status').expect(200);
+    expect(off.body.enabled).toBe(false);
+    const r = await http
+      .get(`/api/trips/${tripId}/unfurl?url=${encodeURIComponent(base + '/a')}`)
+      .set(auth)
+      .expect(200);
+    expect(r.body.aiStatus).toBe('off');
+    expect(r.body.ai).toBeNull();
+    expect(r.body.title).toBe('Emerald Bay Hike');
+    delete process.env.AI_ENRICH;
+  });
+
+  it('summarizes once, sanitizes, and serves repeats from the cache', async () => {
+    const first = await http
+      .get(`/api/trips/${tripId}/unfurl?url=${encodeURIComponent(base + '/r')}`)
+      .set(auth)
+      .expect(200);
+    expect(first.body.aiStatus).toBe('ok');
+    expect(first.body.ai.summary).toBe(canned.summary);
+    expect(first.body.ai.kind).toBe('food');
+    expect(first.body.ai.coverImage).toBe('');
+    expect(first.body.ai.details).toEqual([
+      { label: 'Hours', value: 'Mon-Sun 11-8' },
+      { label: 'Kids', value: 'High chairs available' },
+    ]);
+    expect(stub.summarize).toHaveBeenCalledTimes(1);
+    const sent = stub.summarize.mock.calls[0][0] as {
+      user: string;
+      model: string;
+      system: string;
+    };
+    expect(sent.model).toBe('claude-haiku-5-5');
+    expect(sent.user).toContain('<page_content>');
+    expect(sent.user).toContain('phone=+1 530-555-0199');
+    expect(sent.system).toContain('untrusted');
+
+    const again = await http
+      .get(
+        `/api/trips/${tripId}/unfurl?url=${encodeURIComponent(base + '/r?utm_source=sms')}`,
+      )
+      .set(auth)
+      .expect(200);
+    expect(again.body.aiStatus).toBe('cached');
+    expect(again.body.ai.summary).toBe(canned.summary);
+    expect(stub.summarize).toHaveBeenCalledTimes(1);
+    const rows = await app
+      .get<Repository<UnfurlCache>>(getRepositoryToken(UnfurlCache))
+      .count();
+    expect(rows).toBe(1);
+  });
+
+  it('degrades to the basic preview on errors and bad output', async () => {
+    stub.summarize.mockRejectedValueOnce(new Error('boom'));
+    const e = await http
+      .get(`/api/trips/${tripId}/unfurl?url=${encodeURIComponent(base + '/a')}`)
+      .set(auth)
+      .expect(200);
+    expect(e.body.aiStatus).toBe('error');
+    expect(e.body.ai).toBeNull();
+    expect(e.body.title).toBe('Emerald Bay Hike');
+    stub.summarize.mockResolvedValueOnce({
+      parsed: null,
+      stopReason: 'max_tokens',
+    });
+    const m = await http
+      .get(
+        `/api/trips/${tripId}/unfurl?url=${encodeURIComponent(base + '/a?v=2')}`,
+      )
+      .set(auth)
+      .expect(200);
+    expect(m.body.aiStatus).toBe('error');
+  });
+
+  it('caps calls per trip per day', async () => {
+    process.env.AI_DAILY_CAP = '1';
+    const fresh = await http
+      .post('/api/trips')
+      .send({
+        name: 'Cap',
+        startDate: '2027-01-01',
+        endDate: '2027-01-02',
+        memberName: 'C',
+      })
+      .expect(201);
+    const capAuth = { Authorization: `Bearer ${fresh.body.token}` };
+    const t2 = fresh.body.trip.id;
+    const a = await http
+      .get(
+        `/api/trips/${t2}/unfurl?url=${encodeURIComponent(base + '/a?cap=1')}`,
+      )
+      .set(capAuth)
+      .expect(200);
+    expect(a.body.aiStatus).toBe('ok');
+    const b = await http
+      .get(
+        `/api/trips/${t2}/unfurl?url=${encodeURIComponent(base + '/a?cap=2')}`,
+      )
+      .set(capAuth)
+      .expect(200);
+    expect(b.body.aiStatus).toBe('capped');
+    expect(b.body.ai).toBeNull();
+    expect(b.body.title).toBe('Emerald Bay Hike');
+    delete process.env.AI_DAILY_CAP;
   });
 });

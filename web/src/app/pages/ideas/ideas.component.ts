@@ -4,7 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { ShareService } from '../../core/share.service';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
-import { Idea, IdeaKind } from '../../core/models';
+import { FormCarry, Idea, IdeaKind } from '../../core/models';
 import { usePolling } from '../../core/polling';
 import { AvatarComponent } from '../../shared/avatar.component';
 import { AvatarStackComponent } from '../../shared/avatar-stack.component';
@@ -52,6 +52,7 @@ export class IdeasComponent {
   readonly loaded = signal(false);
 
   readonly adding = signal(false);
+  readonly carry = signal<FormCarry | null>(null);
   readonly editing = signal<Idea | null>(null);
 
   readonly planning = signal<Idea | null>(null);
@@ -68,6 +69,11 @@ export class IdeasComponent {
     });
   }
 
+  onSwitchKind(ev: FormCarry) {
+    this.carry.set(ev);
+    this.switchTo(ev.kind === 'food' ? 'eat' : 'do');
+  }
+
   switchTo(seg: 'do' | 'eat') {
     void this.router.navigate(['/trip/ideas', seg], { replaceUrl: true });
   }
@@ -79,7 +85,7 @@ export class IdeasComponent {
     if (kind !== this.lastKind) {
       this.lastKind = kind;
       this.loaded.set(false);
-      this.adding.set(false);
+      this.adding.set(this.carry()?.kind === kind);
       this.editing.set(null);
     }
     this.ideas.set(await this.api.listIdeas(id, kind));

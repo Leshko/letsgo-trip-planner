@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { MemberGuard } from '../common/member.guard';
 import { UnfurlService } from './unfurl.service';
 
@@ -9,7 +9,7 @@ export class UnfurlController {
 
   /** Link preview for the add-idea form. Members only, so it can't be used as an open proxy. */
   @Get()
-  get(@Query('url') url: string) {
-    return this.unfurl.unfurl(url ?? '');
+  get(@Param('tripId') tripId: string, @Query('url') url: string) {
+    return this.unfurl.unfurl(url ?? '', tripId);
   }
 }

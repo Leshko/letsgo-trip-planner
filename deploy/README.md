@@ -42,6 +42,34 @@ house put LetsGo behind your reverse proxy with a certificate; on the LAN,
 Chrome treats plain `http://192.168.x.x` as insecure and won't offer push.
 iPhone users add the app to their Home Screen first.
 
+## AI link summaries (optional)
+
+When someone pastes a link to a restaurant or activity, LetsGo can have Claude
+read the page and fill in a family-friendly summary, address, phone, hours, price
+level and the best photo. It uses the cheapest current model (Claude Haiku 5.5):
+a new link costs well under a tenth of a cent, repeats are free for a week, and
+each trip is capped at 150 summaries a day. A Claude.ai subscription does not
+cover this; it needs an API key:
+
+1. Go to https://console.anthropic.com, create an account if needed, open
+   **Billing** and add a few dollars of credit.
+2. Open **API Keys**, create a key, and copy it (it starts with `sk-ant-`).
+3. In the Unraid terminal:
+
+   ```bash
+   echo 'ANTHROPIC_API_KEY=sk-ant-...' > /mnt/user/appdata/letsgo/letsgo.env
+   chmod 600 /mnt/user/appdata/letsgo/letsgo.env
+   ```
+
+4. Rerun the deploy line above. It prints "AI link summaries: on".
+
+Other settings for that file: `AI_MODEL` (default `claude-haiku-5-5`),
+`AI_DAILY_CAP` (default 150 per trip per day), `AI_ENRICH=0` to turn it off.
+
+Privacy: only the text and image links of the pasted page are sent to Anthropic.
+Nothing about your trip, family or photos leaves the box, and nothing is sent at
+all without a key.
+
 ## Build from source instead
 
 On any box with Docker:

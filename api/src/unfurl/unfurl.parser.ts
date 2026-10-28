@@ -24,7 +24,7 @@ function attrs(tag: string): Record<string, string> {
   return out;
 }
 
-function decodeEntities(s: string): string {
+export function decodeEntities(s: string): string {
   return s
     .replace(/&amp;/g, '&')
     .replace(/&quot;/g, '"')
@@ -38,7 +38,7 @@ function decodeEntities(s: string): string {
     );
 }
 
-function absolute(src: string, base: string): string | null {
+export function absolute(src: string, base: string): string | null {
   try {
     const u = new URL(src.trim(), base);
     return u.protocol === 'http:' || u.protocol === 'https:'

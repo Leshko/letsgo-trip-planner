@@ -5,20 +5,28 @@
       <input id="ilink" class="input grow" name="ilink" type="url" [(ngModel)]="form.link" maxlength="500" placeholder="https://…"
         inputmode="url" autocomplete="off" (paste)="onLinkPaste($event)" (change)="fetchPreview()" />
       <button class="btn btn--sm" type="button" (click)="fetchPreview(true)" [disabled]="previewBusy() || !form.link.trim()">
-        {{ previewBusy() ? 'Reading…' : isEdit() ? 'Refresh photos' : 'Preview' }}
+        {{ previewBusy() ? (aiEnabled() ? 'Reading the page…' : 'Reading…') : isEdit() ? 'Refresh photos' : 'Preview' }}
       </button>
     </div>
     @if (previewError()) { <span class="tiny" style="color:var(--danger)">{{ previewError() }}</span> }
   </div>
 
-  @if (photoChoices().length) {
+  @if (photoChoices().length || preview()?.ai) {
     <div class="preview">
       @if (preview(); as p) {
-        <div class="row" style="gap:6px">
+        <div class="row row--wrap" style="gap:6px">
           @if (p.icon) { <img [src]="p.icon" alt="" width="16" height="16" style="border-radius:3px" (error)="$any($event.target).style.display='none'" /> }
           <span class="tiny">{{ p.siteName }}</span>
+          @if (p.ai) { <span class="chip chip--sea" data-testid="ai-badge">✨ Summarized by AI</span> }
         </div>
+        @if (kindSuggestion(); as k) {
+          <div class="row tiny" data-testid="kind-suggestion">
+            <span>Looks like {{ k === 'food' ? 'a place to eat' : 'something to do' }}.</span>
+            <button type="button" class="btn btn--ghost btn--sm" (click)="suggestSwitch()">Switch to {{ k === 'food' ? 'To eat' : 'To do' }}</button>
+          </div>
+        }
       }
+      @if (photoChoices().length) {
       <div class="preview__images" role="radiogroup" aria-label="Pick a cover photo">
         @for (src of photoChoices(); track src) {
           <button type="button" class="preview__img" [class.is-selected]="form.imageUrl === src" (click)="pickImage(src)" role="radio" [attr.aria-checked]="form.imageUrl === src">
@@ -27,6 +35,7 @@
         }
       </div>
       <span class="tiny">Tap a photo to use it as the cover{{ form.imageUrl ? '' : ' (none selected)' }}</span>
+      }
     </div>
   }
 

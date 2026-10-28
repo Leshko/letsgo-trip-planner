@@ -34,6 +34,7 @@ export class IdeaDetailComponent {
   readonly missing = signal(false);
   readonly editing = signal(false);
   readonly planning = signal(false);
+  readonly showVoters = signal(false);
   readonly toast = signal('');
   commentDraft = '';
 

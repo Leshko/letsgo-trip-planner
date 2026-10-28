@@ -11,3 +11,4 @@ export * from './photo.entity';
 export * from './photo-comment.entity';
 export * from './notification.entity';
 export * from './push-subscription.entity';
+export * from './unfurl-cache.entity';

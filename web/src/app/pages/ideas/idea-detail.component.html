@@ -19,7 +19,10 @@
       </button>
       <div class="grow">
         <div style="font-weight:600">{{ i.votedByMe ? "You're in" : 'Count me in' }}</div>
-        <div class="row" style="gap:6px"><app-avatar-stack [members]="i.voters" [max]="8" /><span class="tiny">{{ inText() }}</span></div>
+        <button type="button" class="voters-btn row" style="gap:6px" (click)="i.voters.length && showVoters.set(true)" [attr.aria-label]="'See who is in: ' + inText()" data-testid="voters-btn">
+          <app-avatar-stack [members]="i.voters" [max]="8" /><span class="tiny">{{ inText() }}</span>
+          @if (i.voters.length) { <app-icon name="chevron" [size]="16" /> }
+        </button>
       </div>
     </section>
 
@@ -76,6 +79,20 @@
         <div class="modal" (click)="$event.stopPropagation()" role="dialog" aria-label="Edit">
           <h2 style="margin-bottom:12px">Edit {{ i.kind === 'food' ? 'place' : 'activity' }}</h2>
           <app-idea-form [kind]="i.kind" [idea]="i" (saved)="onEdited($event)" (cancelled)="editing.set(false)" />
+        </div>
+      </div>
+    }
+    @if (showVoters()) {
+      <div class="modal-backdrop" (click)="showVoters.set(false)">
+        <div class="modal stack-v" (click)="$event.stopPropagation()" role="dialog" aria-label="Who's in">
+          <h2>Who's in</h2>
+          <p class="muted">{{ i.voteCount }} {{ i.voteCount === 1 ? 'person' : 'people' }} for {{ i.title }}</p>
+          <ul class="list-plain stack-v" style="gap:8px" data-testid="voters-list">
+            @for (v of i.voters; track v.id) {
+              <li class="row"><app-avatar [member]="v" /> <span>{{ v.id === me()?.id ? 'You' : v.name }}</span></li>
+            }
+          </ul>
+          <button class="btn btn--ghost" type="button" (click)="showVoters.set(false)">Done</button>
         </div>
       </div>
     }

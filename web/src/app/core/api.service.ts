@@ -21,6 +21,7 @@ import {
   TransferCode,
   Trip,
   Unfurled,
+  AiStatusInfo,
 } from './models';
 import { IdeaInput } from './models';
 
@@ -115,6 +116,12 @@ export class ApiService {
   }
   createIdea(tripId: string, body: { kind: IdeaKind } & Partial<IdeaInput>) {
     return this.post<Idea>(`/trips/${tripId}/ideas`, body);
+  }
+  private aiStatusPromise: Promise<AiStatusInfo> | null = null;
+  /** Whether link summaries are on; fetched once per app load. */
+  aiStatus() {
+    this.aiStatusPromise ??= this.get<AiStatusInfo>('/ai/status');
+    return this.aiStatusPromise;
   }
   unfurl(tripId: string, url: string) {
     return this.get<Unfurled>(`/trips/${tripId}/unfurl`, { url });

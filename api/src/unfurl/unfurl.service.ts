@@ -2,6 +2,14 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { lookup } from 'dns/promises';
 import { isIP } from 'net';
 import { parseUnfurl, Unfurled } from './unfurl.parser';
+import { buildDigest, Digest } from './unfurl.digest';
+import { AiService } from '../ai/ai.service';
+import type { AiPreview, AiStatus } from '../ai/ai.schema';
+
+export type UnfurlResponse = Unfurled & {
+  ai: AiPreview | null;
+  aiStatus: AiStatus;
+};
 
 const MAX_BYTES = 1_500_000;
 const TIMEOUT_MS = 8_000;
@@ -11,20 +19,33 @@ const USER_AGENT =
 
 @Injectable()
 export class UnfurlService {
-  private readonly cache = new Map<string, { at: number; value: Unfurled }>();
+  private readonly cache = new Map<
+    string,
+    { at: number; value: Unfurled; digest: Digest }
+  >();
 
-  async unfurl(raw: string): Promise<Unfurled> {
+  constructor(private readonly ai: AiService) {}
+
+  async unfurl(raw: string, tripId = ''): Promise<UnfurlResponse> {
     const url = normalize(raw);
-    const hit = this.cache.get(url);
-    if (hit && Date.now() - hit.at < 10 * 60_000) return hit.value;
-
-    await assertPublicHost(url);
-    const html = await this.fetchHtml(url);
-    const value = parseUnfurl(html.body, html.finalUrl);
-    this.cache.set(url, { at: Date.now(), value });
-    if (this.cache.size > 500)
-      this.cache.delete(this.cache.keys().next().value as string);
-    return value;
+    let hit = this.cache.get(url);
+    if (!hit || Date.now() - hit.at >= 10 * 60_000) {
+      await assertPublicHost(url);
+      const html = await this.fetchHtml(url);
+      const value = parseUnfurl(html.body, html.finalUrl);
+      hit = { at: Date.now(), value, digest: buildDigest(html.body, value) };
+      this.cache.set(url, hit);
+      if (this.cache.size > 500)
+        this.cache.delete(this.cache.keys().next().value as string);
+    }
+    // The basic preview never waits on the AI's failure modes; enrich() always resolves.
+    const { ai, aiStatus } = await this.ai.enrich(
+      url,
+      hit.value,
+      hit.digest,
+      tripId,
+    );
+    return { ...hit.value, ai, aiStatus };
   }
 
   private async fetchHtml(

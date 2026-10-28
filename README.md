@@ -16,6 +16,8 @@ What the family can do:
   family (door code, parking, who sleeps where).
 - **Ideas** — To do and To eat lists. Paste a link and the title, description
   and photos are pulled from the page (like a share sheet); pick a cover photo.
+  With an Anthropic API key set, Claude reads the page too and fills in a
+  family-friendly summary, address, hours, price and "good to know" details.
   Anyone can suggest; everyone votes ("I'm in"); the list sorts by votes; each
   idea has its own comment thread, and anyone can edit an idea to add
   "good to know" details like hours, price or parking. Any idea can be dropped
@@ -100,6 +102,11 @@ web/   Angular 20 (standalone, signals). iOS-style look: system font, translucen
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | generated | Web Push keys. When unset they are generated once and saved to `vapid.json` next to the database. |
 | `VAPID_SUBJECT` | `mailto:letsgo@example.com` | Contact for push services; set your email. |
 | `PUSH_DISABLED` | unset | `1` skips sending pushes (tests, dev). |
+| `ANTHROPIC_API_KEY` | unset | Turns on AI link summaries (Claude). Without it the basic preview is used. |
+| `AI_MODEL` | `claude-haiku-5-5` | Model for link summaries. |
+| `AI_DAILY_CAP` | `150` | Max AI summaries per trip per day. |
+| `AI_ENRICH` | unset | `0` disables AI summaries even with a key. |
+| `AI_FAKE` | unset | `1` uses a deterministic fake AI client. Dev and tests only. |
 
 ### How access works
 

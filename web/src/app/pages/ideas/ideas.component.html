@@ -11,7 +11,7 @@
     <button class="btn btn--primary btn--block mt" (click)="adding.set(true)">＋ {{ c.cta }}</button>
   } @else {
     <div class="card mt">
-      <app-idea-form [kind]="kind()" [placeholder]="c.placeholder" (saved)="onAdded($event)" (cancelled)="adding.set(false)" />
+      <app-idea-form [kind]="kind()" [placeholder]="c.placeholder" [initial]="carry()" (switchKind)="onSwitchKind($event)" (saved)="carry.set(null); onAdded($event)" (cancelled)="carry.set(null); adding.set(false)" />
     </div>
   }
 
