@@ -25,7 +25,7 @@
   } @else if (mode() === 'join') {
     <form class="card mt stack-v" (ngSubmit)="join()">
       <h2>Join your family's trip</h2>
-      @if (fromLink()) { <p class="muted">You've been invited. Just tell us who you are.</p> }
+      @if (fromLink()) { <p class="muted">You've been invited. Just tell us who you are{{ next() ? " and we'll take you straight there" : '' }}.</p> }
       <div class="field">
         <label for="code">Invite code</label>
         <input id="code" class="input input--code" name="code" [(ngModel)]="joinCode" required minlength="4"

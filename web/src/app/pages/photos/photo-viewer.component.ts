@@ -23,6 +23,7 @@ export class PhotoViewerComponent implements OnInit, OnDestroy {
   readonly closed = output<void>();
   readonly deleted = output<Photo>();
   readonly updated = output<Photo>();
+  readonly share = output<Photo>();
 
   readonly me = this.session.member;
   readonly current = computed(() => {

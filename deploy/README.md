@@ -32,6 +32,16 @@ proxy_read_timeout 300s;
 
 Cloudflare Tunnel's 100 MB request limit is fine as is.
 
+## Push notifications
+
+Push keys are generated on first start and saved to `/data/vapid.json`, so they
+survive updates as long as the appdata folder does. If that file is ever lost,
+everyone just turns notifications on again from their avatar menu. Push needs the
+app served over HTTPS for anything but `localhost`, so for phones outside the
+house put LetsGo behind your reverse proxy with a certificate; on the LAN,
+Chrome treats plain `http://192.168.x.x` as insecure and won't offer push.
+iPhone users add the app to their Home Screen first.
+
 ## Build from source instead
 
 On any box with Docker:

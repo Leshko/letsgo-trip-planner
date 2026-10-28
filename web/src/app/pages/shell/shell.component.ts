@@ -11,14 +11,18 @@ import { EmojiPickerComponent } from '../../shared/emoji-picker.component';
 import { messageOf } from '../landing/landing.component';
 import { TourComponent } from '../../shared/tour.component';
 import { IconComponent, IconName } from '../../shared/icon.component';
+import { AgoPipe } from '../../shared/pipes';
 import { TransferCode } from '../../core/models';
 import { squareThumbnail } from '../../core/image';
 import { InstallService } from '../../core/install.service';
-import { SwUpdate } from '@angular/service-worker';
+import { SwPush, SwUpdate } from '@angular/service-worker';
+import { ActivatedRoute } from '@angular/router';
+import { PushService } from '../../core/push.service';
+import { Notification, NotifyPrefs } from '../../core/models';
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, FormsModule, AvatarComponent, AvatarStackComponent, EmojiPickerComponent, TourComponent, IconComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, FormsModule, AvatarComponent, AvatarStackComponent, EmojiPickerComponent, TourComponent, IconComponent, AgoPipe],
   templateUrl: './shell.component.html',
 })
 export class ShellComponent {
@@ -29,6 +33,23 @@ export class ShellComponent {
   private readonly updates = inject(SwUpdate);
   readonly updateReady = signal(false);
   readonly showIosHelp = signal(false);
+  readonly push = inject(PushService);
+  private readonly swPush = inject(SwPush);
+  private readonly route = inject(ActivatedRoute);
+  readonly notifs = signal<Notification[]>([]);
+  readonly unread = signal(0);
+  readonly showNotifs = signal(false);
+  readonly notifsLoaded = signal(false);
+  readonly pushError = signal('');
+  readonly prefLabels: { key: keyof NotifyPrefs; label: string }[] = [
+    { key: 'ideas', label: 'New ideas' },
+    { key: 'votes', label: 'Votes on my ideas' },
+    { key: 'comments', label: 'Comments' },
+    { key: 'wall', label: 'Wall posts' },
+    { key: 'plan', label: 'Plan and stay changes' },
+    { key: 'photos', label: 'New photos' },
+    { key: 'members', label: 'Someone joins' },
+  ];
 
   readonly trip = this.session.trip;
   readonly me = this.session.member;
@@ -67,6 +88,71 @@ export class ShellComponent {
         if (e.type === 'VERSION_READY') this.updateReady.set(true);
       });
     }
+    usePolling(() => this.loadNotifs(), 20_000);
+    void this.push.sync();
+    if (this.swPush.isEnabled) {
+      this.swPush.messages.subscribe((m) => {
+        const body = (m as { notification?: { body?: string } }).notification?.body;
+        if (body) this.flash(body);
+        void this.loadNotifs();
+      });
+      this.swPush.notificationClicks.subscribe(() => void this.loadNotifs());
+    }
+    // Arrived from a push: mark that one read and drop the marker from the URL.
+    const n = this.route.snapshot.queryParamMap.get('n');
+    if (n) {
+      void this.api.markNotificationsRead(this.session.tripId(), [n]).then(() => this.loadNotifs());
+      void this.router.navigate([], { queryParams: { n: null }, queryParamsHandling: 'merge', replaceUrl: true });
+    }
+  }
+
+  async loadNotifs() {
+    const id = this.session.tripId();
+    if (!id) return;
+    const page = await this.api.notifications(id, 30);
+    this.notifs.set(page.items);
+    this.unread.set(page.unreadCount);
+    this.notifsLoaded.set(true);
+  }
+
+  async openNotif(n: Notification) {
+    this.showNotifs.set(false);
+    if (!n.read) {
+      this.notifs.update((all) => all.map((x) => (x.id === n.id ? { ...x, read: true } : x)));
+      this.unread.update((u) => Math.max(0, u - 1));
+      void this.api.markNotificationsRead(this.session.tripId(), [n.id]);
+    }
+    await this.router.navigateByUrl(n.url);
+  }
+
+  async markAllRead() {
+    this.notifs.update((all) => all.map((x) => ({ ...x, read: true })));
+    this.unread.set(0);
+    await this.api.markNotificationsRead(this.session.tripId());
+  }
+
+  async togglePush() {
+    this.pushError.set('');
+    try {
+      if (this.push.subscribed()) {
+        await this.push.disable();
+        this.flash('Notifications off on this device');
+      } else {
+        await this.push.enable();
+        this.flash('Notifications on');
+      }
+    } catch (e: unknown) {
+      this.pushError.set(
+        this.push.permission() === 'denied'
+          ? 'Notifications are blocked for this site in your browser settings.'
+          : messageOf(e, "Couldn't turn on notifications"),
+      );
+    }
+  }
+
+  async setPref(key: keyof NotifyPrefs, value: boolean) {
+    const res = await this.api.updateNotifyPrefs({ [key]: value });
+    this.session.setNotifyPrefs(res.notifyPrefs);
   }
 
   async reloadForUpdate() {
@@ -202,6 +288,7 @@ export class ShellComponent {
 
   async leave() {
     if (!confirm('Leave this trip on this device? You can rejoin any time with the invite code.')) return;
+    await this.push.disable().catch(() => undefined);
     this.session.signOut();
     await this.router.navigate(['/']);
   }

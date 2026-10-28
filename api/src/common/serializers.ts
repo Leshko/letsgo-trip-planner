@@ -4,11 +4,13 @@ import {
   Idea,
   ItineraryEntry,
   Member,
+  Notification,
   Photo,
   PhotoComment,
   Post,
   Trip,
 } from '../entities';
+import { refUrl } from './deep-links';
 
 export interface MemberView {
   id: string;
@@ -242,4 +244,28 @@ export const photoCommentView = (c: PhotoComment): PhotoCommentView => ({
   body: c.body,
   member: memberView(c.member),
   createdAt: new Date(c.createdAt).toISOString(),
+});
+
+export interface NotificationView {
+  id: string;
+  type: Notification['type'];
+  message: string;
+  actor: MemberView;
+  refKind: Notification['refKind'];
+  refId: string | null;
+  url: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export const notificationView = (n: Notification): NotificationView => ({
+  id: n.id,
+  type: n.type,
+  message: n.message,
+  actor: memberView(n.actor),
+  refKind: n.refKind,
+  refId: n.refId,
+  url: refUrl(n.refKind, n.refId),
+  read: n.readAt !== null,
+  createdAt: new Date(n.createdAt).toISOString(),
 });

@@ -6,6 +6,8 @@ import { configureApp } from '../src/app.setup';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { photosDir } from '../src/common/paths';
+import { PUSH_SENDER } from '../src/notifications/push.service';
+import { NotificationsService } from '../src/notifications/notifications.service';
 
 describe('LetsGo API (e2e)', () => {
   let app: INestApplication;
@@ -954,5 +956,517 @@ describe('shared photos (e2e)', () => {
     await http
       .get(`/api/trips/${tripId}/photos.zip?token=${ownerToken}`)
       .expect(404);
+  });
+});
+
+describe('notifications and push (e2e)', () => {
+  let app: INestApplication;
+  let http: ReturnType<typeof request>;
+  let notif: NotificationsService;
+  let tripId: string;
+  let inviteCode: string;
+  let mom: { Authorization: string };
+  let dad: { Authorization: string };
+  let kid: { Authorization: string };
+  let stranger: { Authorization: string };
+  const fake = {
+    sent: [] as {
+      endpoint: string;
+      payload: {
+        notification: {
+          title: string;
+          body: string;
+          tag: string;
+          data: { url: string; onActionClick: unknown };
+        };
+      };
+    }[],
+    send: jest.fn(async (sub: { endpoint: string }, payload: string) => {
+      await Promise.resolve();
+      if (sub.endpoint.includes('/gone'))
+        throw Object.assign(new Error('gone'), { statusCode: 410 });
+      fake.sent.push({ endpoint: sub.endpoint, payload: JSON.parse(payload) });
+    }),
+  };
+  const unread = async (who: { Authorization: string }) => {
+    const r = await http
+      .get(`/api/trips/${tripId}/notifications`)
+      .set(who)
+      .expect(200);
+    return r.body as {
+      items: {
+        type: string;
+        message: string;
+        actor: { name: string };
+        url: string;
+        read: boolean;
+        id: string;
+      }[];
+      unreadCount: number;
+    };
+  };
+  const lines = (page: {
+    items: {
+      type: string;
+      message: string;
+      actor: { name: string };
+      read: boolean;
+    }[];
+  }) =>
+    page.items
+      .filter((n) => !n.read)
+      .map((n) => `${n.type}|${n.actor.name} ${n.message}`);
+
+  beforeAll(async () => {
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+      .overrideProvider(PUSH_SENDER)
+      .useValue(fake)
+      .compile();
+    app = moduleRef.createNestApplication();
+    configureApp(app);
+    await app.init();
+    http = request(app.getHttpServer());
+    notif = app.get(NotificationsService);
+    const res = await http
+      .post('/api/trips')
+      .send({
+        name: 'Lake Week',
+        startDate: '2027-07-10',
+        endDate: '2027-07-12',
+        memberName: 'Mom',
+      })
+      .expect(201);
+    mom = { Authorization: `Bearer ${res.body.token}` };
+    tripId = res.body.trip.id;
+    inviteCode = res.body.trip.inviteCode;
+    const d = await http
+      .post('/api/trips/join')
+      .send({ code: inviteCode, name: 'Dad' })
+      .expect(201);
+    dad = { Authorization: `Bearer ${d.body.token}` };
+    const k = await http
+      .post('/api/trips/join')
+      .send({ code: inviteCode, name: 'Kid' })
+      .expect(201);
+    kid = { Authorization: `Bearer ${k.body.token}` };
+    const s = await http
+      .post('/api/trips')
+      .send({
+        name: 'Other',
+        startDate: '2027-01-01',
+        endDate: '2027-01-02',
+        memberName: 'S',
+      })
+      .expect(201);
+    stranger = { Authorization: `Bearer ${s.body.token}` };
+  });
+
+  afterAll(async () => app.close());
+
+  it('publishes the VAPID public key without auth', async () => {
+    const r = await http.get('/api/push/public-key').expect(200);
+    expect(r.body.publicKey).toMatch(/^[A-Za-z0-9_-]{80,}$/);
+  });
+
+  it('subscribes and unsubscribes a device idempotently', async () => {
+    const sub = {
+      endpoint: 'https://push.example/ok',
+      keys: { p256dh: 'p', auth: 'a' },
+    };
+    await http.post('/api/trips/me/push').set(dad).send(sub).expect(201);
+    await http
+      .post('/api/trips/me/push')
+      .set(dad)
+      .send({ ...sub, userAgent: 'TestPhone' })
+      .expect(201);
+    await http
+      .post('/api/trips/me/push')
+      .set(dad)
+      .send({ endpoint: 'https://push.example/x' })
+      .expect(400);
+    await http.post('/api/trips/me/push').send(sub).expect(401);
+    await http
+      .delete('/api/trips/me/push')
+      .set(dad)
+      .send({ endpoint: sub.endpoint })
+      .expect(204);
+    await http
+      .delete('/api/trips/me/push')
+      .set(dad)
+      .send({ endpoint: sub.endpoint })
+      .expect(204);
+  });
+
+  it('tells members joined so far about newcomers', async () => {
+    // Dad and Kid joined after Mom; Mom heard about both, Dad about Kid.
+    expect(lines(await unread(mom))).toEqual([
+      'joined|Kid joined the trip',
+      'joined|Dad joined the trip',
+    ]);
+    expect(lines(await unread(dad))).toEqual(['joined|Kid joined the trip']);
+    expect(lines(await unread(kid))).toEqual([]);
+    await http
+      .post(`/api/trips/${tripId}/notifications/read`)
+      .set(mom)
+      .send({})
+      .expect(201);
+    await http
+      .post(`/api/trips/${tripId}/notifications/read`)
+      .set(dad)
+      .send({})
+      .expect(201);
+  });
+
+  let kayakId: string;
+
+  it('fans out per the rules and never notifies the actor', async () => {
+    const k = await http
+      .post(`/api/trips/${tripId}/ideas`)
+      .set(mom)
+      .send({ kind: 'activity', title: 'Kayaking' })
+      .expect(201);
+    kayakId = k.body.id;
+    expect((await unread(mom)).unreadCount).toBe(0);
+    const dadPage = await unread(dad);
+    expect(lines(dadPage)).toEqual(['idea|Mom suggested Kayaking']);
+    expect(dadPage.items[0].url).toBe(`/trip/idea/${kayakId}`);
+    expect(lines(await unread(kid))).toEqual(['idea|Mom suggested Kayaking']);
+
+    // votes go to the suggester only
+    await http
+      .post(`/api/trips/${tripId}/ideas/${kayakId}/vote`)
+      .set(dad)
+      .expect(201);
+    await http
+      .post(`/api/trips/${tripId}/ideas/${kayakId}/vote`)
+      .set(kid)
+      .expect(201);
+    expect(lines(await unread(mom))).toEqual([
+      'vote|Kid is in for Kayaking',
+      'vote|Dad is in for Kayaking',
+    ]);
+    expect((await unread(dad)).unreadCount).toBe(1);
+
+    // comments go to the suggester and earlier commenters
+    await http
+      .post(`/api/trips/${tripId}/ideas/${kayakId}/comments`)
+      .set(kid)
+      .send({ body: 'yes!' })
+      .expect(201);
+    await http
+      .post(`/api/trips/${tripId}/ideas/${kayakId}/comments`)
+      .set(dad)
+      .send({ body: 'me too' })
+      .expect(201);
+    expect(lines(await unread(mom))[0]).toBe(
+      'comment|Dad commented on Kayaking',
+    );
+    expect(lines(await unread(kid))[0]).toBe(
+      'comment|Dad commented on Kayaking',
+    );
+    expect(
+      lines(await unread(dad)).filter((l) => l.startsWith('comment|')),
+    ).toEqual([]);
+
+    // wall post, itinerary, lodging: everyone else
+    await http
+      .post(`/api/trips/${tripId}/posts`)
+      .set(kid)
+      .send({ body: 'Who has the cooler?' })
+      .expect(201);
+    expect(lines(await unread(mom))[0]).toBe(
+      'post|Kid posted on the wall: "Who has the cooler?"',
+    );
+    expect(lines(await unread(dad))[0]).toBe(
+      'post|Kid posted on the wall: "Who has the cooler?"',
+    );
+    await http
+      .post(`/api/trips/${tripId}/itinerary`)
+      .set(dad)
+      .send({ date: '2027-07-11', ideaId: kayakId })
+      .expect(201);
+    expect(lines(await unread(kid))[0]).toBe(
+      'itinerary|Dad put Kayaking on the plan for Sun, Jul 11',
+    );
+    await http
+      .put(`/api/trips/${tripId}/lodging`)
+      .set(mom)
+      .send({ name: 'Pine Cabin' })
+      .expect(200);
+    expect(lines(await unread(dad))[0]).toBe(
+      "lodging|Mom updated where we're staying: Pine Cabin",
+    );
+
+    // edits and trip changes are feed-only
+    const before = (await unread(dad)).unreadCount;
+    await http
+      .patch(`/api/trips/${tripId}/ideas/${kayakId}`)
+      .set(mom)
+      .send({ title: 'Kayaking at dawn' })
+      .expect(200);
+    await http
+      .patch(`/api/trips/${tripId}`)
+      .set(mom)
+      .send({ destination: 'Tahoe' })
+      .expect(200);
+    expect((await unread(dad)).unreadCount).toBe(before);
+  });
+
+  it('coalesces a photo batch into one line', async () => {
+    const png = Buffer.concat([
+      Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+        'base64',
+      ),
+      Buffer.alloc(300),
+    ]);
+    for (const name of ['a.png', 'b.png', 'c.png']) {
+      await http
+        .post(`/api/trips/${tripId}/photos`)
+        .set(dad)
+        .field('batchId', 'batch-notif-1')
+        .attach('original', png, { filename: name, contentType: 'image/png' })
+        .expect(201);
+    }
+    const momPhotos = (await unread(mom)).items.filter(
+      (n) => n.type === 'photo',
+    );
+    expect(momPhotos.map((n) => n.message)).toEqual(['added 3 photos']);
+  });
+
+  it('marks read one at a time or all at once, and keeps strangers out', async () => {
+    const page = await unread(kid);
+    expect(page.unreadCount).toBeGreaterThan(1);
+    const one = page.items.find((n) => !n.read)!;
+    const r = await http
+      .post(`/api/trips/${tripId}/notifications/read`)
+      .set(kid)
+      .send({ ids: [one.id] })
+      .expect(201);
+    expect(r.body.unreadCount).toBe(page.unreadCount - 1);
+    const all = await http
+      .post(`/api/trips/${tripId}/notifications/read`)
+      .set(kid)
+      .send({})
+      .expect(201);
+    expect(all.body.unreadCount).toBe(0);
+    expect((await unread(kid)).items.every((n) => n.read)).toBe(true);
+    await http
+      .get(`/api/trips/${tripId}/notifications`)
+      .set(stranger)
+      .expect(403);
+  });
+
+  it('honours per-member preferences', async () => {
+    const taco = await http
+      .post(`/api/trips/${tripId}/ideas`)
+      .set(dad)
+      .send({ kind: 'food', title: 'Taco Truck' })
+      .expect(201);
+    const prefs = await http
+      .patch('/api/trips/me/notify-prefs')
+      .set(dad)
+      .send({ votes: false, bogus: true })
+      .expect(200);
+    expect(prefs.body.notifyPrefs).toEqual({
+      ideas: true,
+      votes: false,
+      comments: true,
+      wall: true,
+      plan: true,
+      photos: true,
+      members: true,
+    });
+    const me = await http.get('/api/trips/me').set(dad).expect(200);
+    expect(me.body.notifyPrefs.votes).toBe(false);
+    const before = (await unread(dad)).unreadCount;
+    await http
+      .post(`/api/trips/${tripId}/ideas/${taco.body.id}/vote`)
+      .set(mom)
+      .expect(201);
+    expect((await unread(dad)).unreadCount).toBe(before);
+    await http
+      .patch('/api/trips/me/notify-prefs')
+      .set(dad)
+      .send({ votes: true })
+      .expect(200);
+  });
+
+  it('sends pushes with the ngsw payload shape and drops dead endpoints', async () => {
+    await http
+      .post('/api/trips/me/push')
+      .set(dad)
+      .send({
+        endpoint: 'https://push.example/ok',
+        keys: { p256dh: 'p', auth: 'a' },
+      })
+      .expect(201);
+    await http
+      .post('/api/trips/me/push')
+      .set(dad)
+      .send({
+        endpoint: 'https://push.example/gone',
+        keys: { p256dh: 'p', auth: 'a' },
+      })
+      .expect(201);
+    fake.sent.length = 0;
+    fake.send.mockClear();
+    const zip = await http
+      .post(`/api/trips/${tripId}/ideas`)
+      .set(mom)
+      .send({ kind: 'activity', title: 'Zip-lining' })
+      .expect(201);
+    await notif.whenIdle();
+    expect(fake.send).toHaveBeenCalledTimes(2);
+    expect(fake.sent).toHaveLength(1);
+    const { payload } = fake.sent[0];
+    expect(payload.notification.title).toBe('Lake Week');
+    expect(payload.notification.body).toBe('Mom suggested Zip-lining');
+    expect(payload.notification.tag).toBe(`idea:${zip.body.id}`);
+    const dadNotif = (await unread(dad)).items.find(
+      (n) => n.message === 'suggested Zip-lining',
+    )!;
+    expect(payload.notification.data.url).toBe(
+      `/trip/idea/${zip.body.id}?n=${dadNotif.id}`,
+    );
+    expect(payload.notification.data.onActionClick).toEqual({
+      default: {
+        operation: 'navigateLastFocusedOrOpen',
+        url: `/trip/idea/${zip.body.id}?n=${dadNotif.id}`,
+      },
+    });
+
+    // the 410 endpoint is gone now: next event only reaches /ok
+    fake.send.mockClear();
+    await http
+      .post(`/api/trips/${tripId}/ideas`)
+      .set(kid)
+      .send({ kind: 'activity', title: 'Hike' })
+      .expect(201);
+    await notif.whenIdle();
+    expect(fake.send).toHaveBeenCalledTimes(1);
+    expect(fake.send.mock.calls[0][0].endpoint).toBe('https://push.example/ok');
+  });
+
+  it('coalesces vote toggling into a single unread line', async () => {
+    const idea = await http
+      .post(`/api/trips/${tripId}/ideas`)
+      .set(mom)
+      .send({ kind: 'activity', title: 'Stargazing' })
+      .expect(201);
+    await http
+      .post(`/api/trips/${tripId}/notifications/read`)
+      .set(mom)
+      .send({})
+      .expect(201);
+    for (let i = 0; i < 3; i++)
+      await http
+        .post(`/api/trips/${tripId}/ideas/${idea.body.id}/vote`)
+        .set(dad)
+        .expect(201);
+    const page = await unread(mom);
+    expect(
+      page.items.filter(
+        (n) =>
+          n.type === 'vote' &&
+          n.message === 'is in for Stargazing' &&
+          n.actor.name === 'Dad',
+      ),
+    ).toHaveLength(1);
+  });
+
+  it('a photo batch produces one debounced push', async () => {
+    const png = Buffer.concat([
+      Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+        'base64',
+      ),
+      Buffer.alloc(300),
+    ]);
+    fake.sent.length = 0;
+    for (const name of ['x.png', 'y.png']) {
+      await http
+        .post(`/api/trips/${tripId}/photos`)
+        .set(mom)
+        .field('batchId', 'batch-notif-2')
+        .attach('original', png, { filename: name, contentType: 'image/png' })
+        .expect(201);
+    }
+    expect(fake.sent).toHaveLength(0);
+    await notif.whenIdle();
+    expect(fake.sent.map((s) => s.payload.notification.body)).toEqual([
+      'Mom added 2 photos',
+    ]);
+    expect(fake.sent[0].payload.notification.data.url).toMatch(
+      /^\/trip\/photos\?photo=batch-notif-2&n=/,
+    );
+  });
+});
+
+describe('idea detail (e2e)', () => {
+  let app: INestApplication;
+  let http: ReturnType<typeof request>;
+  let auth: { Authorization: string };
+  let tripId: string;
+
+  beforeAll(async () => {
+    const moduleRef = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+    app = moduleRef.createNestApplication();
+    configureApp(app);
+    await app.init();
+    http = request(app.getHttpServer());
+    const res = await http
+      .post('/api/trips')
+      .send({
+        name: 'D',
+        startDate: '2027-01-01',
+        endDate: '2027-01-02',
+        memberName: 'Me',
+      })
+      .expect(201);
+    auth = { Authorization: `Bearer ${res.body.token}` };
+    tripId = res.body.trip.id;
+  });
+
+  afterAll(async () => app.close());
+
+  it('returns a single idea with votes and comment count', async () => {
+    const created = await http
+      .post(`/api/trips/${tripId}/ideas`)
+      .set(auth)
+      .send({ kind: 'food', title: 'Pizza', cost: '$' })
+      .expect(201);
+    await http
+      .post(`/api/trips/${tripId}/ideas/${created.body.id}/comments`)
+      .set(auth)
+      .send({ body: 'extra cheese' })
+      .expect(201);
+    const one = await http
+      .get(`/api/trips/${tripId}/ideas/${created.body.id}`)
+      .set(auth)
+      .expect(200);
+    expect(one.body.title).toBe('Pizza');
+    expect(one.body.votedByMe).toBe(true);
+    expect(one.body.voters).toHaveLength(1);
+    expect(one.body.commentCount).toBe(1);
+    await http
+      .get(`/api/trips/${tripId}/ideas/00000000-0000-4000-8000-000000000000`)
+      .set(auth)
+      .expect(404);
+    const other = await http
+      .post('/api/trips')
+      .send({
+        name: 'O',
+        startDate: '2027-01-01',
+        endDate: '2027-01-02',
+        memberName: 'X',
+      })
+      .expect(201);
+    await http
+      .get(`/api/trips/${tripId}/ideas/${created.body.id}`)
+      .set({ Authorization: `Bearer ${other.body.token}` })
+      .expect(403);
   });
 });

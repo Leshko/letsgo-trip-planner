@@ -33,6 +33,13 @@ What the family can do:
 - **Photos** — the family album. Anyone adds photos from their phone (originals
   are kept; thumbnails and previews are made on the phone before upload), everyone
   can view, comment, download one, or grab them all as a zip.
+- **Notifications** — a bell with an unread list, and push notifications to the
+  phone (Android/desktop Chrome right away; iPhone once the app is on the Home
+  Screen). Each person chooses what to get: new ideas, votes on their ideas,
+  comments, wall posts, plan changes, photos, new members.
+- **Tap any idea** for its own page: cover, details, map, who's in, comments,
+  add to plan, edit, and a Share button that copies a link. Links carry the
+  invite code, so a relative who isn't signed in joins and lands on the idea.
 - **Install it** — LetsGo is a PWA: on Android/desktop Chrome tap Install; on
   iPhone use Share → Add to Home Screen. Updates arrive with a tap.
 
@@ -90,6 +97,9 @@ web/   Angular 20 (standalone, signals). iOS-style look: system font, translucen
 | `PORT`    | `3001`                  | API (and web) port                |
 | `DB_PATH` | `api/data/letsgo.sqlite` | SQLite file, or `:memory:`        |
 | `UNFURL_ALLOW_PRIVATE` | unset | `1` lets link previews fetch private/local hosts. Dev only. |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | generated | Web Push keys. When unset they are generated once and saved to `vapid.json` next to the database. |
+| `VAPID_SUBJECT` | `mailto:letsgo@example.com` | Contact for push services; set your email. |
+| `PUSH_DISABLED` | unset | `1` skips sending pushes (tests, dev). |
 
 ### How access works
 

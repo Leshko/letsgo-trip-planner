@@ -8,11 +8,17 @@
         <div class="topbar__title">{{ t.name }}</div>
         <div class="topbar__sub">{{ t.destination || 'Somewhere great' }} · {{ dates() }}</div>
       </div>
-      @if (me(); as m) {
-        <button class="btn btn--ghost btn--icon topbar__right" (click)="openProfile()" aria-label="Your profile">
-          <app-avatar [member]="m" />
+      <div class="topbar__right row" style="gap:2px">
+        <button class="btn btn--ghost btn--icon bell" (click)="showNotifs.set(true)" [attr.aria-label]="'Notifications, ' + unread() + ' unread'">
+          <app-icon name="bell" [size]="24" />
+          @if (unread()) { <span class="bell__badge">{{ unread() > 99 ? '99+' : unread() }}</span> }
         </button>
-      }
+        @if (me(); as m) {
+          <button class="btn btn--ghost btn--icon" (click)="openProfile()" aria-label="Your profile">
+            <app-avatar [member]="m" />
+          </button>
+        }
+      </div>
     </div>
   </header>
 
@@ -55,6 +61,30 @@
     </div>
   }
 
+  @if (showNotifs()) {
+    <div class="modal-backdrop" (click)="showNotifs.set(false)">
+      <div class="modal stack-v" (click)="$event.stopPropagation()" role="dialog" aria-label="Notifications">
+        <div class="row row--between">
+          <h2>Notifications</h2>
+          @if (unread()) { <button class="btn btn--ghost btn--sm" (click)="markAllRead()">Mark all read</button> }
+        </div>
+        @if (notifsLoaded() && !notifs().length) {
+          <p class="muted">Nothing yet. You'll hear about new ideas, votes and comments here.</p>
+        }
+        <div class="notif-list">
+          @for (n of notifs(); track n.id) {
+            <button class="notif" [class.notif--unread]="!n.read" (click)="openNotif(n)">
+              <app-avatar [member]="n.actor" size="sm" />
+              <span class="grow"><strong>{{ n.actor.id === me()?.id ? 'You' : n.actor.name }}</strong> {{ n.message }}<span class="tiny notif__time">{{ n.createdAt | ago }}</span></span>
+              @if (!n.read) { <span class="notif__dot" aria-hidden="true"></span> }
+            </button>
+          }
+        </div>
+        <button class="btn btn--ghost btn--sm" type="button" (click)="showNotifs.set(false); openProfile()">Notification settings</button>
+      </div>
+    </div>
+  }
+
   @if (showProfile()) {
     <div class="modal-backdrop" (click)="showProfile.set(false)">
       <form class="modal stack-v" (click)="$event.stopPropagation()" (ngSubmit)="saveProfile()" role="dialog" aria-label="Your profile">
@@ -84,6 +114,32 @@
         <div class="row">
           <button class="btn btn--primary grow" type="submit" [disabled]="!profileName">Save</button>
           <button class="btn btn--ghost" type="button" (click)="showProfile.set(false)">Cancel</button>
+        </div>
+        <hr style="border:0;border-top:1px solid var(--border);margin:4px 0" />
+        <div class="stack-v" style="gap:8px">
+          <div class="label">Notifications</div>
+          @if (!push.supported) {
+            <p class="tiny">Push isn't available in this browser. The bell still shows what's new.</p>
+          } @else if (push.iosNeedsInstall) {
+            <p class="tiny">On iPhone, add LetsGo to your Home Screen first, then turn on notifications from there.</p>
+            <button class="btn btn--tinted btn--sm" type="button" style="align-self:flex-start" (click)="showProfile.set(false); showIosHelp.set(true)">Show me how</button>
+          } @else if (push.permission() === 'denied') {
+            <p class="tiny" style="color:var(--red)">Notifications are blocked for this site in your browser settings.</p>
+          } @else {
+            <label class="switch-row">
+              <span>Push notifications on this device</span>
+              <input type="checkbox" class="switch" [checked]="push.subscribed()" [disabled]="push.busy()" (change)="togglePush()" data-testid="push-toggle" />
+            </label>
+            @if (pushError()) { <p class="tiny" style="color:var(--red)">{{ pushError() }}</p> }
+          }
+          <div class="check-list">
+            @for (p of prefLabels; track p.key) {
+              <label class="check-row">
+                <input type="checkbox" [checked]="session.notifyPrefs()[p.key]" (change)="setPref(p.key, $any($event.target).checked)" />
+                <span>{{ p.label }}</span>
+              </label>
+            }
+          </div>
         </div>
         <hr style="border:0;border-top:1px solid var(--border);margin:4px 0" />
         <div>

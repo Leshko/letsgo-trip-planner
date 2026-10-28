@@ -47,6 +47,13 @@ export class SocialService {
         reactions: {},
       }),
     );
+    const snippet = body.trim().replace(/\s+/g, ' ');
+    await this.activity.record(
+      me,
+      'post',
+      `posted on the wall: "${snippet.length > 60 ? snippet.slice(0, 60) + '…' : snippet}"`,
+      { kind: 'post', id: saved.id },
+    );
     return postView(await this.loadPost(tripId, saved.id), me.id);
   }
 
@@ -112,10 +119,20 @@ export class SocialService {
         body: body.trim(),
       }),
     );
-    await this.activity.record(me, 'comment', `commented on ${idea.title}`, {
-      kind: 'idea',
-      id: idea.id,
+    const others = await this.comments.find({
+      where: { ideaId },
+      select: { memberId: true },
     });
+    await this.activity.record(
+      me,
+      'comment',
+      `commented on ${idea.title}`,
+      {
+        kind: 'idea',
+        id: idea.id,
+      },
+      [idea.suggestedById, ...others.map((c) => c.memberId)],
+    );
     const row = await this.comments.findOneOrFail({ where: { id: saved.id } });
     return commentView(row);
   }

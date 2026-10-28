@@ -3,11 +3,16 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Activity, ActivityType, Member } from '../entities';
 import { activityView, ActivityView } from '../common/serializers';
+import {
+  Audience,
+  NotificationsService,
+} from '../notifications/notifications.service';
 
 @Injectable()
 export class ActivityService {
   constructor(
     @InjectRepository(Activity) private readonly activity: Repository<Activity>,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async record(
@@ -15,6 +20,7 @@ export class ActivityService {
     type: ActivityType,
     message: string,
     ref?: { kind: Activity['refKind']; id: string },
+    audience: Audience = 'all',
   ): Promise<void> {
     await this.activity.save(
       this.activity.create({
@@ -26,6 +32,15 @@ export class ActivityService {
         refId: ref?.id ?? null,
       }),
     );
+    await this.notifications.notify({
+      tripId: member.tripId,
+      actor: member,
+      type,
+      message,
+      refKind: ref?.kind ?? null,
+      refId: ref?.id ?? null,
+      audience,
+    });
   }
 
   /** One feed line per upload batch, updated as more photos in that batch arrive. */
@@ -47,6 +62,15 @@ export class ActivityService {
     if (existing) {
       existing.message = message;
       await this.activity.save(existing);
+      await this.notifications.notify({
+        tripId: member.tripId,
+        actor: member,
+        type: 'photo',
+        message,
+        refKind: 'photo',
+        refId: batchId,
+        audience: 'all',
+      });
       return;
     }
     await this.record(member, 'photo', message, { kind: 'photo', id: batchId });

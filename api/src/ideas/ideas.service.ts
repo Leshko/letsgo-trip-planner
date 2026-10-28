@@ -49,6 +49,14 @@ export class IdeasService {
       );
   }
 
+  async get(tripId: string, me: Member, ideaId: string): Promise<IdeaView> {
+    return ideaView(
+      await this.load(tripId, ideaId),
+      me.id,
+      await this.commentCount(ideaId),
+    );
+  }
+
   private async load(tripId: string, ideaId: string): Promise<Idea> {
     const idea = await this.ideas.findOne({ where: { id: ideaId, tripId } });
     if (!idea) throw new NotFoundException('Idea not found');
@@ -105,10 +113,16 @@ export class IdeasService {
     if (dto.siteName !== undefined) idea.siteName = dto.siteName.trim();
     if (dto.details !== undefined) idea.details = cleanDetails(dto.details);
     await this.ideas.save(idea);
-    await this.activity.record(me, 'idea', `updated ${idea.title}`, {
-      kind: 'idea',
-      id: idea.id,
-    });
+    await this.activity.record(
+      me,
+      'idea',
+      `updated ${idea.title}`,
+      {
+        kind: 'idea',
+        id: idea.id,
+      },
+      'none',
+    );
     return ideaView(
       await this.load(tripId, ideaId),
       me.id,
@@ -139,10 +153,16 @@ export class IdeasService {
     if (existing) await this.votes.remove(existing);
     else {
       await this.votes.save(this.votes.create({ ideaId, memberId: me.id }));
-      await this.activity.record(me, 'vote', `is in for ${idea.title}`, {
-        kind: 'idea',
-        id: idea.id,
-      });
+      await this.activity.record(
+        me,
+        'vote',
+        `is in for ${idea.title}`,
+        {
+          kind: 'idea',
+          id: idea.id,
+        },
+        [idea.suggestedById],
+      );
     }
     return ideaView(
       await this.load(tripId, ideaId),

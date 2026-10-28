@@ -1,6 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { ApiService } from './api.service';
-import { Member, Session, Trip } from './models';
+import { DEFAULT_NOTIFY_PREFS, Member, NotifyPrefs, Session, Trip } from './models';
 
 const TOKEN_KEY = 'letsgo.token';
 
@@ -13,6 +13,7 @@ export class SessionService {
   readonly member = signal<Member | null>(null);
   readonly trip = signal<Trip | null>(null);
   readonly ready = signal(false);
+  readonly notifyPrefs = signal<NotifyPrefs>(DEFAULT_NOTIFY_PREFS);
 
   readonly isSignedIn = computed(() => !!this.token() && !!this.member());
   readonly tripId = computed(() => this.trip()?.id ?? '');
@@ -29,6 +30,7 @@ export class SessionService {
       const me = await this.api.me();
       this.member.set(me.member);
       this.trip.set(me.trip);
+      this.notifyPrefs.set({ ...DEFAULT_NOTIFY_PREFS, ...me.notifyPrefs });
       return true;
     } catch {
       this.signOut();
@@ -43,7 +45,12 @@ export class SessionService {
     this.token.set(session.token);
     this.member.set(session.member);
     this.trip.set(session.trip);
+    this.notifyPrefs.set(DEFAULT_NOTIFY_PREFS);
     this.ready.set(true);
+  }
+
+  setNotifyPrefs(p: NotifyPrefs): void {
+    this.notifyPrefs.set(p);
   }
 
   async refreshTrip(): Promise<void> {
@@ -65,6 +72,7 @@ export class SessionService {
     this.token.set(null);
     this.member.set(null);
     this.trip.set(null);
+    this.notifyPrefs.set(DEFAULT_NOTIFY_PREFS);
   }
 }
 

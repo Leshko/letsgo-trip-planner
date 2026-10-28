@@ -1,0 +1,87 @@
+<div class="page">
+  <a class="back" [routerLink]="backLink()"><app-icon name="back" [size]="20" /> Ideas</a>
+
+  @if (missing()) {
+    <div class="card card--flat empty mt"><div class="big">🤷</div>This idea isn't in your trip.<br /><a routerLink="/trip/ideas/do">Back to ideas</a></div>
+  } @else if (idea(); as i) {
+    @if (i.imageUrl) {
+      <div class="detail__cover mt"><img [src]="i.imageUrl" alt="" (error)="$any($event.target).closest('.detail__cover').style.display='none'" /></div>
+    }
+    <div class="row row--wrap mt" style="gap:6px">
+      <span class="chip" [class.chip--leaf]="i.kind === 'activity'" [class.chip--sun]="i.kind === 'food'">{{ i.kind === 'food' ? '🍽️ To eat' : '🎯 To do' }}</span>
+      @if (i.cost) { <span class="chip chip--sun">{{ i.cost }}</span> }
+    </div>
+    <h1 style="margin-top:6px">{{ i.title }}</h1>
+
+    <section class="card mt detail__vote">
+      <button class="vote" [class.is-on]="i.votedByMe" (click)="vote()" [attr.aria-pressed]="i.votedByMe" aria-label="Count me in">
+        <span class="ico">{{ i.votedByMe ? (i.kind === 'food' ? '😋' : '🙌') : '👍' }}</span><span class="n">{{ i.voteCount }}</span>
+      </button>
+      <div class="grow">
+        <div style="font-weight:600">{{ i.votedByMe ? "You're in" : 'Count me in' }}</div>
+        <div class="row" style="gap:6px"><app-avatar-stack [members]="i.voters" [max]="8" /><span class="tiny">{{ inText() }}</span></div>
+      </div>
+    </section>
+
+    @if (i.description) { <p class="mt-lg detail__desc">{{ i.description }}</p> }
+
+    @if (i.details.length) {
+      <section class="card mt">
+        <h3>Good to know</h3>
+        <dl class="kv mt">@for (d of i.details; track $index) { <dt>{{ d.label }}</dt><dd>{{ d.value }}</dd> }</dl>
+      </section>
+    }
+
+    @if (i.link || i.address) {
+      <section class="card mt stack-v" style="gap:10px">
+        @if (i.link) { <a class="row" [href]="i.link" target="_blank" rel="noopener">🔗 <span class="grow">{{ i.siteName || hostOf(i.link) }}</span><app-icon name="chevron" [size]="18" /></a> }
+        @if (i.address) {
+          <a class="row" [href]="directionsUrl()" target="_blank" rel="noopener">📍 <span class="grow">{{ i.address }}</span><app-icon name="chevron" [size]="18" /></a>
+          @if (mapUrl(); as m) { <iframe class="map" [src]="m" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Map"></iframe> }
+        }
+      </section>
+    }
+
+    <p class="tiny mt-lg row" style="gap:6px"><app-avatar [member]="i.suggestedBy" size="sm" /> Suggested by {{ i.suggestedBy.id === me()?.id ? 'you' : i.suggestedBy.name }} · {{ i.createdAt | ago }}</p>
+
+    <div class="row row--wrap mt" style="gap:8px">
+      <button class="btn btn--primary" (click)="planning.set(true)">🗓️ Add to plan</button>
+      <button class="btn btn--tinted" (click)="shareIdea()"><app-icon name="share" [size]="18" /> Share</button>
+      <button class="btn" (click)="editing.set(true)"><app-icon name="pencil" [size]="18" /> Edit</button>
+      @if (canRemove()) { <button class="btn btn--ghost btn--danger" (click)="remove()">Remove</button> }
+    </div>
+
+    <section class="card mt-lg" id="comments">
+      <h3>{{ i.commentCount === 1 ? '1 comment' : i.commentCount + ' comments' }}</h3>
+      <div class="comments" style="border-top:0;padding-top:8px">
+        @for (c of comments(); track c.id) {
+          <div class="comment">
+            <app-avatar [member]="c.member" size="sm" />
+            <div class="comment__body">
+              <span class="comment__who">{{ c.member.id === me()?.id ? 'You' : c.member.name }}</span><span class="tiny">{{ c.createdAt | ago }}</span>
+              <div>{{ c.body }}</div>
+            </div>
+            @if (canDeleteComment(c)) { <button class="btn btn--ghost btn--sm" (click)="deleteComment(c)" aria-label="Delete comment">✕</button> }
+          </div>
+        } @empty { <p class="tiny">No comments yet. Say something.</p> }
+        <form class="row" (ngSubmit)="comment()">
+          <input class="input grow" name="cdraft" [(ngModel)]="commentDraft" maxlength="1000" placeholder="Add a comment…" autocomplete="off" />
+          <button class="btn btn--primary btn--sm" type="submit" [disabled]="!commentDraft.trim()">Post</button>
+        </form>
+      </div>
+    </section>
+
+    @if (editing()) {
+      <div class="modal-backdrop" (click)="editing.set(false)">
+        <div class="modal" (click)="$event.stopPropagation()" role="dialog" aria-label="Edit">
+          <h2 style="margin-bottom:12px">Edit {{ i.kind === 'food' ? 'place' : 'activity' }}</h2>
+          <app-idea-form [kind]="i.kind" [idea]="i" (saved)="onEdited($event)" (cancelled)="editing.set(false)" />
+        </div>
+      </div>
+    }
+    @if (planning()) { <app-plan-sheet [idea]="i" (added)="planning.set(false); flash('Added to the plan ✓')" (cancelled)="planning.set(false)" /> }
+  } @else if (!loaded()) {
+    <p class="spinner">Loading…</p>
+  }
+  @if (toast()) { <div class="toast" role="status">{{ toast() }}</div> }
+</div>

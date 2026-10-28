@@ -25,6 +25,11 @@ import {
   UpdateTripDto,
 } from './trips.dto';
 import { ActivityService } from '../activity/activity.service';
+import {
+  effectivePrefs,
+  NOTIFY_PREF_KEYS,
+  NotifyPrefs,
+} from '../common/notify-prefs';
 
 const TRANSFER_TTL_MS = 10 * 60_000;
 const AVATAR_MAX_BYTES = 250_000;
@@ -72,7 +77,13 @@ export class TripsService {
     const member = await this.members.save(
       this.newMember(trip.id, dto.memberName, true, dto.emoji),
     );
-    await this.activity.record(member, 'trip', `started planning ${trip.name}`);
+    await this.activity.record(
+      member,
+      'trip',
+      `started planning ${trip.name}`,
+      undefined,
+      'none',
+    );
     return {
       token: member.token,
       member: memberView(member),
@@ -223,6 +234,18 @@ export class TripsService {
     return { bytes: Buffer.from(row.avatar), type: row.avatarType };
   }
 
+  async updateNotifyPrefs(
+    me: Member,
+    dto: Partial<NotifyPrefs>,
+  ): Promise<{ notifyPrefs: NotifyPrefs }> {
+    const next: Record<string, boolean> = { ...(me.notifyPrefs ?? {}) };
+    for (const key of NOTIFY_PREF_KEYS)
+      if (typeof dto[key] === 'boolean') next[key] = dto[key];
+    me.notifyPrefs = next;
+    await this.members.save(me);
+    return { notifyPrefs: effectivePrefs(me) };
+  }
+
   async updateProfile(me: Member, dto: UpdateProfileDto): Promise<MemberView> {
     if (dto.name !== undefined) {
       const clean = dto.name.trim();
@@ -254,7 +277,13 @@ export class TripsService {
     if (dto.endDate !== undefined) trip.endDate = dto.endDate;
     this.assertDates(trip.startDate, trip.endDate);
     await this.trips.save(trip);
-    await this.activity.record(me, 'trip', 'updated the trip details');
+    await this.activity.record(
+      me,
+      'trip',
+      'updated the trip details',
+      undefined,
+      'none',
+    );
     return this.getView(tripId);
   }
 

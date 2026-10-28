@@ -29,12 +29,12 @@
         <div class="grow">
           <div class="row row--wrap">
             <span class="rank" [class.rank--top]="idx === 0 && i.voteCount > 1">#{{ idx + 1 }}</span>
-            <span class="idea__title">{{ i.title }}</span>
+            <a class="idea__title idea__title--link" [routerLink]="['/trip/idea', i.id]">{{ i.title }}</a>
             @if (i.cost) { <span class="chip chip--sun">{{ i.cost }}</span> }
           </div>
           @if (i.description) { <p class="muted idea__desc" style="margin-top:4px">{{ i.description }}</p> }
           @if (i.imageUrl) {
-            <a class="idea__cover" [href]="i.link || i.imageUrl" target="_blank" rel="noopener">
+            <a class="idea__cover" [routerLink]="['/trip/idea', i.id]">
               <img [src]="i.imageUrl" alt="" loading="lazy" (error)="$any($event.target).closest('a').style.display='none'" />
             </a>
           }
@@ -53,32 +53,13 @@
               <span>{{ i.voteCount === 1 ? (i.votedByMe ? 'Just you so far' : i.voters[0].name + ' is in') : i.voteCount + ' in' }}</span></div>
           }
           <div class="idea__actions">
-            <button class="btn btn--sm" (click)="toggleComments(i)">💬 {{ i.commentCount || '' }} {{ i.commentCount === 1 ? 'comment' : 'comments' }}</button>
-            <button class="btn btn--sm" (click)="startPlan(i)">🗓️ Add to plan</button>
+            <a class="btn btn--sm" [routerLink]="['/trip/idea', i.id]" fragment="comments">💬 {{ i.commentCount || '' }} {{ i.commentCount === 1 ? 'comment' : 'comments' }} ›</a>
+            <button class="btn btn--sm" (click)="planning.set(i)">🗓️ Add to plan</button>
+            <button class="btn btn--sm" (click)="shareIdea(i)"><app-icon name="share" [size]="16" /> Share</button>
             <button class="btn btn--sm" (click)="editing.set(i)">✏️ Edit</button>
             @if (canRemove(i)) { <button class="btn btn--sm btn--ghost btn--danger" (click)="remove(i)">Remove</button> }
           </div>
 
-          @if (openComments() === i.id) {
-            <div class="comments">
-              @for (cm of comments(); track cm.id) {
-                <div class="comment">
-                  <app-avatar [member]="cm.member" size="sm" />
-                  <div class="comment__body">
-                    <span class="comment__who">{{ cm.member.id === me()?.id ? 'You' : cm.member.name }}</span><span class="tiny">{{ cm.createdAt | ago }}</span>
-                    <div>{{ cm.body }}</div>
-                  </div>
-                  @if (cm.member.id === me()?.id || me()?.isOwner) {
-                    <button class="btn btn--ghost btn--sm" (click)="deleteComment(i, cm)" aria-label="Delete comment">✕</button>
-                  }
-                </div>
-              } @empty { <p class="tiny">No comments yet. Say something.</p> }
-              <form class="row" (ngSubmit)="comment(i)">
-                <input class="input grow" name="cdraft" [(ngModel)]="commentDraft" maxlength="1000" placeholder="Add a comment…" autocomplete="off" />
-                <button class="btn btn--primary btn--sm" type="submit" [disabled]="!commentDraft.trim()">Post</button>
-              </form>
-            </div>
-          }
         </div>
       </article>
     }
@@ -93,27 +74,6 @@
     </div>
   }
 
-  @if (planning(); as p) {
-    <div class="modal-backdrop" (click)="planning.set(null)">
-      <form class="modal stack-v" (click)="$event.stopPropagation()" (ngSubmit)="addToPlan()" role="dialog">
-        <h2>Add to the plan</h2>
-        <p class="muted">{{ p.title }}</p>
-        <div class="field">
-          <label for="pday">Which day?</label>
-          <select id="pday" class="select" name="pday" [(ngModel)]="planDate">
-            @for (d of days(); track d) { <option [value]="d">{{ d | longDate }}</option> }
-          </select>
-        </div>
-        <div class="field">
-          <label for="ptime">Time (optional)</label>
-          <input id="ptime" class="input" type="time" name="ptime" [(ngModel)]="planTime" />
-        </div>
-        <div class="row">
-          <button class="btn btn--primary grow" type="submit">Add</button>
-          <button class="btn btn--ghost" type="button" (click)="planning.set(null)">Cancel</button>
-        </div>
-      </form>
-    </div>
-  }
+  @if (planning(); as p) { <app-plan-sheet [idea]="p" (added)="planning.set(null); flash('Added to the plan ✓')" (cancelled)="planning.set(null)" /> }
   @if (toast()) { <div class="toast" role="status">{{ toast() }}</div> }
 </div>

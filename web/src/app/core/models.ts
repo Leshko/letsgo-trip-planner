@@ -86,10 +86,10 @@ export interface Post {
 
 export interface Activity {
   id: string;
-  type: 'joined' | 'idea' | 'vote' | 'comment' | 'itinerary' | 'lodging' | 'trip' | 'photo';
+  type: 'joined' | 'idea' | 'vote' | 'comment' | 'itinerary' | 'lodging' | 'trip' | 'photo' | 'post';
   message: string;
   member: Member;
-  refKind: 'idea' | 'itinerary' | 'lodging' | 'photo' | null;
+  refKind: 'idea' | 'itinerary' | 'lodging' | 'photo' | 'post' | null;
   refId: string | null;
   createdAt: string;
 }
@@ -162,3 +162,40 @@ export interface PhotoComment {
   member: Member;
   createdAt: string;
 }
+
+export interface Notification {
+  id: string;
+  type: Activity['type'];
+  message: string;
+  actor: Member;
+  refKind: Activity['refKind'];
+  refId: string | null;
+  url: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface NotificationPage {
+  items: Notification[];
+  unreadCount: number;
+}
+
+export interface NotifyPrefs {
+  ideas: boolean;
+  votes: boolean;
+  comments: boolean;
+  wall: boolean;
+  plan: boolean;
+  photos: boolean;
+  members: boolean;
+}
+
+export const DEFAULT_NOTIFY_PREFS: NotifyPrefs = {
+  ideas: true,
+  votes: true,
+  comments: true,
+  wall: true,
+  plan: true,
+  photos: true,
+  members: true,
+};

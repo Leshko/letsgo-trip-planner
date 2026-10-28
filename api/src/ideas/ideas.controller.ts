@@ -33,6 +33,15 @@ export class IdeasController {
     return this.ideas.list(tripId, me, k);
   }
 
+  @Get(':ideaId')
+  get(
+    @Param('tripId') tripId: string,
+    @Param('ideaId') ideaId: string,
+    @CurrentMember() me: Member,
+  ) {
+    return this.ideas.get(tripId, me, ideaId);
+  }
+
   @Post()
   create(
     @Param('tripId') tripId: string,

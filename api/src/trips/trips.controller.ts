@@ -27,6 +27,8 @@ import {
   UpdateTripDto,
 } from './trips.dto';
 import { Throttle } from '../common/throttle';
+import { effectivePrefs } from '../common/notify-prefs';
+import { NotifyPrefsDto } from '../notifications/notifications.dto';
 import { TripsService } from './trips.service';
 
 @Controller('trips')
@@ -65,6 +67,7 @@ export class TripsController {
     return {
       member: memberView(me),
       trip: await this.trips.getView(me.tripId),
+      notifyPrefs: effectivePrefs(me),
     };
   }
 
@@ -72,6 +75,12 @@ export class TripsController {
   @UseGuards(MemberGuard)
   profile(@CurrentMember() me: Member, @Body() dto: UpdateProfileDto) {
     return this.trips.updateProfile(me, dto);
+  }
+
+  @Patch('me/notify-prefs')
+  @UseGuards(MemberGuard)
+  notifyPrefs(@CurrentMember() me: Member, @Body() dto: NotifyPrefsDto) {
+    return this.trips.updateNotifyPrefs(me, dto);
   }
 
   @Put('me/avatar')

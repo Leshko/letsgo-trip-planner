@@ -13,6 +13,8 @@ import {
   Post,
   Photo,
   PhotoComment,
+  Notification,
+  PushSubscription,
   TransferCode,
   Trip,
   Vote,
@@ -37,6 +39,8 @@ export const ENTITIES = [
   TransferCode,
   Photo,
   PhotoComment,
+  Notification,
+  PushSubscription,
 ];
 
 /** The built Angular app, when present, is served by the API so one process is the whole deploy. */

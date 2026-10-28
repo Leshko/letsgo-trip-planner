@@ -192,7 +192,11 @@ export class PhotosService {
     photoId: string,
     dto: CreatePhotoCommentDto,
   ): Promise<PhotoCommentView> {
-    await this.load(tripId, photoId);
+    const photo = await this.load(tripId, photoId);
+    const others = await this.comments.find({
+      where: { photoId },
+      select: { memberId: true },
+    });
     const saved = await this.comments.save(
       this.comments.create({
         tripId,
@@ -201,10 +205,16 @@ export class PhotosService {
         body: dto.body.trim(),
       }),
     );
-    await this.activity.record(me, 'comment', 'commented on a photo', {
-      kind: 'photo',
-      id: photoId,
-    });
+    await this.activity.record(
+      me,
+      'comment',
+      'commented on a photo',
+      {
+        kind: 'photo',
+        id: photoId,
+      },
+      [photo.memberId, ...others.map((c) => c.memberId)],
+    );
     return photoCommentView(
       await this.comments.findOneOrFail({ where: { id: saved.id } }),
     );

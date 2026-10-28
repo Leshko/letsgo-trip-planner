@@ -18,6 +18,7 @@ const ICONS: Record<Activity['type'], string> = {
   lodging: '🏡',
   trip: '✈️',
   photo: '📷',
+  post: '📝',
 };
 
 @Component({

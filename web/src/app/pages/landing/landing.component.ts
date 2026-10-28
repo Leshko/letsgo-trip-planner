@@ -20,6 +20,8 @@ export class LandingComponent {
 
   /** Bound from /join/:code by the router. */
   readonly code = input<string>();
+  /** Where to go after signing in (share links and notifications). Only in-app paths are honoured. */
+  readonly next = input<string>();
   readonly mode = signal<Mode>('join');
   readonly busy = signal(false);
   readonly error = signal('');
@@ -44,8 +46,12 @@ export class LandingComponent {
   constructor() {
     // The session may already exist when arriving via a /join link.
     void this.session.restore().then((signedIn) => {
-      if (signedIn) void this.router.navigate(['/trip']);
+      if (signedIn) void this.router.navigateByUrl(this.target());
     });
+  }
+
+  private target(): string {
+    return safeNext(this.next());
   }
 
   ngOnInit() {
@@ -62,7 +68,7 @@ export class LandingComponent {
     try {
       const s = await this.api.joinTrip({ code: this.joinCode, name: this.joinName, emoji: this.joinEmoji });
       this.session.start(s);
-      await this.router.navigate(['/trip']);
+      await this.router.navigateByUrl(this.target());
     } catch (e: unknown) {
       this.error.set(messageOf(e, "Couldn't find a trip with that code"));
     } finally {
@@ -76,7 +82,7 @@ export class LandingComponent {
     try {
       const s = await this.api.redeemTransferCode(this.loginCode);
       this.session.start(s);
-      await this.router.navigate(['/trip']);
+      await this.router.navigateByUrl(this.target());
     } catch (e: unknown) {
       this.error.set(messageOf(e, "That code didn't work"));
     } finally {
@@ -97,7 +103,7 @@ export class LandingComponent {
         emoji: this.createEmoji,
       });
       this.session.start(s);
-      await this.router.navigate(['/trip']);
+      await this.router.navigateByUrl(this.target());
     } catch (e: unknown) {
       this.error.set(messageOf(e, "Couldn't create the trip"));
     } finally {
@@ -111,4 +117,11 @@ export function messageOf(e: unknown, fallback: string): string {
   const m = err?.error?.message;
   if (Array.isArray(m)) return m[0] ?? fallback;
   return typeof m === 'string' ? m : fallback;
+}
+
+/** Share links and notifications may ask for a page after sign-in; only in-app /trip paths are allowed. */
+export function safeNext(n: string | undefined): string {
+  if (!n) return '/trip';
+  if (!/^\/trip(\/|\?|#|$)/.test(n) || n.startsWith('//')) return '/trip';
+  return n;
 }

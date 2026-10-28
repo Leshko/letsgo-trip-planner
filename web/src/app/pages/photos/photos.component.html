@@ -56,6 +56,7 @@
   </div>
 
   @if (viewing() !== null) {
-    <app-photo-viewer [photos]="photos()" [(index)]="viewing" (closed)="viewing.set(null)" (deleted)="onDeleted($event)" (updated)="onUpdated($event)" />
+    <app-photo-viewer [photos]="photos()" [(index)]="viewing" (closed)="viewing.set(null)" (deleted)="onDeleted($event)" (updated)="onUpdated($event)" (share)="sharePhoto($event)" />
   }
+  @if (toast()) { <div class="toast toast--top" role="status">{{ toast() }}</div> }
 </div>

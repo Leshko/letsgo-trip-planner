@@ -4,6 +4,7 @@
       <button class="btn btn--icon" (click)="closed.emit()" aria-label="Close"><app-icon name="close" [size]="22" /></button>
       <span class="viewer__count">{{ position() }}</span>
       <span class="grow"></span>
+      <button class="btn btn--icon" (click)="share.emit(p)" aria-label="Share photo"><app-icon name="share" [size]="22" /></button>
       <a class="btn btn--icon" [href]="p.urls.original + '?download=1'" download aria-label="Download original" title="Download original ({{ sizeLabel() }})"><app-icon name="download" [size]="22" /></a>
       @if (canManage()) { <button class="btn btn--icon" (click)="remove()" aria-label="Delete photo"><app-icon name="trash" [size]="22" /></button> }
     </div>

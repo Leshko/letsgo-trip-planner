@@ -1,5 +1,7 @@
 import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, input, signal } from '@angular/core';
+import { Router } from '@angular/router';
+import { ShareService } from '../../core/share.service';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { Photo } from '../../core/models';
@@ -22,7 +24,14 @@ interface UploadItem {
 })
 export class PhotosComponent {
   private readonly api = inject(ApiService);
+  private readonly router = inject(Router);
   readonly session = inject(SessionService);
+  readonly share = inject(ShareService);
+
+  /** ?photo=<id> from a share link or notification opens that photo. */
+  readonly photo = input<string>();
+  private openedFromLink = false;
+  readonly toast = signal('');
 
   readonly photos = signal<Photo[]>([]);
   readonly loaded = signal(false);
@@ -44,6 +53,13 @@ export class PhotosComponent {
     // Keep the viewer stable while polling.
     this.photos.set(fresh);
     this.loaded.set(true);
+    const target = this.photo();
+    if (target && !this.openedFromLink) {
+      this.openedFromLink = true;
+      const idx = fresh.findIndex((p) => p.id === target);
+      if (idx >= 0) this.viewing.set(idx);
+      void this.router.navigate([], { queryParams: { photo: null }, replaceUrl: true });
+    }
   }
 
   /** One batch per picker selection. Files go one at a time so phones don't run out of memory. */
@@ -109,6 +125,17 @@ export class PhotosComponent {
     this.photos.update((all) => all.filter((p) => p.id !== photo.id));
     const i = this.viewing();
     if (i !== null) this.viewing.set(this.photos().length ? Math.min(i, this.photos().length - 1) : null);
+  }
+
+  async sharePhoto(p: Photo) {
+    const out = await this.share.share({ title: this.session.trip()?.name ?? 'LetsGo', text: p.caption || 'Trip photo', path: `/trip/photos?photo=${p.id}` });
+    if (out === 'copied') this.flash('Link copied');
+    else if (out === 'failed') this.flash("Couldn't share");
+  }
+
+  flash(msg: string) {
+    this.toast.set(msg);
+    setTimeout(() => this.toast.set(''), 1800);
   }
 
   onUpdated(photo: Photo) {

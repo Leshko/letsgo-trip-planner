@@ -12,6 +12,8 @@ import {
   ItineraryEntry,
   Lodging,
   Member,
+  NotificationPage,
+  NotifyPrefs,
   Photo,
   PhotoComment,
   Post,
@@ -59,7 +61,28 @@ export class ApiService {
     return this.post<Session>('/trips/join', body);
   }
   me() {
-    return this.get<{ member: Member; trip: Trip }>('/trips/me');
+    return this.get<{ member: Member; trip: Trip; notifyPrefs: NotifyPrefs }>('/trips/me');
+  }
+  getIdea(tripId: string, ideaId: string) {
+    return this.get<Idea>(`/trips/${tripId}/ideas/${ideaId}`);
+  }
+  notifications(tripId: string, limit = 30) {
+    return this.get<NotificationPage>(`/trips/${tripId}/notifications`, { limit: String(limit) });
+  }
+  markNotificationsRead(tripId: string, ids?: string[]) {
+    return this.post<{ unreadCount: number }>(`/trips/${tripId}/notifications/read`, ids?.length ? { ids } : {});
+  }
+  updateNotifyPrefs(body: Partial<NotifyPrefs>) {
+    return this.patch<{ notifyPrefs: NotifyPrefs }>('/trips/me/notify-prefs', body);
+  }
+  pushPublicKey() {
+    return this.get<{ publicKey: string }>('/push/public-key');
+  }
+  pushSubscribe(body: { endpoint: string; keys: { p256dh: string; auth: string }; userAgent?: string }) {
+    return this.post<{ ok: true }>('/trips/me/push', body);
+  }
+  pushUnsubscribe(endpoint: string) {
+    return firstValueFrom(this.http.delete<void>(`${this.base}/trips/me/push`, { body: { endpoint } }));
   }
   createTransferCode() {
     return this.post<TransferCode>('/trips/me/transfer-code', {});

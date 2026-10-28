@@ -25,6 +25,7 @@ export const routes: Routes = [
         path: 'ideas/:kind',
         loadComponent: () => import('./pages/ideas/ideas.component').then((m) => m.IdeasComponent),
       },
+      { path: 'idea/:id', loadComponent: () => import('./pages/ideas/idea-detail.component').then((m) => m.IdeaDetailComponent) },
       { path: 'photos', loadComponent: () => import('./pages/photos/photos.component').then((m) => m.PhotosComponent) },
       { path: 'plan', loadComponent: () => import('./pages/itinerary/itinerary.component').then((m) => m.ItineraryComponent) },
       { path: 'wall', loadComponent: () => import('./pages/wall/wall.component').then((m) => m.WallComponent) },

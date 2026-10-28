@@ -1,14 +1,16 @@
 import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
+import { ShareService } from '../../core/share.service';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
-import { Comment, Idea, IdeaKind } from '../../core/models';
-import { dateRangeDays } from './days';
+import { Idea, IdeaKind } from '../../core/models';
 import { usePolling } from '../../core/polling';
 import { AvatarComponent } from '../../shared/avatar.component';
 import { AvatarStackComponent } from '../../shared/avatar-stack.component';
-import { AgoPipe, LongDatePipe } from '../../shared/pipes';
+import { AgoPipe } from '../../shared/pipes';
+import { IconComponent } from '../../shared/icon.component';
+import { PlanSheetComponent } from './plan-sheet.component';
 import { IdeaFormComponent } from './idea-form.component';
 
 const COPY: Record<IdeaKind, { title: string; blurb: string; placeholder: string; cta: string; empty: string; voteIco: string }> = {
@@ -32,13 +34,14 @@ const COPY: Record<IdeaKind, { title: string; blurb: string; placeholder: string
 
 @Component({
   selector: 'app-ideas',
-  imports: [FormsModule, AvatarComponent, AvatarStackComponent, AgoPipe, LongDatePipe, IdeaFormComponent],
+  imports: [FormsModule, RouterLink, AvatarComponent, AvatarStackComponent, AgoPipe, IdeaFormComponent, PlanSheetComponent, IconComponent],
   templateUrl: './ideas.component.html',
 })
 export class IdeasComponent {
   private readonly api = inject(ApiService);
   private readonly router = inject(Router);
   readonly session = inject(SessionService);
+  readonly share = inject(ShareService);
 
   /** Route segment: /trip/ideas/do or /trip/ideas/eat (bound by the router). */
   readonly seg = input<string>('do', { alias: 'kind' });
@@ -47,23 +50,11 @@ export class IdeasComponent {
   readonly me = this.session.member;
   readonly ideas = signal<Idea[]>([]);
   readonly loaded = signal(false);
-  readonly days = computed(() => {
-    const t = this.session.trip();
-    return t ? dateRangeDays(t.startDate, t.endDate) : [];
-  });
 
   readonly adding = signal(false);
   readonly editing = signal<Idea | null>(null);
 
-  // comments
-  readonly openComments = signal<string | null>(null);
-  readonly comments = signal<Comment[]>([]);
-  commentDraft = '';
-
-  // add to plan
   readonly planning = signal<Idea | null>(null);
-  planDate = '';
-  planTime = '';
   readonly toast = signal('');
 
   private lastKind: IdeaKind | null = null;
@@ -88,7 +79,6 @@ export class IdeasComponent {
     if (kind !== this.lastKind) {
       this.lastKind = kind;
       this.loaded.set(false);
-      this.openComments.set(null);
       this.adding.set(false);
       this.editing.set(null);
     }
@@ -127,44 +117,10 @@ export class IdeasComponent {
     this.ideas.update((all) => all.filter((i) => i.id !== idea.id));
   }
 
-  async toggleComments(idea: Idea) {
-    if (this.openComments() === idea.id) {
-      this.openComments.set(null);
-      return;
-    }
-    this.openComments.set(idea.id);
-    this.comments.set([]);
-    this.commentDraft = '';
-    this.comments.set(await this.api.listComments(this.session.tripId(), idea.id));
-  }
-
-  async comment(idea: Idea) {
-    const body = this.commentDraft.trim();
-    if (!body) return;
-    const c = await this.api.addComment(this.session.tripId(), idea.id, body);
-    this.comments.update((all) => [...all, c]);
-    this.ideas.update((all) => all.map((i) => (i.id === idea.id ? { ...i, commentCount: i.commentCount + 1 } : i)));
-    this.commentDraft = '';
-  }
-
-  async deleteComment(idea: Idea, c: Comment) {
-    await this.api.deleteComment(this.session.tripId(), c.id);
-    this.comments.update((all) => all.filter((x) => x.id !== c.id));
-    this.ideas.update((all) => all.map((i) => (i.id === idea.id ? { ...i, commentCount: Math.max(0, i.commentCount - 1) } : i)));
-  }
-
-  startPlan(idea: Idea) {
-    this.planDate = this.days()[0] ?? '';
-    this.planTime = '';
-    this.planning.set(idea);
-  }
-
-  async addToPlan() {
-    const idea = this.planning();
-    if (!idea || !this.planDate) return;
-    await this.api.addEntry(this.session.tripId(), { date: this.planDate, ideaId: idea.id, startTime: this.planTime || undefined });
-    this.planning.set(null);
-    this.flash('Added to the plan ✓');
+  async shareIdea(i: Idea) {
+    const out = await this.share.share({ title: i.title, text: `${i.title} · ${this.session.trip()?.name ?? 'LetsGo'}`, path: `/trip/idea/${i.id}` });
+    if (out === 'copied') this.flash('Link copied');
+    else if (out === 'failed') this.flash("Couldn't share");
   }
 
   flash(msg: string) {

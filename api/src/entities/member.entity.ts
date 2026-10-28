@@ -49,4 +49,8 @@ export class Member extends Timestamped {
 
   @Column({ type: 'integer', default: 0 })
   avatarVersion!: number;
+
+  /** Notification switches the person turned off; missing keys mean on. */
+  @Column({ type: 'simple-json', default: '{}' })
+  notifyPrefs!: Record<string, boolean>;
 }
