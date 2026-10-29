@@ -7,8 +7,10 @@ import {
   Param,
   Post,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { MemberGuard } from '../common/member.guard';
 import { CurrentMember } from '../common/current-member.decorator';
 import { Member } from '../entities';
@@ -49,8 +51,12 @@ export class NotificationsController {
 
   /** Register this browser for push. Idempotent per endpoint. */
   @Post('me/push')
-  async subscribe(@CurrentMember() me: Member, @Body() dto: PushSubscribeDto) {
-    await this.push.upsert(me, dto);
+  async subscribe(
+    @CurrentMember() me: Member,
+    @Body() dto: PushSubscribeDto,
+    @Req() req: Request,
+  ) {
+    await this.push.upsert(me, dto, String(req.headers.origin ?? ''));
     return { ok: true };
   }
 

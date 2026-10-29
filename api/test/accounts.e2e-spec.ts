@@ -1,4 +1,5 @@
 import { INestApplication } from '@nestjs/common';
+import { createECDH, randomBytes } from 'crypto';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { DataSource } from 'typeorm';
@@ -524,6 +525,87 @@ describe('accounts (e2e)', () => {
       .get('/api/auth/facebook/start')
       .expect(302)
       .expect('location', '/signin?error=unavailable');
+  });
+
+  it('tells the app its main web address', async () => {
+    const r = await http.get('/api/config').expect(200);
+    expect(r.body).toEqual({ publicUrl: 'https://letsgo.example' });
+  });
+
+  it('carries a signed-in account to the main address with a one-time code', async () => {
+    const token = await emailSignIn('mover@example.com');
+    const h = await http
+      .post('/api/account/handoff')
+      .set(acct(token))
+      .expect(200);
+    const moved = await http
+      .post('/api/auth/exchange')
+      .set(visitor())
+      .send({ code: h.body.code })
+      .expect(200);
+    expect(moved.body.user.email).toBe('mover@example.com');
+    expect(moved.body.token).not.toBe(token);
+    await http
+      .post('/api/auth/exchange')
+      .set(visitor())
+      .send({ code: h.body.code })
+      .expect(400);
+    await http.post('/api/account/handoff').expect(401);
+  });
+
+  it('turning notifications on at the main address replaces the old address', async () => {
+    const org = await emailSignIn('pusher@example.com');
+    const t = await http
+      .post('/api/trips')
+      .set(acct(org))
+      .send(trip('Mom'))
+      .expect(201);
+    const keys = () => {
+      const e = createECDH('prime256v1');
+      e.generateKeys();
+      return {
+        p256dh: e.getPublicKey().toString('base64url'),
+        auth: randomBytes(16).toString('base64url'),
+      };
+    };
+    const ds = app.get(DataSource);
+    const endpoints = async () =>
+      ds.query<{ endpoint: string; origin: string }[]>(
+        `SELECT endpoint, origin FROM push_subscription WHERE "memberId" = $1 ORDER BY endpoint`,
+        [t.body.member.id],
+      );
+    await http
+      .post('/api/trips/me/push')
+      .set(bearer(t.body.token))
+      .set('Origin', 'https://old.example')
+      .send({ endpoint: 'https://push.example/a-old', keys: keys() })
+      .expect(201);
+    expect((await endpoints()).map((e) => e.origin)).toEqual([
+      'https://old.example',
+    ]);
+    await http
+      .post('/api/trips/me/push')
+      .set(bearer(t.body.token))
+      .set('Origin', 'https://letsgo.example')
+      .send({ endpoint: 'https://push.example/b-new', keys: keys() })
+      .expect(201);
+    expect(await endpoints()).toEqual([
+      {
+        endpoint: 'https://push.example/b-new',
+        origin: 'https://letsgo.example',
+      },
+    ]);
+    // A second phone still on the old address doesn't knock out the new one.
+    await http
+      .post('/api/trips/me/push')
+      .set(bearer(t.body.token))
+      .set('Origin', 'https://old.example')
+      .send({ endpoint: 'https://push.example/c-old', keys: keys() })
+      .expect(201);
+    expect((await endpoints()).map((e) => e.endpoint)).toEqual([
+      'https://push.example/b-new',
+      'https://push.example/c-old',
+    ]);
   });
 
   it('signs out one device, and deleting an account keeps the trips', async () => {

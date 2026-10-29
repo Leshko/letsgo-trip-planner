@@ -34,4 +34,8 @@ export class PushSubscription extends Timestamped {
 
   @Column({ default: '' })
   userAgent!: string;
+
+  /** The web address the subscription was made on (notifications open there). */
+  @Column({ default: '' })
+  origin!: string;
 }

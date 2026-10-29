@@ -6,6 +6,7 @@ import { join } from 'path';
 import { databaseOptions } from './database/database.config';
 import { LegacyImportModule } from './database/legacy-import.module';
 import { HealthController } from './health.controller';
+import { ConfigController } from './config.controller';
 import { AuthModule } from './auth/auth.module';
 import { SocialModule } from './social/social.module';
 import { ActivityModule } from './activity/activity.module';
@@ -57,6 +58,6 @@ const webDist = join(__dirname, '..', '..', 'web', 'dist', 'web', 'browser');
     AiModule,
     AdminModule,
   ],
-  controllers: [HealthController],
+  controllers: [HealthController, ConfigController],
 })
 export class AppModule {}

@@ -8,6 +8,14 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/landing/landing.component').then((m) => m.LandingComponent),
   },
   {
+    path: 'privacy',
+    loadComponent: () => import('./pages/account/privacy.component').then((m) => m.PrivacyComponent),
+  },
+  {
+    path: 'handoff',
+    loadComponent: () => import('./pages/account/handoff.component').then((m) => m.HandoffComponent),
+  },
+  {
     path: 'signin',
     loadComponent: () => import('./pages/account/signin.component').then((m) => m.SignInPageComponent),
   },

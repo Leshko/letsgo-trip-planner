@@ -57,7 +57,7 @@ import { messageOf } from '../landing/landing.component';
             </form>
           }
           @if (error()) { <p class="error">{{ error() }}</p> }
-          <p class="tiny">No passwords. We only use your email to sign you in.</p>
+          <p class="tiny">No passwords. We only use your email to sign you in. <a href="/privacy" target="_blank" rel="noopener">Privacy</a></p>
         </div>
       }
     } @else {

@@ -118,15 +118,25 @@ export class AuthService {
       return '/signin?error=failed';
     }
     const user = await this.userForIdentity(cfg.id, profile);
+    const code = await this.handoffCode(user.id);
+    const next = encodeURIComponent(flow.returnTo);
+    return `/auth/done?code=${encodeURIComponent(code)}&next=${next}`;
+  }
+
+  /**
+   * A one-time, two-minute code that becomes a session for this user wherever
+   * it's redeemed: after a provider sign-in, or when a signed-in phone moves
+   * from the old web address to the new one.
+   */
+  async handoffCode(userId: string): Promise<string> {
     const code = randomToken(32);
     await this.handoffs.delete({ expiresAt: LessThan(Date.now()) });
     await this.handoffs.insert({
       codeHash: sha256(code),
-      userId: user.id,
+      userId,
       expiresAt: Date.now() + HANDOFF_TTL,
     });
-    const next = encodeURIComponent(flow.returnTo);
-    return `/auth/done?code=${encodeURIComponent(code)}&next=${next}`;
+    return code;
   }
 
   async exchange(code: string, userAgent: string): Promise<SignedIn> {

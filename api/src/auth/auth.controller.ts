@@ -134,6 +134,13 @@ export class AccountController {
     return this.account.claim(user, dto.memberToken);
   }
 
+  /** A one-time code to carry this sign-in to the app's main web address. */
+  @Post('handoff')
+  @HttpCode(200)
+  async handoff(@CurrentUser() user: User) {
+    return { code: await this.auth.handoffCode(user.id) };
+  }
+
   @Post('signout')
   @HttpCode(204)
   async signOut(@Req() req: AccountRequest) {

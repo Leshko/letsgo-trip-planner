@@ -6,6 +6,30 @@ import { SessionService } from '../core/session.service';
 const TOUR_KEY = 'letsgo.tour.v1';
 /** Bumped whenever the tour gains steps that existing users should see once. */
 const WHATS_NEW_KEY = 'letsgo.whatsnew.v2';
+/** Set when this phone was just carried over from the old web address. */
+const MOVED_KEY = 'letsgo.moved';
+
+/**
+ * After a hand-off from the old address: skip the full tour (they've seen it)
+ * and show the short "new home" card with notifications and install, once.
+ */
+export function markMoved(): void {
+  try {
+    localStorage.setItem(TOUR_KEY, '1');
+    localStorage.removeItem(WHATS_NEW_KEY);
+    localStorage.setItem(MOVED_KEY, '1');
+  } catch {
+    /* ignore */
+  }
+}
+
+function moved(): boolean {
+  try {
+    return localStorage.getItem(MOVED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
 
 interface Step {
   art: string;
@@ -49,7 +73,17 @@ export class TourComponent {
   ];
 
   readonly steps = computed<Step[]>(() => {
-    if (this.mode() === 'new') return this.newSteps;
+    if (this.mode() === 'new')
+      return moved()
+        ? [
+            {
+              art: '🏝️',
+              title: 'LetsGo Together has a new home',
+              body: "We moved to letsgotogether.app, and your trip came with you. Two quick things on the new address, since phones treat it as a new app:",
+            },
+            ...this.newSteps,
+          ]
+        : this.newSteps;
     const t = this.session.trip();
     const name = this.session.member()?.name ?? 'there';
     return [
@@ -147,6 +181,7 @@ export class TourComponent {
     try {
       localStorage.setItem(TOUR_KEY, '1');
       localStorage.setItem(WHATS_NEW_KEY, '1');
+      localStorage.removeItem(MOVED_KEY);
     } catch {
       /* ignore */
     }

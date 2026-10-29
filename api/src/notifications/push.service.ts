@@ -1,11 +1,12 @@
 import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In, Not, Repository } from 'typeorm';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import * as webPush from 'web-push';
 import { Member, PushSubscription } from '../entities';
 import { dataDir } from '../common/paths';
+import { publicUrl } from '../auth/auth.config';
 
 export interface PushTarget {
   endpoint: string;
@@ -96,7 +97,19 @@ export class PushService implements OnModuleInit {
     this._publicKey = pub;
   }
 
-  async upsert(me: Member, input: SubscribeInput): Promise<void> {
+  /**
+   * Save this device's subscription. Turning notifications on at the app's
+   * main address replaces that person's subscriptions from older addresses,
+   * so a phone that moved doesn't get everything twice.
+   */
+  async upsert(me: Member, input: SubscribeInput, origin = ''): Promise<void> {
+    const main = mainOrigin();
+    if (main && origin === main)
+      await this.subs.delete({
+        memberId: me.id,
+        origin: Not(main),
+        endpoint: Not(input.endpoint),
+      });
     const existing = await this.subs.findOne({
       where: { endpoint: input.endpoint },
     });
@@ -105,6 +118,7 @@ export class PushService implements OnModuleInit {
       existing.p256dh = input.keys.p256dh;
       existing.auth = input.keys.auth;
       existing.userAgent = (input.userAgent ?? '').slice(0, 300);
+      existing.origin = origin.slice(0, 200);
       await this.subs.save(existing);
       return;
     }
@@ -115,6 +129,7 @@ export class PushService implements OnModuleInit {
         p256dh: input.keys.p256dh,
         auth: input.keys.auth,
         userAgent: (input.userAgent ?? '').slice(0, 300),
+        origin: origin.slice(0, 200),
       }),
     );
   }
@@ -159,5 +174,15 @@ export class PushService implements OnModuleInit {
         }
       }),
     );
+  }
+}
+
+/** The origin (scheme + host) of PUBLIC_URL, or '' when it isn't set. */
+function mainOrigin(): string {
+  const url = publicUrl();
+  try {
+    return url ? new URL(url).origin : '';
+  } catch {
+    return '';
   }
 }
