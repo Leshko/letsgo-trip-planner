@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, inject, input, OnDestroy, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ApiService } from '../../core/api.service';
@@ -13,7 +13,7 @@ type Mode = 'join' | 'create' | 'code';
   imports: [FormsModule, EmojiPickerComponent],
   templateUrl: './landing.component.html',
 })
-export class LandingComponent {
+export class LandingComponent implements OnDestroy {
   private readonly api = inject(ApiService);
   private readonly session = inject(SessionService);
   private readonly router = inject(Router);
@@ -26,6 +26,16 @@ export class LandingComponent {
   readonly busy = signal(false);
   readonly error = signal('');
   readonly fromLink = computed(() => !!this.code());
+  readonly unreachable = this.session.unreachable;
+  readonly retrying = signal(false);
+  /** While the server is unreachable, quietly try again every few seconds. */
+  private readonly autoRetry = setInterval(() => {
+    if (this.unreachable() && !this.retrying()) void this.retry();
+  }, 5000);
+
+  ngOnDestroy() {
+    clearInterval(this.autoRetry);
+  }
 
   // join form
   joinCode = '';
@@ -59,6 +69,16 @@ export class LandingComponent {
     if (c) {
       this.joinCode = c.toUpperCase();
       this.mode.set('join');
+    }
+  }
+
+  /** The server was unreachable when the app opened; the trip is still saved here. */
+  async retry() {
+    this.retrying.set(true);
+    try {
+      if (await this.session.restore(true)) await this.router.navigateByUrl(this.target());
+    } finally {
+      this.retrying.set(false);
     }
   }
 

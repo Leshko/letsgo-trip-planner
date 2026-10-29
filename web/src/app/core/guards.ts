@@ -14,4 +14,5 @@ export const signedOutGuard: CanActivateFn = async () => {
   const session = inject(SessionService);
   const router = inject(Router);
   return (await session.restore()) ? router.createUrlTree(['/trip']) : true;
+  // When the server is unreachable the landing page shows a "try again" card instead.
 };

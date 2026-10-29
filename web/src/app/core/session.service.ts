@@ -14,30 +14,46 @@ export class SessionService {
   readonly trip = signal<Trip | null>(null);
   readonly ready = signal(false);
   readonly notifyPrefs = signal<NotifyPrefs>(DEFAULT_NOTIFY_PREFS);
+  /** The server couldn't be reached (restarting, offline). The saved trip is kept. */
+  readonly unreachable = signal(false);
 
   readonly isSignedIn = computed(() => !!this.token() && !!this.member());
   readonly tripId = computed(() => this.trip()?.id ?? '');
 
   /** Resolve the stored token into a member + trip. Safe to call repeatedly. */
-  async restore(): Promise<boolean> {
+  async restore(force = false): Promise<boolean> {
     if (this.ready()) return this.isSignedIn();
+    // Already known to be unreachable: don't make every page wait again; the landing page retries.
+    if (this.unreachable() && !force) return false;
     const token = this.token();
     if (!token) {
       this.ready.set(true);
       return false;
     }
-    try {
-      const me = await this.api.me();
-      this.member.set(me.member);
-      this.trip.set(me.trip);
-      this.notifyPrefs.set({ ...DEFAULT_NOTIFY_PREFS, ...me.notifyPrefs });
-      return true;
-    } catch {
-      this.signOut();
-      return false;
-    } finally {
-      this.ready.set(true);
+    // Only forget the trip when the server says this sign-in is no longer valid.
+    // A restart, a tunnel hiccup or a weak signal must never sign anyone out.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const me = await withTimeout(this.api.me(), 8000);
+        this.member.set(me.member);
+        this.trip.set(me.trip);
+        this.notifyPrefs.set({ ...DEFAULT_NOTIFY_PREFS, ...me.notifyPrefs });
+        this.unreachable.set(false);
+        this.ready.set(true);
+        return true;
+      } catch (e: unknown) {
+        const status = (e as { status?: number }).status ?? 0;
+        if (status === 401 || status === 403) {
+          this.signOut();
+          this.ready.set(true);
+          return false;
+        }
+        if (attempt < 1) await new Promise((r) => setTimeout(r, 1200));
+      }
     }
+    // Still unreachable: keep the token and try again on the next visit or tap.
+    this.unreachable.set(true);
+    return false;
   }
 
   start(session: Session): void {
@@ -91,4 +107,8 @@ function writeToken(token: string | null): void {
   } catch {
     /* private mode: the session simply won't persist */
   }
+}
+
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([p, new Promise<T>((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))]);
 }
