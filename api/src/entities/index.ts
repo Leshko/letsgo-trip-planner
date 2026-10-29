@@ -14,6 +14,7 @@ export * from './push-subscription.entity';
 export * from './unfurl-cache.entity';
 export * from './legacy-import.entity';
 export * from './account.entities';
+export * from './member-alias.entity';
 
 import { Trip } from './trip.entity';
 import { Member } from './member.entity';
@@ -30,6 +31,7 @@ import { Notification } from './notification.entity';
 import { PushSubscription } from './push-subscription.entity';
 import { UnfurlCache } from './unfurl-cache.entity';
 import { LegacyImport } from './legacy-import.entity';
+import { MemberAlias } from './member-alias.entity';
 import {
   AccountSession,
   AuthFlow,
@@ -61,4 +63,5 @@ export const ENTITIES = [
   EmailCode,
   AuthFlow,
   AuthHandoff,
+  MemberAlias,
 ];

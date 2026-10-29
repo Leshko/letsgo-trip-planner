@@ -25,6 +25,10 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/account/my-trips.component').then((m) => m.MyTripsComponent),
   },
   {
+    path: 'admin',
+    loadComponent: () => import('./pages/admin/admin.component').then((m) => m.AdminComponent),
+  },
+  {
     path: 'join/:code',
     loadComponent: () => import('./pages/landing/landing.component').then((m) => m.LandingComponent),
   },

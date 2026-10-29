@@ -85,3 +85,21 @@ docker compose up -d --build
 The app is designed for a family on different networks. Put it behind whatever
 you already use on Unraid (Nginx Proxy Manager, SWAG, Cloudflare Tunnel,
 Tailscale) and share that URL. Invite links are `https://<your-host>/join/<CODE>`.
+
+## Admin screen
+
+`/admin` shows every trip on the server with its join link, who is in it,
+and what each person has added. If someone lost the trip on their phone and
+rejoined under a different name, merge their new spot into their original one
+there: everything they did moves over, and their phone opens the original spot
+from then on.
+
+It's off until you give it a key. In the Unraid terminal:
+
+```bash
+echo "ADMIN_KEY=$(head -c 24 /dev/urandom | base64 | tr -dc 'A-Za-z0-9')" >> /mnt/user/appdata/letsgo/letsgo.env
+grep ADMIN_KEY /mnt/user/appdata/letsgo/letsgo.env
+```
+
+Rerun the deploy line, open `https://<your address>/admin`, and type the key
+it printed. Tap **Lock** on a shared device when you're done.

@@ -61,6 +61,13 @@ describe('moving from SQLite to Postgres (e2e)', () => {
   beforeAll(async () => {
     await freshDatabase();
     dir = stageDataDir((db) => {
+      // An admin-merged device from the live version: its token opens Mom's spot.
+      db.exec(
+        `CREATE TABLE IF NOT EXISTS "member_alias" ("createdAt" integer NOT NULL, "token" varchar PRIMARY KEY NOT NULL, "memberId" varchar NOT NULL)`,
+      );
+      db.prepare(
+        `INSERT INTO member_alias (createdAt, token, memberId) VALUES (1, 'merged-device-token-0001', (SELECT id FROM member WHERE token = ?))`,
+      ).run(ids.momToken);
       // A comment whose idea was deleted long ago: it can't be shown anywhere.
       db.prepare(
         `INSERT INTO comment (id, tripId, ideaId, memberId, body, createdAt) VALUES (?, ?, ?, (SELECT id FROM member LIMIT 1), 'ghost', 1)`,
@@ -99,6 +106,14 @@ describe('moving from SQLite to Postgres (e2e)', () => {
       .expect(200);
     expect(kid.body.notifyPrefs.comments).toBe(false);
     expect(kid.body.member.emoji).toBe('🦖');
+  });
+
+  it('keeps devices an admin merged on the old version', async () => {
+    const r = await http()
+      .get('/api/trips/me')
+      .set(auth('merged-device-token-0001'))
+      .expect(200);
+    expect(r.body.member.name).toBe('Mom');
   });
 
   it('keeps profile photos (stored as bytes)', async () => {
