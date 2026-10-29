@@ -178,7 +178,7 @@ export class ShellComponent {
   async share() {
     const t = this.trip();
     if (!t) return;
-    const text = `Join "${t.name}" on LetsGo: ${this.inviteUrl()}  (code ${t.inviteCode})`;
+    const text = `Join "${t.name}" on LetsGo Together: ${this.inviteUrl()}  (code ${t.inviteCode})`;
     const nav = navigator as Navigator & { share?: (d: ShareData) => Promise<void> };
     if (nav.share) {
       try {

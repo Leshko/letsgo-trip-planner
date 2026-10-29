@@ -1,4 +1,4 @@
-# LetsGo Trip Planner
+# LetsGo Together
 
 Plan the family trip together.
 
@@ -42,7 +42,7 @@ What the family can do:
 - **Tap any idea** for its own page: cover, details, map, who's in, comments,
   add to plan, edit, and a Share button that copies a link. Links carry the
   invite code, so a relative who isn't signed in joins and lands on the idea.
-- **Install it** — LetsGo is a PWA: on Android/desktop Chrome tap Install; on
+- **Install it** — LetsGo Together is a PWA: on Android/desktop Chrome tap Install; on
   iPhone use Share → Add to Home Screen. Updates arrive with a tap.
 
 Screens poll every few seconds so everyone's phone stays in sync.

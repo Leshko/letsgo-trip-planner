@@ -1,4 +1,4 @@
-# Deploying LetsGo
+# Deploying LetsGo Together
 
 ## Unraid (one command)
 
@@ -38,13 +38,13 @@ Push keys are generated on first start and saved to `/data/vapid.json`, so they
 survive updates as long as the appdata folder does. If that file is ever lost,
 everyone just turns notifications on again from their avatar menu. Push needs the
 app served over HTTPS for anything but `localhost`, so for phones outside the
-house put LetsGo behind your reverse proxy with a certificate; on the LAN,
+house put LetsGo Together behind your reverse proxy with a certificate; on the LAN,
 Chrome treats plain `http://192.168.x.x` as insecure and won't offer push.
 iPhone users add the app to their Home Screen first.
 
 ## AI link summaries (optional)
 
-When someone pastes a link to a restaurant or activity, LetsGo can have Claude
+When someone pastes a link to a restaurant or activity, LetsGo Together can have Claude
 read the page and fill in a family-friendly summary, address, phone, hours, price
 level and the best photo. It uses the cheapest current model (Claude Haiku 5.5):
 a new link costs well under a tenth of a cent, repeats are free for a week, and

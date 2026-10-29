@@ -95,7 +95,7 @@ export class NotificationsService {
     }
 
     const trip = await this.trips.findOne({ where: { id: input.tripId } });
-    const title = trip?.name ?? 'LetsGo';
+    const title = trip?.name ?? 'LetsGo Together';
     const send = () => this.track(this.sendPush(title, input, notifIds));
     if (input.type === 'photo' && input.refId) {
       // A batch of uploads becomes one push, sent shortly after the last one lands.

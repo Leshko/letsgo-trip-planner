@@ -25,7 +25,7 @@ import {
 } from './models';
 import { IdeaInput } from './models';
 
-/** Thin typed wrapper over the LetsGo API. Every call returns a Promise. */
+/** Thin typed wrapper over the LetsGo Together API. Every call returns a Promise. */
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private readonly http = inject(HttpClient);

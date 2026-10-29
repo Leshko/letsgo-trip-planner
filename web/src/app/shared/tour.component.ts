@@ -42,7 +42,7 @@ export class TourComponent {
     },
     {
       art: '📲',
-      title: 'Put LetsGo on your home screen',
+      title: 'Put LetsGo Together on your home screen',
       body: 'Install it like an app: full screen, no browser bar, and on iPhone this is what makes notifications work.',
       action: 'install',
     },

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Deploy (or update) LetsGo on an Unraid box. Run this in the Unraid terminal:
+# Deploy (or update) LetsGo Together on an Unraid box. Run this in the Unraid terminal:
 #
 #   curl -fsSL https://raw.githubusercontent.com/Leshko/letsgo-trip-planner/main/deploy/unraid-deploy.sh | bash
 #
@@ -49,4 +49,4 @@ fi
 
 IP=$(hostname -I 2>/dev/null | awk '{print $1}')
 echo
-echo "LetsGo is running: http://${IP:-<unraid-ip>}:${PORT}"
+echo "LetsGo Together is running: http://${IP:-<unraid-ip>}:${PORT}"

@@ -128,7 +128,7 @@ export class PhotosComponent {
   }
 
   async sharePhoto(p: Photo) {
-    const out = await this.share.share({ title: this.session.trip()?.name ?? 'LetsGo', text: p.caption || 'Trip photo', path: `/trip/photos?photo=${p.id}` });
+    const out = await this.share.share({ title: this.session.trip()?.name ?? 'LetsGo Together', text: p.caption || 'Trip photo', path: `/trip/photos?photo=${p.id}` });
     if (out === 'copied') this.flash('Link copied');
     else if (out === 'failed') this.flash("Couldn't share");
   }

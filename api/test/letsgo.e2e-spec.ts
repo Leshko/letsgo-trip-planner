@@ -922,7 +922,7 @@ describe('shared photos (e2e)', () => {
       .expect(200);
     expect(zip.headers['content-type']).toContain('application/zip');
     expect(zip.headers['content-disposition']).toContain(
-      'LetsGo - Photo Trip2027.zip',
+      'LetsGo Together - Photo Trip2027.zip',
     );
     const body = zip.body as Buffer;
     expect(body.subarray(0, 4)).toEqual(Buffer.from([0x50, 0x4b, 0x03, 0x04]));

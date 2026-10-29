@@ -1,7 +1,7 @@
 <div class="modal-backdrop" style="align-items:center">
   <div class="modal tour" role="dialog" [attr.aria-label]="mode() === 'new' ? 'What\'s new' : 'Welcome tour'" [attr.data-testid]="mode() === 'new' ? 'whats-new' : 'tour'">
     @let s = step();
-    @if (mode() === 'new') { <span class="chip chip--sea">✨ New in LetsGo</span> }
+    @if (mode() === 'new') { <span class="chip chip--sea">✨ New in LetsGo Together</span> }
     @if (s.demoVote) {
       <button class="vote tour__demo" [class.is-on]="demoOn()" type="button" (click)="demoOn.set(!demoOn())" aria-label="Try voting">
         <span class="ico">{{ demoOn() ? '🙌' : '👍' }}</span><span class="n">{{ demoOn() ? 4 : 3 }}</span>
@@ -40,7 +40,7 @@
             <li>Tap <strong>Add</strong></li>
           </ol>
         } @else {
-          <span class="tiny">In Chrome or Edge, look for "Install LetsGo" in the browser menu. You can also find it later under your profile.</span>
+          <span class="tiny">In Chrome or Edge, look for "Install LetsGo Together" in the browser menu. You can also find it later under your profile.</span>
         }
       </div>
     }

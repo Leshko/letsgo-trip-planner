@@ -7,6 +7,6 @@ async function bootstrap() {
   configureApp(app);
   const port = Number(process.env.PORT ?? 3001);
   await app.listen(port);
-  console.log(`LetsGo API listening on http://localhost:${port}/api`);
+  console.log(`LetsGo Together API listening on http://localhost:${port}/api`);
 }
 void bootstrap();

@@ -249,7 +249,7 @@ export class PhotosService {
 
   async zipName(tripId: string): Promise<string> {
     const trip = await this.trips.findOne({ where: { id: tripId } });
-    return `LetsGo - ${safeName(trip?.name ?? 'trip') || 'trip'}.zip`;
+    return `LetsGo Together - ${safeName(trip?.name ?? 'trip') || 'trip'}.zip`;
   }
 
   /** Oldest first, numbered, named after the uploader and the original file. */

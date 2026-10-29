@@ -126,7 +126,7 @@ export class IdeaDetailComponent {
   async shareIdea() {
     const i = this.idea();
     if (!i) return;
-    const out = await this.share.share({ title: i.title, text: `${i.title} · ${this.session.trip()?.name ?? 'LetsGo'}`, path: `/trip/idea/${i.id}` });
+    const out = await this.share.share({ title: i.title, text: `${i.title} · ${this.session.trip()?.name ?? 'LetsGo Together'}`, path: `/trip/idea/${i.id}` });
     if (out === 'copied') this.flash('Link copied');
     else if (out === 'failed') this.flash("Couldn't share");
   }
