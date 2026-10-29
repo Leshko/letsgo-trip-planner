@@ -19,12 +19,14 @@ import {
   Trip,
   UnfurlCache,
   Vote,
+  MemberAlias,
 } from './entities';
 import { SocialModule } from './social/social.module';
 import { ActivityModule } from './activity/activity.module';
 import { UnfurlModule } from './unfurl/unfurl.module';
 import { PhotosModule } from './photos/photos.module';
 import { AiModule } from './ai/ai.module';
+import { AdminModule } from './admin/admin.module';
 import { TripsModule } from './trips/trips.module';
 import { IdeasModule } from './ideas/ideas.module';
 import { ItineraryModule } from './itinerary/itinerary.module';
@@ -44,6 +46,7 @@ export const ENTITIES = [
   Notification,
   PushSubscription,
   UnfurlCache,
+  MemberAlias,
 ];
 
 /** The built Angular app, when present, is served by the API so one process is the whole deploy. */
@@ -85,6 +88,7 @@ const webDist = join(__dirname, '..', '..', 'web', 'dist', 'web', 'browser');
     UnfurlModule,
     PhotosModule,
     AiModule,
+    AdminModule,
   ],
 })
 export class AppModule {}

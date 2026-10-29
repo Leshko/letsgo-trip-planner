@@ -8,6 +8,10 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/landing/landing.component').then((m) => m.LandingComponent),
   },
   {
+    path: 'admin',
+    loadComponent: () => import('./pages/admin/admin.component').then((m) => m.AdminComponent),
+  },
+  {
     path: 'join/:code',
     loadComponent: () => import('./pages/landing/landing.component').then((m) => m.LandingComponent),
   },

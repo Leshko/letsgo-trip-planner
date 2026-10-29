@@ -6,9 +6,9 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { Request } from 'express';
-import { Member } from '../entities';
+import { Member, MemberAlias } from '../entities';
 
 export interface AuthedRequest extends Request {
   member: Member;
@@ -22,6 +22,7 @@ export interface AuthedRequest extends Request {
 export class MemberGuard implements CanActivate {
   constructor(
     @InjectRepository(Member) private readonly members: Repository<Member>,
+    private readonly ds: DataSource,
   ) {}
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
@@ -39,10 +40,21 @@ export class MemberGuard implements CanActivate {
     }
     if (!token) throw new UnauthorizedException('Missing token');
 
-    const member = await this.members.findOne({
+    let member = await this.members.findOne({
       where: { token },
       relations: { trip: true },
     });
+    if (!member) {
+      // A device whose spot an admin merged into an older one.
+      const alias = await this.ds
+        .getRepository(MemberAlias)
+        .findOne({ where: { token } });
+      if (alias)
+        member = await this.members.findOne({
+          where: { id: alias.memberId },
+          relations: { trip: true },
+        });
+    }
     if (!member) throw new UnauthorizedException('Invalid token');
 
     const tripId = (req.params as Record<string, string>)['tripId'];

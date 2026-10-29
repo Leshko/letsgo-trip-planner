@@ -26,7 +26,7 @@ if [ -f "$ENV_FILE" ]; then
   chmod 600 "$ENV_FILE" 2>/dev/null || true
   EXTRA+=(--env-file "$ENV_FILE")
 fi
-for v in ANTHROPIC_API_KEY AI_MODEL AI_ENRICH AI_DAILY_CAP VAPID_SUBJECT; do
+for v in ANTHROPIC_API_KEY AI_MODEL AI_ENRICH AI_DAILY_CAP VAPID_SUBJECT ADMIN_KEY; do
   if [ -n "${!v:-}" ]; then EXTRA+=(-e "$v=${!v}"); fi
 done
 
