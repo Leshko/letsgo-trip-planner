@@ -27,7 +27,7 @@ What the family can do:
 - **Login codes** — from your avatar menu, make a one-time code (10 minutes)
   and type it on another phone or computer to sign in there as you.
 - **Profiles** — pick an emoji or upload a photo; it's shrunk on the phone
-  before upload and stored with everything else in the SQLite file.
+  before upload and stored in the database.
 - **Plan** — a day-by-day itinerary generated from the trip dates. Add entries
   from the idea list or write your own, give them a time or leave them "anytime",
   and drag them between days.
@@ -42,12 +42,19 @@ What the family can do:
 - **Tap any idea** for its own page: cover, details, map, who's in, comments,
   add to plan, edit, and a Share button that copies a link. Links carry the
   invite code, so a relative who isn't signed in joins and lands on the idea.
+- **Accounts** — sign in with Google, Microsoft or a 6-digit code emailed to
+  you (no passwords). *My trips* lists every trip you're part of, on any device.
+  Starting a trip needs an account; joining one only needs a name, and people
+  can save their spot to an account later without losing anything.
+- **Admin** — `/admin` (unlocked with `ADMIN_KEY`) lists every trip with its
+  join link and lets you merge a person who rejoined under a new name back into
+  their original spot.
 - **Install it** — LetsGo Together is a PWA: on Android/desktop Chrome tap Install; on
   iPhone use Share → Add to Home Screen. Updates arrive with a tap.
 
 Screens poll every few seconds so everyone's phone stays in sync.
 
-## Deploy on Unraid (single container)
+## Deploy on Unraid
 
 See [deploy/README.md](deploy/README.md). Short version, in the Unraid terminal:
 
@@ -55,18 +62,22 @@ See [deploy/README.md](deploy/README.md). Short version, in the Unraid terminal:
 curl -fsSL https://raw.githubusercontent.com/Leshko/letsgo-trip-planner/main/deploy/unraid-deploy.sh | bash
 ```
 
-One container, one SQLite file, port 3001.
+Two containers (the app and PostgreSQL), port 3001. The setup for sign-in and
+the letsgotogether.app address is in the same guide.
 
 ## Run it locally
 
 ```bash
+docker run -d --name letsgo-pg -e POSTGRES_USER=letsgo -e POSTGRES_PASSWORD=letsgo -p 5432:5432 postgres:16-alpine
+export DATABASE_URL=postgres://letsgo:letsgo@localhost:5432/letsgo
 pnpm install
 pnpm --filter @letsgo/web build     # once; the API serves the built app
 pnpm --filter @letsgo/api start     # http://localhost:3001
 ```
 
-Data lives in a SQLite file at `api/data/letsgo.sqlite`, with uploaded photos
-next to it under `api/data/photos/`. Nothing else to set up.
+The schema is created by the migrations in `api/src/migrations` on startup.
+Uploaded photos go to `api/data/photos/`. Set `MAIL_DEV_OUTBOX=memory` (or a
+file path) to sign in with emailed codes without an email service.
 
 ### Develop
 
@@ -79,13 +90,14 @@ Open <http://localhost:4200>.
 ### Test
 
 ```bash
-pnpm --filter @letsgo/api test      # end-to-end API suite against an in-memory DB
+pnpm --filter @letsgo/api test      # end-to-end suite; each suite gets a fresh Postgres database
+# uses TEST_PG_ADMIN_URL, default postgres://letsgo:letsgo@127.0.0.1:5432/postgres
 ```
 
 ## Layout
 
 ```
-api/   NestJS 11 + TypeORM + SQLite. Trips, members, ideas, votes, comments,
+api/   NestJS 11 + TypeORM + PostgreSQL. Accounts, trips, members, ideas, votes, comments,
        posts, activity feed, itinerary, photos (files on disk, zip streaming).
        Serves web/dist in production.
 web/   Angular 20 (standalone, signals). iOS-style look: system font, translucent
@@ -97,7 +109,15 @@ web/   Angular 20 (standalone, signals). iOS-style look: system font, translucen
 | Variable  | Default                 | Meaning                           |
 |-----------|-------------------------|-----------------------------------|
 | `PORT`    | `3001`                  | API (and web) port                |
-| `DB_PATH` | `api/data/letsgo.sqlite` | SQLite file, or `:memory:`        |
+| `DATABASE_URL` | required | PostgreSQL connection string. |
+| `DATA_DIR` | `api/data` | Photos, push keys. |
+| `DB_PATH` | `<DATA_DIR>/letsgo.sqlite` | The old SQLite file, imported once on first start if present. |
+| `PUBLIC_URL` | unset | The app's main address, e.g. `https://letsgotogether.app`. Sign-in redirects and emailed links use it; other addresses hand phones over to it. |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | unset | Google sign-in. |
+| `MICROSOFT_CLIENT_ID` / `MICROSOFT_CLIENT_SECRET` | unset | Microsoft sign-in (`MICROSOFT_TENANT`, default `common`). |
+| `SMTP_HOST` `SMTP_PORT` `SMTP_USER` `SMTP_PASS` `MAIL_FROM` | unset | Email for sign-in codes (e.g. Resend). |
+| `MAIL_DEV_OUTBOX` | unset | `memory` or a file path: keep emails instead of sending. Dev and tests only. |
+| `ADMIN_KEY` | unset | Turns on `/admin` (16+ characters). |
 | `UNFURL_ALLOW_PRIVATE` | unset | `1` lets link previews fetch private/local hosts. Dev only. |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | generated | Web Push keys. When unset they are generated once and saved to `vapid.json` next to the database. |
 | `VAPID_SUBJECT` | `mailto:letsgo@example.com` | Contact for push services; set your email. |
@@ -110,8 +130,11 @@ web/   Angular 20 (standalone, signals). iOS-style look: system font, translucen
 
 ### How access works
 
-A trip has one invite code. Joining with a code and a name creates a member and
-returns a bearer token the browser keeps in local storage. Joining again with the
+Starting a trip needs an account (Google, Microsoft or emailed code). A trip has
+one invite code. Joining with a code and a name creates a member and returns a
+bearer token the browser keeps in local storage; signing in later saves that
+spot to the account. A spot saved to an account can't be taken over by typing
+the same name. Joining again with the
 same name on another device hands back the same identity, so Grandma can use her
 phone and the iPad. The trip owner (whoever created it) can remove anyone's
 ideas, comments and posts; everyone else can remove only their own.
