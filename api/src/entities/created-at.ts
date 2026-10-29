@@ -1,12 +1,12 @@
 import { BeforeInsert, Column } from 'typeorm';
+import { epochMs } from './columns';
 
 /**
- * Creation time as epoch milliseconds. SQLite's datetime('now') only has
- * one-second resolution and TypeORM's string round-trip is timezone-fragile,
- * so a plain integer is both precise and unambiguous for ordering.
+ * Creation time as epoch milliseconds. A plain integer is precise and
+ * unambiguous for ordering, and it survived the move from SQLite unchanged.
  */
 export abstract class Timestamped {
-  @Column({ type: 'integer' })
+  @Column({ type: 'bigint', transformer: epochMs })
   createdAt!: number;
 
   @BeforeInsert()

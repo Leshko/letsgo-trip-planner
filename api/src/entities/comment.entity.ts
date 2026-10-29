@@ -16,17 +16,17 @@ export class Comment extends Timestamped {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column()
+  @Column({ type: 'uuid' })
   tripId!: string;
 
-  @Column()
+  @Column({ type: 'uuid' })
   ideaId!: string;
 
   @ManyToOne(() => Idea, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'ideaId' })
   idea!: Idea;
 
-  @Column()
+  @Column({ type: 'uuid' })
   memberId!: string;
 
   @ManyToOne(() => Member, { onDelete: 'CASCADE', eager: true })

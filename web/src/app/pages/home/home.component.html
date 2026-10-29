@@ -1,5 +1,15 @@
 @if (trip(); as t) {
   <div class="page">
+    @if (savePrompt(); as p) {
+      <section class="card card--sea save-trip" data-testid="save-trip" [attr.data-organizer]="p.organizer">
+        <div class="big" aria-hidden="true">🔒</div>
+        <div class="grow"><strong>{{ p.title }}</strong><div class="tiny">{{ p.body }}</div></div>
+        <div class="stack-v" style="gap:4px">
+          <button class="btn btn--primary btn--sm" type="button" (click)="saveTrip()" data-testid="save-trip-btn">Save it</button>
+          @if (!p.organizer) { <button class="btn btn--ghost btn--sm" type="button" (click)="dismissSave()">Not now</button> }
+        </div>
+      </section>
+    }
     @if (countdown(); as c) {
       <section class="card card--accent row row--between">
         <div>

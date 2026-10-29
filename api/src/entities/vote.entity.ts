@@ -16,14 +16,14 @@ export class Vote extends Timestamped {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column()
+  @Column({ type: 'uuid' })
   ideaId!: string;
 
   @ManyToOne(() => Idea, (i) => i.votes, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'ideaId' })
   idea!: Idea;
 
-  @Column()
+  @Column({ type: 'uuid' })
   memberId!: string;
 
   @ManyToOne(() => Member, { onDelete: 'CASCADE', eager: true })

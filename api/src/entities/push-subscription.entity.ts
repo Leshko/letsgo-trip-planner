@@ -15,7 +15,7 @@ export class PushSubscription extends Timestamped {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column()
+  @Column({ type: 'uuid' })
   @Index()
   memberId!: string;
 

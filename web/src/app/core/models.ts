@@ -32,6 +32,8 @@ export interface Session {
   token: string;
   member: Member;
   trip: Trip;
+  /** Whether this trip spot is saved to an account. */
+  accountLinked?: boolean;
 }
 
 export type IdeaKind = 'activity' | 'food';
@@ -239,3 +241,33 @@ export const DEFAULT_NOTIFY_PREFS: NotifyPrefs = {
   photos: true,
   members: true,
 };
+
+// ---- accounts ----
+
+export type AuthProviderId = 'google' | 'microsoft' | 'email';
+
+export interface AccountUser {
+  id: string;
+  name: string;
+  email: string;
+  signIns: { provider: AuthProviderId; email: string }[];
+}
+
+/** One trip the signed-in account is part of, with the member token to open it. */
+export interface MyTrip {
+  trip: Trip;
+  member: Member;
+  token: string;
+}
+
+export interface Account {
+  user: AccountUser;
+  trips: MyTrip[];
+}
+
+export interface SignedIn {
+  token: string;
+  user: AccountUser;
+}
+
+export type SignInOptions = Record<AuthProviderId, boolean>;

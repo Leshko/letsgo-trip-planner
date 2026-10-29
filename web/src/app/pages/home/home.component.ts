@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { Activity, Idea, Photo, Post } from '../../core/models';
@@ -32,6 +32,49 @@ export class HomeComponent {
 
   readonly trip = this.session.trip;
   readonly me = this.session.member;
+  private readonly router = inject(Router);
+  private readonly saveDismissed = signal(readDismissed(this.session.tripId()));
+
+  /**
+   * Organizers are asked until they save the trip to an account (it can't be
+   * dismissed). Everyone else sees a gentle prompt they can put off for two weeks.
+   */
+  readonly savePrompt = computed(() => {
+    const m = this.me();
+    if (!m || this.session.accountLinked()) return null;
+    if (m.isOwner)
+      return {
+        organizer: true,
+        title: "You're the organizer. Save this trip to your account",
+        body: "Sign in once with Google, Microsoft or email. You'll never lose the trip, and you can open it on any device.",
+      };
+    if (this.saveDismissed()) return null;
+    return {
+      organizer: false,
+      title: 'Save your spot',
+      body: 'Sign in to keep your votes and photos safe and see all your trips on any device.',
+    };
+  });
+
+  async saveTrip() {
+    if (this.session.hasAccount()) {
+      await this.api.claimTrip(this.session.token() ?? '').then(
+        () => this.session.accountLinked.set(true),
+        () => void this.router.navigate(['/trips']),
+      );
+      return;
+    }
+    await this.router.navigate(['/signin'], { queryParams: { next: '/trip' } });
+  }
+
+  dismissSave() {
+    try {
+      localStorage.setItem(dismissKey(this.session.tripId()), String(Date.now()));
+    } catch {
+      /* ignore */
+    }
+    this.saveDismissed.set(true);
+  }
   readonly ideas = signal<Idea[]>([]);
   readonly feed = signal<Activity[]>([]);
   readonly posts = signal<Post[]>([]);
@@ -83,4 +126,15 @@ export class HomeComponent {
 
 function byVotes(a: Idea, b: Idea): number {
   return b.voteCount - a.voteCount || a.createdAt.localeCompare(b.createdAt);
+}
+
+const dismissKey = (tripId: string) => `letsgo.savePrompt.${tripId}`;
+
+function readDismissed(tripId: string): boolean {
+  try {
+    const at = Number(localStorage.getItem(dismissKey(tripId)) ?? 0);
+    return Date.now() - at < 14 * 24 * 60 * 60_000;
+  } catch {
+    return false;
+  }
 }

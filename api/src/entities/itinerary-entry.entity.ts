@@ -16,7 +16,7 @@ export class ItineraryEntry extends Timestamped {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column()
+  @Column({ type: 'uuid' })
   tripId!: string;
 
   /** YYYY-MM-DD */
@@ -33,7 +33,7 @@ export class ItineraryEntry extends Timestamped {
   @Column({ default: '' })
   notes!: string;
 
-  @Column({ type: 'varchar', nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   ideaId!: string | null;
 
   @ManyToOne(() => Idea, { onDelete: 'SET NULL', eager: true, nullable: true })
@@ -43,7 +43,7 @@ export class ItineraryEntry extends Timestamped {
   @Column({ default: 0 })
   position!: number;
 
-  @Column()
+  @Column({ type: 'uuid' })
   addedById!: string;
 
   @ManyToOne(() => Member, { onDelete: 'CASCADE', eager: true })

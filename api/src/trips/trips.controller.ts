@@ -27,9 +27,16 @@ import {
   UpdateTripDto,
 } from './trips.dto';
 import { Throttle } from '../common/throttle';
+import { clientIp } from '../common/client-ip';
 import { effectivePrefs } from '../common/notify-prefs';
 import { NotifyPrefsDto } from '../notifications/notifications.dto';
 import { TripsService } from './trips.service';
+import {
+  AccountGuard,
+  CurrentUser,
+  OptionalAccountGuard,
+} from '../auth/account.guard';
+import { User } from '../entities';
 
 @Controller('trips')
 export class TripsController {
@@ -37,20 +44,24 @@ export class TripsController {
 
   constructor(private readonly trips: TripsService) {}
 
+  /** Organizers need an account (plans and billing hang off it). */
   @Post()
-  create(@Body() dto: CreateTripDto) {
-    return this.trips.create(dto);
+  @UseGuards(AccountGuard)
+  create(@Body() dto: CreateTripDto, @CurrentUser() user: User) {
+    return this.trips.create(dto, user);
   }
 
+  /** Joining works with or without an account. */
   @Post('join')
-  join(@Body() dto: JoinTripDto) {
-    return this.trips.join(dto);
+  @UseGuards(OptionalAccountGuard)
+  join(@Body() dto: JoinTripDto, @CurrentUser() user: User | null) {
+    return this.trips.join(dto, user);
   }
 
   /** Sign in on this device with a login code made on another one. */
   @Post('transfer')
   transfer(@Body() dto: TransferDto, @Req() req: Request) {
-    this.throttle.hit(req.ip ?? 'unknown');
+    this.throttle.hit(clientIp(req));
     return this.trips.redeemTransferCode(dto);
   }
 
@@ -68,6 +79,8 @@ export class TripsController {
       member: memberView(me),
       trip: await this.trips.getView(me.tripId),
       notifyPrefs: effectivePrefs(me),
+      /** Whether this spot is saved to an account (drives the "save your trip" prompt). */
+      accountLinked: !!me.userId,
     };
   }
 

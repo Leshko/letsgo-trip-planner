@@ -1,11 +1,28 @@
 import { Routes } from '@angular/router';
-import { signedInGuard, signedOutGuard } from './core/guards';
+import { accountGuard, signedInGuard, signedOutGuard } from './core/guards';
 
 export const routes: Routes = [
   {
     path: '',
     canActivate: [signedOutGuard],
     loadComponent: () => import('./pages/landing/landing.component').then((m) => m.LandingComponent),
+  },
+  {
+    path: 'signin',
+    loadComponent: () => import('./pages/account/signin.component').then((m) => m.SignInPageComponent),
+  },
+  {
+    path: 'auth/done',
+    loadComponent: () => import('./pages/account/auth-callback.component').then((m) => m.AuthCallbackComponent),
+  },
+  {
+    path: 'auth/email',
+    loadComponent: () => import('./pages/account/auth-callback.component').then((m) => m.AuthCallbackComponent),
+  },
+  {
+    path: 'trips',
+    canActivate: [accountGuard],
+    loadComponent: () => import('./pages/account/my-trips.component').then((m) => m.MyTripsComponent),
   },
   {
     path: 'join/:code',

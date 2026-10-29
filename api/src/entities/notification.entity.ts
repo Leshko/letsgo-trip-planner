@@ -6,6 +6,7 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { epochMs } from './columns';
 import { Member } from './member.entity';
 import { Timestamped } from './created-at';
 import type { ActivityType } from './activity.entity';
@@ -21,18 +22,18 @@ export class Notification extends Timestamped {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column()
+  @Column({ type: 'uuid' })
   tripId!: string;
 
   /** Recipient. */
-  @Column()
+  @Column({ type: 'uuid' })
   memberId!: string;
 
   @ManyToOne(() => Member, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'memberId' })
   member!: Member;
 
-  @Column()
+  @Column({ type: 'uuid' })
   actorId!: string;
 
   @ManyToOne(() => Member, { onDelete: 'CASCADE', eager: true })
@@ -51,6 +52,6 @@ export class Notification extends Timestamped {
   @Column({ type: 'varchar', nullable: true })
   refId!: string | null;
 
-  @Column({ type: 'integer', nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: epochMs })
   readAt!: number | null;
 }

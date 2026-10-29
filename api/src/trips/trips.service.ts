@@ -1,12 +1,14 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
-import { emptyLodging, Member, TransferCode, Trip } from '../entities';
+import { emptyLodging, Member, TransferCode, Trip, User } from '../entities';
+import { AccountService } from '../auth/account.service';
 import { generateInviteCode, normalizeInviteCode } from '../common/invite-code';
 import { isIsoDate } from '../common/dates';
 import {
@@ -38,6 +40,8 @@ export interface SessionResult {
   token: string;
   member: MemberView;
   trip: TripView;
+  /** Whether this trip spot is saved to an account. */
+  accountLinked: boolean;
 }
 
 @Injectable()
@@ -48,6 +52,7 @@ export class TripsService {
     @InjectRepository(TransferCode)
     private readonly transfers: Repository<TransferCode>,
     private readonly activity: ActivityService,
+    private readonly account: AccountService,
   ) {}
 
   private assertDates(start: string, end: string) {
@@ -57,7 +62,7 @@ export class TripsService {
       throw new BadRequestException('End date must be on or after start date');
   }
 
-  async create(dto: CreateTripDto): Promise<SessionResult> {
+  async create(dto: CreateTripDto, user: User): Promise<SessionResult> {
     this.assertDates(dto.startDate, dto.endDate);
 
     let inviteCode = generateInviteCode();
@@ -72,10 +77,11 @@ export class TripsService {
         endDate: dto.endDate,
         inviteCode,
         lodging: emptyLodging(),
+        ownerUserId: user.id,
       }),
     );
     const member = await this.members.save(
-      this.newMember(trip.id, dto.memberName, true, dto.emoji),
+      this.newMember(trip.id, dto.memberName, true, dto.emoji, user.id),
     );
     await this.activity.record(
       member,
@@ -86,6 +92,7 @@ export class TripsService {
     );
     return {
       token: member.token,
+      accountLinked: !!member.userId,
       member: memberView(member),
       trip: tripView(trip, [member]),
     };
@@ -96,6 +103,7 @@ export class TripsService {
     name: string,
     isOwner: boolean,
     emoji?: string,
+    userId: string | null = null,
   ): Member {
     const clean = name.trim();
     return this.members.create({
@@ -105,28 +113,53 @@ export class TripsService {
       token: randomUUID() + randomUUID().replace(/-/g, ''),
       isOwner,
       emoji: (emoji ?? '').trim(),
+      userId,
     });
   }
 
   /**
    * Joining is trust-based: a family invite code plus a first name. If the name
    * already exists in the trip the same person is assumed (e.g. second device)
-   * and their existing identity is handed back.
+   * and their existing identity is handed back, unless that spot is saved to
+   * an account, in which case only that account can have it.
    */
-  async join(dto: JoinTripDto): Promise<SessionResult> {
+  async join(
+    dto: JoinTripDto,
+    user: User | null = null,
+  ): Promise<SessionResult> {
     const inviteCode = normalizeInviteCode(dto.code);
     const trip = await this.trips.findOne({ where: { inviteCode } });
     if (!trip) throw new NotFoundException('No trip with that invite code');
 
+    // Signed in and already in this trip: just open it.
+    let member = user
+      ? await this.members.findOne({
+          where: { tripId: trip.id, userId: user.id },
+        })
+      : null;
+    if (member) return this.session(trip, member);
+
     const nameKey = dto.name.trim().toLowerCase();
-    let member = await this.members.findOne({
+    member = await this.members.findOne({
       where: { tripId: trip.id, nameKey },
     });
+    if (member?.userId) {
+      throw new ConflictException(
+        user
+          ? `Someone named ${member.name} is already in this trip. Try a different name.`
+          : `${member.name} signs in with an account. Sign in to continue as ${member.name}, or use a different name.`,
+      );
+    }
     if (!member) {
       member = await this.members.save(
-        this.newMember(trip.id, dto.name, false, dto.emoji),
+        this.newMember(trip.id, dto.name, false, dto.emoji, user?.id ?? null),
       );
       await this.activity.record(member, 'joined', 'joined the trip');
+    } else if (user) {
+      member.userId = user.id;
+      if (dto.emoji && !member.emoji) member.emoji = dto.emoji.trim();
+      await this.members.save(member);
+      await this.account.adoptOwnership(member, user);
     } else if (dto.emoji && !member.emoji) {
       member.emoji = dto.emoji.trim();
       await this.members.save(member);
@@ -135,6 +168,17 @@ export class TripsService {
     const members = await this.listMembers(trip.id);
     return {
       token: member.token,
+      accountLinked: !!member.userId,
+      member: memberView(member),
+      trip: tripView(trip, members),
+    };
+  }
+
+  private async session(trip: Trip, member: Member): Promise<SessionResult> {
+    const members = await this.listMembers(trip.id);
+    return {
+      token: member.token,
+      accountLinked: !!member.userId,
       member: memberView(member),
       trip: tripView(trip, members),
     };
@@ -194,6 +238,7 @@ export class TripsService {
     ]);
     return {
       token: member.token,
+      accountLinked: !!member.userId,
       member: memberView(member),
       trip: tripView(trip, members),
     };

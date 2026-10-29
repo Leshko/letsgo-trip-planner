@@ -6,6 +6,7 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { epochMs } from './columns';
 import { Member } from './member.entity';
 import { Timestamped } from './created-at';
 
@@ -19,7 +20,7 @@ export class TransferCode extends Timestamped {
   @Index()
   code!: string;
 
-  @Column()
+  @Column({ type: 'uuid' })
   memberId!: string;
 
   @ManyToOne(() => Member, { onDelete: 'CASCADE', eager: true })
@@ -27,9 +28,9 @@ export class TransferCode extends Timestamped {
   member!: Member;
 
   /** epoch ms */
-  @Column({ type: 'integer' })
+  @Column({ type: 'bigint', transformer: epochMs })
   expiresAt!: number;
 
-  @Column({ type: 'integer', nullable: true })
+  @Column({ type: 'bigint', nullable: true, transformer: epochMs })
   usedAt!: number | null;
 }

@@ -414,3 +414,18 @@ body.viewer-open { overflow: hidden; }
 
 .voters-btn { background: transparent; border: 0; padding: 0; cursor: pointer; color: inherit; text-align: left; }
 .voters-btn app-icon { color: var(--text-3); }
+
+/* ---------- accounts ---------- */
+.signin-btn { background: #fff; color: var(--text); border: 1px solid var(--separator, #d1d1d6); gap: 10px; font-weight: 600; }
+.signin-btn:active { background: var(--fill-2); }
+.signin-or { display: flex; align-items: center; gap: 10px; color: var(--text-2); font-size: 13px; }
+.signin-or::before, .signin-or::after { content: ''; flex: 1; height: 1px; background: var(--separator, #d1d1d6); }
+.trip-card { display: block; width: 100%; text-align: left; border: 0; cursor: pointer; font: inherit; color: inherit; }
+.trip-card:active { transform: scale(0.99); }
+.trip-card__name { font-size: 19px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.save-trip { display: flex; gap: 12px; align-items: center; }
+.save-trip .big { font-size: 28px; }
+.topbar__switch { text-decoration: none; color: inherit; }
+.topbar__switch span { font-size: 12px; color: var(--text-2); }
+.save-trip { margin-bottom: 12px; }
+.card .btn--primary.btn--sm { background: var(--tint); color: #fff; }

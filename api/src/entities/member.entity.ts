@@ -8,14 +8,16 @@ import {
 } from 'typeorm';
 import { Timestamped } from './created-at';
 import { Trip } from './trip.entity';
+import { User } from './account.entities';
 
 @Entity()
 @Index(['tripId', 'nameKey'], { unique: true })
+@Index(['tripId', 'userId'], { unique: true })
 export class Member extends Timestamped {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column()
+  @Column({ type: 'uuid' })
   tripId!: string;
 
   @ManyToOne(() => Trip, (t) => t.members, { onDelete: 'CASCADE' })
@@ -40,8 +42,8 @@ export class Member extends Timestamped {
   @Column({ default: '' })
   emoji!: string;
 
-  /** Uploaded profile photo (small JPEG/PNG/WebP), stored inline so the SQLite file is the whole backup. */
-  @Column({ type: 'blob', nullable: true, select: false })
+  /** Uploaded profile photo (small JPEG/PNG/WebP), stored inline so a database backup includes it. */
+  @Column({ type: 'bytea', nullable: true, select: false })
   avatar!: Buffer | null;
 
   @Column({ default: '' })
@@ -49,6 +51,15 @@ export class Member extends Timestamped {
 
   @Column({ type: 'integer', default: 0 })
   avatarVersion!: number;
+
+  /** The account this spot in the trip belongs to; null for people who joined without one. */
+  @Column({ type: 'uuid', nullable: true })
+  @Index()
+  userId!: string | null;
+
+  @ManyToOne(() => User, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'userId' })
+  user!: User | null;
 
   /** Notification switches the person turned off; missing keys mean on. */
   @Column({ type: 'simple-json', default: '{}' })

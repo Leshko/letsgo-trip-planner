@@ -3,6 +3,8 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
+import { freshDatabase } from './db';
+import { organizer } from './accounts';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { photosDir } from '../src/common/paths';
@@ -25,6 +27,7 @@ describe('LetsGo API (e2e)', () => {
   const auth = (t: string) => ({ Authorization: `Bearer ${t}` });
 
   beforeAll(async () => {
+    await freshDatabase();
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
@@ -39,6 +42,7 @@ describe('LetsGo API (e2e)', () => {
   it('creates a trip and returns the owner session', async () => {
     const res = await http
       .post('/api/trips')
+      .set(await organizer(app))
       .send({
         name: 'Lake Week',
         destination: 'Lake Tahoe',
@@ -60,6 +64,7 @@ describe('LetsGo API (e2e)', () => {
   it('rejects an end date before the start date', async () => {
     await http
       .post('/api/trips')
+      .set(await organizer(app))
       .send({
         name: 'Bad',
         startDate: '2027-07-10',
@@ -109,6 +114,7 @@ describe('LetsGo API (e2e)', () => {
   it('blocks members of another trip', async () => {
     const other = await http
       .post('/api/trips')
+      .set(await organizer(app))
       .send({
         name: 'Other',
         startDate: '2027-01-01',
@@ -391,6 +397,7 @@ describe('unfurl endpoint (e2e)', () => {
   let tripId: string;
 
   beforeAll(async () => {
+    await freshDatabase();
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
@@ -400,6 +407,7 @@ describe('unfurl endpoint (e2e)', () => {
     http = request(app.getHttpServer());
     const res = await http
       .post('/api/trips')
+      .set(await organizer(app))
       .send({
         name: 'U',
         startDate: '2027-01-01',
@@ -460,6 +468,7 @@ describe('idea details, editing and login codes (e2e)', () => {
   let memberId: string;
 
   beforeAll(async () => {
+    await freshDatabase();
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
@@ -469,6 +478,7 @@ describe('idea details, editing and login codes (e2e)', () => {
     http = request(app.getHttpServer());
     const res = await http
       .post('/api/trips')
+      .set(await organizer(app))
       .send({
         name: 'E',
         startDate: '2027-01-01',
@@ -599,6 +609,7 @@ describe('profile photos (e2e)', () => {
   ]);
 
   beforeAll(async () => {
+    await freshDatabase();
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
@@ -608,6 +619,7 @@ describe('profile photos (e2e)', () => {
     http = request(app.getHttpServer());
     const res = await http
       .post('/api/trips')
+      .set(await organizer(app))
       .send({
         name: 'P',
         startDate: '2027-01-01',
@@ -702,6 +714,7 @@ describe('shared photos (e2e)', () => {
   };
 
   beforeAll(async () => {
+    await freshDatabase();
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
@@ -711,6 +724,7 @@ describe('shared photos (e2e)', () => {
     http = request(app.getHttpServer());
     const res = await http
       .post('/api/trips')
+      .set(await organizer(app))
       .send({
         name: 'Photo: Trip/2027',
         startDate: '2027-01-01',
@@ -729,6 +743,7 @@ describe('shared photos (e2e)', () => {
     kid = { Authorization: `Bearer ${k.body.token}` };
     const s = await http
       .post('/api/trips')
+      .set(await organizer(app))
       .send({
         name: 'Other',
         startDate: '2027-01-01',
@@ -1038,6 +1053,7 @@ describe('notifications and push (e2e)', () => {
       .map((n) => `${n.type}|${n.actor.name} ${n.message}`);
 
   beforeAll(async () => {
+    await freshDatabase();
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(PUSH_SENDER)
       .useValue(fake)
@@ -1049,6 +1065,7 @@ describe('notifications and push (e2e)', () => {
     notif = app.get(NotificationsService);
     const res = await http
       .post('/api/trips')
+      .set(await organizer(app))
       .send({
         name: 'Lake Week',
         startDate: '2027-07-10',
@@ -1071,6 +1088,7 @@ describe('notifications and push (e2e)', () => {
     kid = { Authorization: `Bearer ${k.body.token}` };
     const s = await http
       .post('/api/trips')
+      .set(await organizer(app))
       .send({
         name: 'Other',
         startDate: '2027-01-01',
@@ -1430,6 +1448,7 @@ describe('idea detail (e2e)', () => {
   let tripId: string;
 
   beforeAll(async () => {
+    await freshDatabase();
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
@@ -1439,6 +1458,7 @@ describe('idea detail (e2e)', () => {
     http = request(app.getHttpServer());
     const res = await http
       .post('/api/trips')
+      .set(await organizer(app))
       .send({
         name: 'D',
         startDate: '2027-01-01',
@@ -1477,6 +1497,7 @@ describe('idea detail (e2e)', () => {
       .expect(404);
     const other = await http
       .post('/api/trips')
+      .set(await organizer(app))
       .send({
         name: 'O',
         startDate: '2027-01-01',
@@ -1546,6 +1567,7 @@ describe('AI link previews (e2e)', () => {
     base = `http://127.0.0.1:${(fixture.address() as { port: number }).port}`;
     process.env.UNFURL_ALLOW_PRIVATE = '1';
     process.env.ANTHROPIC_API_KEY = 'test-key';
+    await freshDatabase();
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(AI_CLIENT)
       .useValue(stub)
@@ -1556,6 +1578,7 @@ describe('AI link previews (e2e)', () => {
     http = request(app.getHttpServer());
     const res = await http
       .post('/api/trips')
+      .set(await organizer(app))
       .send({
         name: 'AI',
         startDate: '2027-01-01',
@@ -1708,6 +1731,7 @@ describe('AI link previews (e2e)', () => {
     process.env.AI_DAILY_CAP = '1';
     const fresh = await http
       .post('/api/trips')
+      .set(await organizer(app))
       .send({
         name: 'Cap',
         startDate: '2027-01-01',

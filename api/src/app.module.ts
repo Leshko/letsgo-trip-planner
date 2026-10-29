@@ -3,23 +3,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { existsSync } from 'fs';
 import { join } from 'path';
-import { databasePath } from './common/paths';
-import {
-  Activity,
-  Comment,
-  Idea,
-  ItineraryEntry,
-  Member,
-  Post,
-  Photo,
-  PhotoComment,
-  Notification,
-  PushSubscription,
-  TransferCode,
-  Trip,
-  UnfurlCache,
-  Vote,
-} from './entities';
+import { databaseOptions } from './database/database.config';
+import { LegacyImportModule } from './database/legacy-import.module';
+import { HealthController } from './health.controller';
+import { AuthModule } from './auth/auth.module';
 import { SocialModule } from './social/social.module';
 import { ActivityModule } from './activity/activity.module';
 import { UnfurlModule } from './unfurl/unfurl.module';
@@ -29,34 +16,15 @@ import { TripsModule } from './trips/trips.module';
 import { IdeasModule } from './ideas/ideas.module';
 import { ItineraryModule } from './itinerary/itinerary.module';
 
-export const ENTITIES = [
-  Trip,
-  Member,
-  Idea,
-  Vote,
-  ItineraryEntry,
-  Comment,
-  Post,
-  Activity,
-  TransferCode,
-  Photo,
-  PhotoComment,
-  Notification,
-  PushSubscription,
-  UnfurlCache,
-];
+export { ENTITIES } from './entities';
 
 /** The built Angular app, when present, is served by the API so one process is the whole deploy. */
 const webDist = join(__dirname, '..', '..', 'web', 'dist', 'web', 'browser');
 
 @Module({
   imports: [
-    TypeOrmModule.forRoot({
-      type: 'better-sqlite3',
-      database: databasePath(),
-      entities: ENTITIES,
-      synchronize: true,
-    }),
+    TypeOrmModule.forRootAsync({ useFactory: () => databaseOptions() }),
+    LegacyImportModule,
     ...(existsSync(webDist)
       ? [
           ServeStaticModule.forRoot({
@@ -78,6 +46,7 @@ const webDist = join(__dirname, '..', '..', 'web', 'dist', 'web', 'browser');
         ]
       : []),
     ActivityModule,
+    AuthModule,
     TripsModule,
     IdeasModule,
     ItineraryModule,
@@ -86,5 +55,6 @@ const webDist = join(__dirname, '..', '..', 'web', 'dist', 'web', 'browser');
     PhotosModule,
     AiModule,
   ],
+  controllers: [HealthController],
 })
 export class AppModule {}

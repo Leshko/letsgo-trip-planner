@@ -1,4 +1,13 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
+import { User } from './account.entities';
 import { Timestamped } from './created-at';
 import { Member } from './member.entity';
 
@@ -46,6 +55,15 @@ export class Trip extends Timestamped {
 
   @Column({ type: 'simple-json' })
   lodging!: Lodging;
+
+  /** The organizer's account (plans and billing hang off this). Null until they sign in. */
+  @Column({ type: 'uuid', nullable: true })
+  @Index()
+  ownerUserId!: string | null;
+
+  @ManyToOne(() => User, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'ownerUserId' })
+  ownerUser!: User | null;
 
   @OneToMany(() => Member, (m) => m.trip)
   members!: Member[];

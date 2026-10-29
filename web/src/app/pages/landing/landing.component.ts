@@ -1,6 +1,7 @@
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, inject, input, OnDestroy, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
+import { SignInPanelComponent } from '../account/signin-panel.component';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { addDays, todayIso } from '../../core/format';
@@ -10,10 +11,10 @@ type Mode = 'join' | 'create' | 'code';
 
 @Component({
   selector: 'app-landing',
-  imports: [FormsModule, EmojiPickerComponent],
+  imports: [FormsModule, EmojiPickerComponent, SignInPanelComponent, RouterLink],
   templateUrl: './landing.component.html',
 })
-export class LandingComponent {
+export class LandingComponent implements OnDestroy {
   private readonly api = inject(ApiService);
   private readonly session = inject(SessionService);
   private readonly router = inject(Router);
@@ -22,10 +23,34 @@ export class LandingComponent {
   readonly code = input<string>();
   /** Where to go after signing in (share links and notifications). Only in-app paths are honoured. */
   readonly next = input<string>();
+  /** ?create=1 / ?join=1 from My trips. */
+  readonly createParam = input<string | undefined>(undefined, { alias: 'create' });
+  readonly joinParam = input<string | undefined>(undefined, { alias: 'join' });
+  readonly hasAccount = this.session.hasAccount;
   readonly mode = signal<Mode>('join');
   readonly busy = signal(false);
   readonly error = signal('');
   readonly fromLink = computed(() => !!this.code());
+  readonly unreachable = this.session.unreachable;
+  readonly retrying = signal(false);
+  /** While the server is unreachable, quietly try again every few seconds. */
+  private readonly autoRetry = setInterval(() => {
+    if (this.unreachable() && !this.retrying()) void this.retry();
+  }, 5000);
+
+  ngOnDestroy() {
+    clearInterval(this.autoRetry);
+  }
+
+  /** The server was unreachable when the app opened; the trip is still saved here. */
+  async retry() {
+    this.retrying.set(true);
+    try {
+      if (await this.session.restore(true)) await this.router.navigateByUrl(this.target());
+    } finally {
+      this.retrying.set(false);
+    }
+  }
 
   // join form
   joinCode = '';
@@ -46,8 +71,9 @@ export class LandingComponent {
   constructor() {
     // The session may already exist when arriving via a /join link.
     void this.session.restore().then((signedIn) => {
-      if (signedIn) void this.router.navigateByUrl(this.target());
+      if (signedIn && !this.createParam() && !this.joinParam()) void this.router.navigateByUrl(this.target());
     });
+    void this.session.restoreAccount().then(() => this.prefillName());
   }
 
   private target(): string {
@@ -59,7 +85,21 @@ export class LandingComponent {
     if (c) {
       this.joinCode = c.toUpperCase();
       this.mode.set('join');
+    } else if (this.createParam()) {
+      this.mode.set('create');
     }
+  }
+
+  /** Signed in: start from the account's first name. */
+  prefillName() {
+    const first = this.session.account()?.user.name.split(' ')[0] ?? '';
+    if (first && !this.memberName) this.memberName = first;
+    if (first && !this.joinName) this.joinName = first;
+  }
+
+  signedInToCreate() {
+    this.prefillName();
+    this.mode.set('create');
   }
 
   async join() {

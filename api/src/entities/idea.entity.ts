@@ -28,7 +28,7 @@ export class Idea extends Timestamped {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column()
+  @Column({ type: 'uuid' })
   tripId!: string;
 
   @Column({ type: 'varchar' })
@@ -64,7 +64,7 @@ export class Idea extends Timestamped {
   @Column({ type: 'simple-json', default: '[]' })
   details!: IdeaDetail[];
 
-  @Column()
+  @Column({ type: 'uuid' })
   suggestedById!: string;
 
   @ManyToOne(() => Member, { onDelete: 'CASCADE', eager: true })

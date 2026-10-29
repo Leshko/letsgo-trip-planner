@@ -12,7 +12,8 @@ RUN pnpm --filter @letsgo/web build && pnpm --filter @letsgo/api build
 
 # ---- runtime ----
 FROM node:22-bookworm-slim
-ENV NODE_ENV=production PORT=3001 DB_PATH=/data/letsgo.sqlite
+# DATA_DIR holds photos and push keys; DB_PATH is only read once, to import the old SQLite database.
+ENV NODE_ENV=production PORT=3001 DATA_DIR=/data DB_PATH=/data/letsgo.sqlite
 WORKDIR /app
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/api/dist ./api/dist
@@ -22,4 +23,6 @@ VOLUME ["/data"]
 EXPOSE 3001
 USER node
 WORKDIR /app/api
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3001)+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 CMD ["node", "dist/main.js"]

@@ -1,9 +1,24 @@
 <div class="page landing">
   <div class="hero">
-    <p class="chip chip--accent">🌴 LetsGo Together</p>
+    <div class="row" style="justify-content:space-between">
+      <p class="chip chip--accent">🌴 LetsGo Together</p>
+      @if (hasAccount()) {
+        <a class="btn btn--ghost btn--sm" routerLink="/trips">My trips</a>
+      } @else {
+        <a class="btn btn--ghost btn--sm" routerLink="/signin" data-testid="landing-signin">Sign in</a>
+      }
+    </div>
     <h1 class="mt">Plan the family trip<br />together.</h1>
     <p class="muted mt">One place to pitch ideas, vote on them, see where you're staying, and build the plan day by day.</p>
   </div>
+
+  @if (unreachable()) {
+    <div class="card card--sea mt stack-v" data-testid="unreachable">
+      <h2>Can't reach LetsGo Together right now</h2>
+      <p class="muted">Your trip is still saved on this device. The server may be restarting, or your connection dropped. Try again in a moment.</p>
+      <button class="btn btn--primary btn--block" type="button" (click)="retry()" [disabled]="retrying()">{{ retrying() ? 'Trying…' : 'Try again' }}</button>
+    </div>
+  }
 
   <div class="segmented mt-lg" role="tablist">
     <button role="tab" [class.is-active]="mode() === 'join'" (click)="mode.set('join')">I have a code</button>
@@ -45,6 +60,12 @@
       </button>
       <button class="btn btn--ghost btn--sm" type="button" (click)="mode.set('code'); error.set('')">Already in on another device? I have a login code</button>
     </form>
+  } @else if (!hasAccount()) {
+    <div class="card mt stack-v" data-testid="create-needs-account">
+      <h2>Start a new trip</h2>
+      <p class="muted">Organizers sign in with a free account, so your trip is always safe and you can open it from any device. Your family still joins with just their name.</p>
+      <app-signin-panel next="/?create=1" (signedIn)="signedInToCreate()" />
+    </div>
   } @else {
     <form class="card mt stack-v" (ngSubmit)="create()">
       <h2>Start a new trip</h2>
@@ -78,7 +99,7 @@
       <button class="btn btn--primary btn--block" type="submit" [disabled]="busy() || !tripName || !memberName || !startDate || !endDate">
         {{ busy() ? 'Creating…' : 'Create trip & get invite code' }}
       </button>
-      <p class="tiny">You'll get a short code to text the family. No accounts, no passwords.</p>
+      <p class="tiny">You'll get a short code to text the family. They join with just their name.</p>
     </form>
   }
 </div>

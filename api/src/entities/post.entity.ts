@@ -16,10 +16,10 @@ export class Post extends Timestamped {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column()
+  @Column({ type: 'uuid' })
   tripId!: string;
 
-  @Column()
+  @Column({ type: 'uuid' })
   memberId!: string;
 
   @ManyToOne(() => Member, { onDelete: 'CASCADE', eager: true })

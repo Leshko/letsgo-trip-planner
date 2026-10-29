@@ -4,10 +4,17 @@
       <button class="btn btn--sm btn--tinted topbar__left" (click)="showInvite.set(true)" aria-label="Invite family">
         <app-avatar-stack [members]="t.members" [max]="3" /> <span>Invite</span>
       </button>
-      <div class="topbar__center">
-        <div class="topbar__title">{{ t.name }}</div>
-        <div class="topbar__sub">{{ t.destination || 'Somewhere great' }} · {{ dates() }}</div>
-      </div>
+      @if (hasAccount()) {
+        <a class="topbar__center topbar__switch" routerLink="/trips" aria-label="Switch trip" data-testid="switch-trip">
+          <div class="topbar__title">{{ t.name }} <span aria-hidden="true">▾</span></div>
+          <div class="topbar__sub">{{ t.destination || 'Somewhere great' }} · {{ dates() }}</div>
+        </a>
+      } @else {
+        <div class="topbar__center">
+          <div class="topbar__title">{{ t.name }}</div>
+          <div class="topbar__sub">{{ t.destination || 'Somewhere great' }} · {{ dates() }}</div>
+        </div>
+      }
       <div class="topbar__right row" style="gap:2px">
         <button class="btn btn--ghost btn--icon bell" (click)="showNotifs.set(true)" [attr.aria-label]="'Notifications, ' + unread() + ' unread'">
           <app-icon name="bell" [size]="24" />
@@ -140,6 +147,22 @@
               </label>
             }
           </div>
+        </div>
+        <hr style="border:0;border-top:1px solid var(--border);margin:4px 0" />
+        <div data-testid="profile-account">
+          @if (hasAccount()) {
+            <div class="label">Account</div>
+            <p class="tiny">Signed in as {{ account()?.user?.email || account()?.user?.name }}.{{ accountLinked() ? ' This trip is saved to your account.' : '' }}</p>
+            @if (!accountLinked()) { <button class="btn btn--tinted btn--sm mt" type="button" (click)="claimHere()" data-testid="claim-here">Save this trip to my account</button> }
+            <div class="row mt" style="gap:8px">
+              <button class="btn btn--sm" type="button" (click)="myTrips()">My trips</button>
+              <button class="btn btn--ghost btn--sm" type="button" (click)="signOutAccount()" data-testid="profile-signout">Sign out</button>
+            </div>
+          } @else {
+            <div class="label">Save this trip</div>
+            <p class="tiny">Sign in with Google, Microsoft or your email. You'll never lose this trip, and you can open all your trips on any device.</p>
+            <button class="btn btn--tinted btn--sm mt" type="button" (click)="saveTrip()" data-testid="profile-save">Sign in to save it</button>
+          }
         </div>
         <hr style="border:0;border-top:1px solid var(--border);margin:4px 0" />
         <div>

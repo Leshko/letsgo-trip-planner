@@ -22,6 +22,10 @@ import {
   Trip,
   Unfurled,
   AiStatusInfo,
+  Account,
+  MyTrip,
+  SignedIn,
+  SignInOptions,
 } from './models';
 import { IdeaInput } from './models';
 
@@ -62,7 +66,7 @@ export class ApiService {
     return this.post<Session>('/trips/join', body);
   }
   me() {
-    return this.get<{ member: Member; trip: Trip; notifyPrefs: NotifyPrefs }>('/trips/me');
+    return this.get<{ member: Member; trip: Trip; notifyPrefs: NotifyPrefs; accountLinked: boolean }>('/trips/me');
   }
   getIdea(tripId: string, ideaId: string) {
     return this.get<Idea>(`/trips/${tripId}/ideas/${ideaId}`);
@@ -90,6 +94,32 @@ export class ApiService {
   }
   redeemTransferCode(code: string) {
     return this.post<Session>('/trips/transfer', { code });
+  }
+
+  // accounts
+  signInOptions() {
+    return this.get<SignInOptions>('/auth/providers');
+  }
+  emailStart(email: string) {
+    return this.post<{ sent: boolean }>('/auth/email/start', { email });
+  }
+  emailVerify(body: { email: string; code: string } | { token: string }) {
+    return this.post<SignedIn>('/auth/email/verify', body);
+  }
+  exchangeSignIn(code: string) {
+    return this.post<SignedIn>('/auth/exchange', { code });
+  }
+  account() {
+    return this.get<Account>('/account');
+  }
+  claimTrip(memberToken: string) {
+    return this.post<MyTrip>('/account/claim', { memberToken });
+  }
+  accountSignOut() {
+    return this.post<void>('/account/signout', {});
+  }
+  deleteAccount() {
+    return this.delete('/account');
   }
   uploadAvatar(dataUrl: string) {
     return this.put<Member>('/trips/me/avatar', { dataUrl });

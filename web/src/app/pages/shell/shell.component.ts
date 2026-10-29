@@ -53,6 +53,9 @@ export class ShellComponent {
 
   readonly trip = this.session.trip;
   readonly me = this.session.member;
+  readonly hasAccount = this.session.hasAccount;
+  readonly accountLinked = this.session.accountLinked;
+  readonly account = this.session.account;
   readonly dates = computed(() => {
     const t = this.trip();
     return t ? dateRangeLabel(t.startDate, t.endDate) : '';
@@ -85,6 +88,7 @@ export class ShellComponent {
   constructor() {
     // Keeps the member list (who's joined) fresh across every page.
     usePolling(() => this.session.refreshTrip(), 20_000);
+    void this.session.restoreAccount();
     if (this.updates.isEnabled) {
       this.updates.versionUpdates.subscribe((e) => {
         if (e.type === 'VERSION_READY') this.updateReady.set(true);
@@ -290,9 +294,42 @@ export class ShellComponent {
   }
 
   async leave() {
-    if (!confirm('Leave this trip on this device? You can rejoin any time with the invite code.')) return;
+    const msg = this.accountLinked()
+      ? 'Close this trip on this device? It stays in My trips.'
+      : 'Leave this trip on this device? You can rejoin any time with the invite code.';
+    if (!confirm(msg)) return;
     await this.push.disable().catch(() => undefined);
     this.session.signOut();
+    await this.router.navigate([this.hasAccount() ? '/trips' : '/']);
+  }
+
+  /** Not signed in: sign in, and the trip on this device is saved to the account. */
+  async saveTrip() {
+    this.showProfile.set(false);
+    await this.router.navigate(['/signin'], { queryParams: { next: '/trip' } });
+  }
+
+  /** Signed in, but this trip spot isn't on the account yet. */
+  async claimHere() {
+    try {
+      await this.api.claimTrip(this.session.token() ?? '');
+      this.session.accountLinked.set(true);
+      await this.session.restoreAccount(true);
+      this.flash('Saved to your account');
+    } catch (e: unknown) {
+      this.flash(messageOf(e, "Couldn't save this trip to your account"));
+    }
+  }
+
+  async myTrips() {
+    this.showProfile.set(false);
+    await this.router.navigate(['/trips']);
+  }
+
+  async signOutAccount() {
+    if (this.accountLinked()) await this.push.disable().catch(() => undefined);
+    await this.session.signOutAccount();
+    this.showProfile.set(false);
     await this.router.navigate(['/']);
   }
 }
