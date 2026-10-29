@@ -2,7 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { lookup } from 'dns/promises';
 import { isIP } from 'net';
 import { parseUnfurl, Unfurled } from './unfurl.parser';
-import { buildDigest, Digest } from './unfurl.digest';
+import { bestAddress, buildDigest, Digest } from './unfurl.digest';
 import { AiService } from '../ai/ai.service';
 import type { AiPreview, AiStatus } from '../ai/ai.schema';
 
@@ -38,7 +38,9 @@ export class UnfurlService {
       await assertPublicHost(url);
       const html = await this.fetchHtml(url);
       const value = parseUnfurl(html.body, html.finalUrl);
-      hit = { at: Date.now(), value, digest: buildDigest(html.body, value) };
+      const digest = buildDigest(html.body, value);
+      value.address = bestAddress(digest);
+      hit = { at: Date.now(), value, digest };
       this.cache.set(url, hit);
       if (this.cache.size > 500)
         this.cache.delete(this.cache.keys().next().value as string);

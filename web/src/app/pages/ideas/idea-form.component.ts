@@ -106,6 +106,7 @@ export class IdeaFormComponent {
       if (!this.form.description.trim() && u.description) this.form.description = u.description.slice(0, 2000);
       this.form.siteName = u.siteName;
       if (!this.form.imageUrl && u.image) this.form.imageUrl = u.image;
+      if ((replace || !this.form.address.trim()) && u.address) this.form.address = u.address.slice(0, 300);
       if (u.ai) {
         this.applyAi(u.ai, u, replace);
         if (replace) this.notice.set('Updated from the page. Save to keep it, Cancel to discard.');

@@ -138,6 +138,8 @@ export interface Unfurled {
   image: string;
   images: string[];
   icon: string;
+  /** Best address found on the page without AI. */
+  address: string;
   ai: AiPreview | null;
   aiStatus: AiStatus;
 }

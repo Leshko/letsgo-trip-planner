@@ -3,7 +3,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { createHash } from 'crypto';
 import { UnfurlCache } from '../entities';
-import { Digest, isThin, renderDigest } from '../unfurl/unfurl.digest';
+import {
+  bestAddress,
+  Digest,
+  isThin,
+  renderDigest,
+} from '../unfurl/unfurl.digest';
 import type { Unfurled } from '../unfurl/unfurl.parser';
 import { AI_CLIENT } from './ai.client';
 import type { AiClient } from './ai.client';
@@ -112,6 +117,7 @@ export class AiService {
         res.parsed,
         digest.candidates.map((c) => c.url),
       );
+      if (!ai.address) ai.address = bestAddress(digest);
       await this.cache.save(
         this.cache.create({
           urlHash: hash,

@@ -1,4 +1,5 @@
 import {
+  bestAddress,
   buildDigest,
   DIGEST_MAX_CHARS,
   isThin,
@@ -43,7 +44,7 @@ const html = `<!doctype html><html><head>
     ${filler}
   </main>
   <aside>Promo ASIDETEXT</aside>
-  <footer>© Marina Taco Truck FOOTERTEXT</footer>
+  <footer>© Marina Taco Truck FOOTERTEXT <address>700 N Lake Blvd, Tahoe City, CA 96145</address> <a href="tel:+15305550199">Call</a> <a href="https://www.google.com/maps/place/Marina+Taco+Truck/@39.1,-120.1">Directions</a></footer>
 </body></html>`;
 
 describe('unfurl digest', () => {
@@ -102,6 +103,31 @@ describe('unfurl digest', () => {
       '[1] https://tacos.example/img/cover.jpg — Tacos on a paper boat',
     );
     expect(isThin(digest)).toBe(false);
+  });
+
+  it('collects address signals from the footer, links and structured data', () => {
+    const c = digest.contact.join('\n');
+    expect(c).toContain('700 N Lake Blvd, Tahoe City, CA 96145');
+    expect(c).toContain('phone: +15305550199');
+    expect(c).toContain('maps place: Marina Taco Truck');
+    expect(digest.text).not.toContain('FOOTERTEXT');
+    expect(renderDigest(unfurled, digest)).toContain('<contact>');
+    expect(bestAddress(digest)).toBe('700 N Lake Blvd, Tahoe City, CA 96145');
+  });
+
+  it('finds a footer-only address and an event location without business JSON-LD', () => {
+    const page = `<html><head><title>Fun Run</title></head><body><main><h1>Lakeside Fun Run</h1><p>${'A family 5k along the shore with a kids dash. '.repeat(6)}</p></main>
+      <footer>Lakeside Rec District · 400 Fairway Dr, Tahoe City, CA 96145 · hello@lakeside.example</footer></body></html>`;
+    const d = buildDigest(page, parseUnfurl(page, 'https://run.example/'));
+    expect(d.jsonLd).toEqual([]);
+    expect(bestAddress(d)).toBe('400 Fairway Dr, Tahoe City, CA 96145');
+
+    const ev = `<html><head><script type="application/ld+json">{"@type":"Event","name":"Night Hike","location":{"@type":"Place","name":"Visitor Center","address":{"@type":"PostalAddress","streetAddress":"1 Park Rd","addressLocality":"Truckee","addressRegion":"CA"},"geo":{"latitude":39.3,"longitude":-120.2}}}</script></head><body><main><p>${'Guided hike under the stars. '.repeat(10)}</p></main></body></html>`;
+    const de = buildDigest(ev, parseUnfurl(ev, 'https://park.example/hike'));
+    expect(de.jsonLd[0]).toContain('event: name=Night Hike');
+    expect(de.jsonLd[0]).toContain('address=1 Park Rd, Truckee, CA');
+    expect(de.jsonLd[0]).toContain('geo=39.3,-120.2');
+    expect(bestAddress(de)).toBe('1 Park Rd, Truckee, CA');
   });
 
   it('treats an empty page as thin', () => {

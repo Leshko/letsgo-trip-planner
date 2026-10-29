@@ -1513,6 +1513,14 @@ describe('AI link previews (e2e)', () => {
         if (req.url?.startsWith('/r'))
           return res.end(page('Marina Taco Truck', ld));
         if (req.url?.startsWith('/a')) return res.end(page('Emerald Bay Hike'));
+        if (req.url?.startsWith('/f')) {
+          return res.end(
+            page('Fun Run').replace(
+              '</body>',
+              '<footer>Lakeside Rec · 400 Fairway Dr, Tahoe City, CA 96145</footer></body>',
+            ),
+          );
+        }
         res.statusCode = 404;
         res.end('no');
       })
@@ -1572,6 +1580,14 @@ describe('AI link previews (e2e)', () => {
     expect(r.body.aiStatus).toBe('off');
     expect(r.body.ai).toBeNull();
     expect(r.body.title).toBe('Emerald Bay Hike');
+    const f = await http
+      .get(
+        `/api/trips/${tripId}/unfurl?url=${encodeURIComponent(base + '/f?off=1')}`,
+      )
+      .set(auth)
+      .expect(200);
+    expect(f.body.aiStatus).toBe('off');
+    expect(f.body.address).toBe('400 Fairway Dr, Tahoe City, CA 96145');
     delete process.env.AI_ENRICH;
   });
 
@@ -1627,6 +1643,23 @@ describe('AI link previews (e2e)', () => {
         .get<Repository<UnfurlCache>>(getRepositoryToken(UnfurlCache))
         .count(),
     ).toBe(1);
+  });
+
+  it('falls back to the address found on the page when the model leaves it blank', async () => {
+    stub.summarize.mockResolvedValueOnce({
+      parsed: { ...canned, address: '' },
+      stopReason: 'end_turn',
+    });
+    const r = await http
+      .get(`/api/trips/${tripId}/unfurl?url=${encodeURIComponent(base + '/f')}`)
+      .set(auth)
+      .expect(200);
+    expect(r.body.aiStatus).toBe('ok');
+    expect(r.body.ai.address).toBe('400 Fairway Dr, Tahoe City, CA 96145');
+    expect(r.body.address).toBe('400 Fairway Dr, Tahoe City, CA 96145');
+    const sent = stub.summarize.mock.calls.at(-1)?.[0] as { user: string };
+    expect(sent.user).toContain('<contact>');
+    expect(sent.user).toContain('400 Fairway Dr');
   });
 
   it('degrades to the basic preview on errors and bad output', async () => {

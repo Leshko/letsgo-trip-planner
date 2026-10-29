@@ -4,8 +4,12 @@ import { absolute, decodeEntities, Unfurled } from './unfurl.parser';
 export interface Digest {
   text: string;
   jsonLd: string[];
+  /** Footer, contact and address signals: the places a street address usually hides. */
+  contact: string[];
   candidates: { url: string; alt: string }[];
 }
+
+const CONTACT_MAX_CHARS = 1_500;
 
 export const DIGEST_MAX_CHARS = 12_000;
 const JSONLD_MAX_CHARS = 3_000;
@@ -36,9 +40,11 @@ const PLACE_TYPES = new Set([
 
 export function buildDigest(html: string, unfurled: Unfurled): Digest {
   const noComments = html.replace(/<!--[\s\S]*?-->/g, '');
+  const text = extractText(noComments);
   return {
     jsonLd: extractJsonLd(noComments),
-    text: extractText(noComments),
+    text,
+    contact: extractContact(noComments, text, unfurled.url),
     candidates: candidates(noComments, unfurled),
   };
 }
@@ -55,7 +61,10 @@ export function renderDigest(unfurled: Unfurled, digest: Digest): string {
   const imgs = digest.candidates
     .map((c, i) => `[${i + 1}] ${c.url} — ${c.alt || '(no alt)'}`)
     .join('\n');
-  const fixed = `${head}\n<structured_data>\n${ld}\n</structured_data>\n<candidate_images>\n${imgs}\n</candidate_images>\n`;
+  let contact = digest.contact.join('\n');
+  if (contact.length > CONTACT_MAX_CHARS)
+    contact = contact.slice(0, CONTACT_MAX_CHARS) + ' …[truncated]';
+  const fixed = `${head}\n<structured_data>\n${ld}\n</structured_data>\n<contact>\n${contact}\n</contact>\n<candidate_images>\n${imgs}\n</candidate_images>\n`;
   const room = Math.max(1_000, DIGEST_MAX_CHARS - fixed.length - 40);
   let text = digest.text;
   if (text.length > room) text = text.slice(0, room) + '\n…[truncated]';
@@ -63,7 +72,30 @@ export function renderDigest(unfurled: Unfurled, digest: Digest): string {
 }
 
 export function isThin(digest: Digest): boolean {
-  return digest.text.length < 200 && digest.jsonLd.length === 0;
+  return (
+    digest.text.length < 200 &&
+    digest.jsonLd.length === 0 &&
+    digest.contact.length === 0
+  );
+}
+
+/** The most trustworthy address on the page, for when the model leaves it blank or the AI is off. */
+export function bestAddress(digest: Digest): string {
+  const pick = (lines: string[], prefix: string) => {
+    for (const l of lines) {
+      if (l.startsWith(prefix)) return l.slice(prefix.length).trim();
+    }
+    return '';
+  };
+  for (const l of digest.jsonLd) {
+    const m = /address=([^;]+)/.exec(l);
+    if (m && m[1].trim().length > 6) return m[1].trim().slice(0, 300);
+  }
+  return (
+    pick(digest.contact, 'meta address:') ||
+    pick(digest.contact, 'possible address:') ||
+    pick(digest.contact, 'maps place:')
+  ).slice(0, 300);
 }
 
 // ---- JSON-LD ----
@@ -131,6 +163,14 @@ function str(v: unknown): string {
   return '';
 }
 
+function geoOf(o: Obj): string {
+  const g = o['geo'] as Obj | undefined;
+  if (!g) return '';
+  const lat = str(g['latitude']);
+  const lng = str(g['longitude']);
+  return lat && lng ? `${lat},${lng}` : '';
+}
+
 function addressOf(v: unknown): string {
   if (!v) return '';
   if (typeof v === 'string') return str(v);
@@ -176,12 +216,19 @@ function hoursOf(o: Obj): string {
 
 function describeNode(o: Obj): string {
   const types = typesOf(o);
-  if (!types.some((t) => PLACE_TYPES.has(t))) return '';
+  const loc = (
+    Array.isArray(o['location']) ? o['location'][0] : o['location']
+  ) as Obj | undefined;
+  const address =
+    addressOf(o['address']) ||
+    (loc ? addressOf(loc['address']) || str(loc) : '');
+  if (!types.some((t) => PLACE_TYPES.has(t)) && !address) return '';
   const rating = o['aggregateRating'] as Obj | undefined;
   const parts: [string, string][] = [
     ['name', str(o['name'])],
     ['description', str(o['description']).slice(0, 300)],
-    ['address', addressOf(o['address'])],
+    ['address', address],
+    ['geo', geoOf(o) || (loc ? geoOf(loc) : '')],
     ['phone', str(o['telephone'])],
     ['hours', hoursOf(o)],
     ['priceRange', str(o['priceRange'])],
@@ -279,4 +326,112 @@ function candidates(
   return unfurled.images
     .slice(0, 8)
     .map((url) => ({ url, alt: alts.get(url) ?? '' }));
+}
+
+// ---- contact / address signals ----
+
+const CONTACT_BLOCK =
+  /<(address|footer)\b[^>]*>([\s\S]*?)<\/\1>|<([a-z][a-z0-9]*)\b[^>]*(?:id|class)\s*=\s*["'][^"']*(?:contact|address|location|directions|visit|find-us|findus)[^"']*["'][^>]*>([\s\S]*?)<\/\3>/gi;
+const STREET =
+  /\b\d{1,6}[A-Za-z]?\s+(?:[A-Z][A-Za-z0-9.'-]*\s){0,5}(?:St|Street|Ave|Avenue|Blvd|Boulevard|Rd|Road|Dr|Drive|Hwy|Highway|Way|Ln|Lane|Ct|Court|Trail|Trl|Pkwy|Parkway|Pl|Place|Sq|Square|Terrace|Ter|Circle|Cir|Loop|Pier|Marina|Wharf)\b\.?(?:[^\n]{0,70}?\b[A-Z]{2}\s?\d{5}(?:-\d{4})?)?/g;
+
+function extractContact(
+  html: string,
+  pageText: string,
+  baseUrl: string,
+): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const push = (line: string) => {
+    const l = line.replace(/\s+/g, ' ').trim();
+    if (!l || seen.has(l.toLowerCase())) return;
+    seen.add(l.toLowerCase());
+    out.push(l.length > 300 ? l.slice(0, 300) + '…' : l);
+  };
+
+  // Open Graph / business meta tags
+  const meta: Record<string, string> = {};
+  for (const tag of html.match(/<meta\b[^>]*>/gi) ?? []) {
+    const prop = /(?:property|name)\s*=\s*["']([^"']+)["']/i
+      .exec(tag)?.[1]
+      ?.toLowerCase();
+    const content = /content\s*=\s*["']([^"']*)["']/i.exec(tag)?.[1];
+    if (prop && content) meta[prop] = decodeEntities(content).trim();
+  }
+  const metaAddress = [
+    meta['og:street-address'] ?? meta['business:contact_data:street_address'],
+    meta['og:locality'] ?? meta['business:contact_data:locality'],
+    [
+      meta['og:region'] ?? meta['business:contact_data:region'],
+      meta['og:postal-code'] ?? meta['business:contact_data:postal_code'],
+    ]
+      .filter(Boolean)
+      .join(' '),
+    meta['og:country-name'] ?? meta['business:contact_data:country_name'],
+  ]
+    .filter(Boolean)
+    .join(', ');
+  if (metaAddress) push(`meta address: ${metaAddress}`);
+  else if (meta['geo.placename'])
+    push(`meta address: ${meta['geo.placename']}`);
+  const geo =
+    meta['place:location:latitude'] && meta['place:location:longitude']
+      ? `${meta['place:location:latitude']},${meta['place:location:longitude']}`
+      : (meta['geo.position'] ?? meta['icbm'] ?? '');
+  if (geo) push(`meta geo: ${geo.replace(/;/g, ',')}`);
+
+  // Map and phone links anywhere on the page
+  for (const m of html.matchAll(
+    /<a\b[^>]*href\s*=\s*["']([^"']+)["'][^>]*>/gi,
+  )) {
+    const href = decodeEntities(m[1]);
+    if (/^tel:/i.test(href)) push(`phone: ${href.slice(4).trim()}`);
+    else if (
+      /maps\.google|google\.[a-z.]+\/maps|goo\.gl\/maps|maps\.app\.goo\.gl|maps\.apple|\/maps\/place\//i.test(
+        href,
+      )
+    ) {
+      const abs = absolute(href, baseUrl) ?? href;
+      let place = '';
+      try {
+        const u = new URL(abs);
+        place =
+          u.searchParams.get('q') ??
+          u.searchParams.get('query') ??
+          u.searchParams.get('daddr') ??
+          '';
+        if (!place) {
+          const p = /\/maps\/place\/([^/@?]+)/.exec(u.pathname);
+          if (p) place = decodeURIComponent(p[1]).replace(/\+/g, ' ');
+        }
+      } catch {
+        /* keep the raw href */
+      }
+      push(
+        place && !/^-?\d+\.\d+,/.test(place)
+          ? `maps place: ${place}`
+          : `maps link: ${abs.slice(0, 200)}`,
+      );
+    }
+  }
+
+  // Footer, <address>, and anything that calls itself contact/location
+  for (const m of html.matchAll(CONTACT_BLOCK)) {
+    const inner = m[2] ?? m[4] ?? '';
+    const text = stripTags(inner.replace(DROP_WHOLE, ' '))
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l.length > 2)
+      .join(' · ');
+    if (text) push(text);
+    if (out.join('\n').length > CONTACT_MAX_CHARS * 2) break;
+  }
+
+  // Last resort: anything that looks like a street address in the visible text
+  let hits = 0;
+  for (const m of (pageText + '\n' + out.join('\n')).matchAll(STREET)) {
+    push(`possible address: ${m[0]}`);
+    if (++hits >= 3) break;
+  }
+  return out;
 }
