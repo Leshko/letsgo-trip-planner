@@ -75,6 +75,11 @@ export class AuthService {
     };
   }
 
+  /** Whether this server offers any way to sign in at all. */
+  anySignIn(): boolean {
+    return Object.values(this.providers()).some(Boolean);
+  }
+
   // ---------- Google / Microsoft ----------
 
   /** Where to send the browser to start signing in. */

@@ -60,7 +60,7 @@
       </button>
       <button class="btn btn--ghost btn--sm" type="button" (click)="mode.set('code'); error.set('')">Already in on another device? I have a login code</button>
     </form>
-  } @else if (!hasAccount()) {
+  } @else if (!hasAccount() && !noSignIn()) {
     <div class="card mt stack-v" data-testid="create-needs-account">
       <h2>Start a new trip</h2>
       <p class="muted">Organizers sign in with a free account, so your trip is always safe and you can open it from any device. Your family still joins with just their name.</p>

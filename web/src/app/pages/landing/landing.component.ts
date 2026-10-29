@@ -27,6 +27,8 @@ export class LandingComponent implements OnDestroy {
   readonly createParam = input<string | undefined>(undefined, { alias: 'create' });
   readonly joinParam = input<string | undefined>(undefined, { alias: 'join' });
   readonly hasAccount = this.session.hasAccount;
+  /** No sign-in method set up on this server yet: trips start the old way. */
+  readonly noSignIn = signal(false);
   readonly mode = signal<Mode>('join');
   readonly busy = signal(false);
   readonly error = signal('');
@@ -74,6 +76,10 @@ export class LandingComponent implements OnDestroy {
       if (signedIn && !this.createParam() && !this.joinParam()) void this.router.navigateByUrl(this.target());
     });
     void this.session.restoreAccount().then(() => this.prefillName());
+    this.api
+      .signInOptions()
+      .then((o) => this.noSignIn.set(!o.google && !o.microsoft && !o.email))
+      .catch(() => undefined);
   }
 
   private target(): string {

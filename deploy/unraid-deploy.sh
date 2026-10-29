@@ -131,6 +131,10 @@ healthy() {
     if docker exec letsgo node -e "fetch('http://127.0.0.1:3001/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" >/dev/null 2>&1; then
       return 0
     fi
+    # Crashing on startup: Docker keeps restarting it; don't wait out the full minute.
+    if [ "$(docker inspect --format '{{.RestartCount}}' letsgo 2>/dev/null || echo 0)" -ge 2 ]; then
+      return 1
+    fi
     if [ "$(docker inspect --format '{{.State.Running}}' letsgo 2>/dev/null)" != "true" ] && [ "$i" -gt 5 ]; then
       return 1
     fi

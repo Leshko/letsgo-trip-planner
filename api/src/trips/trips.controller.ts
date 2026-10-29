@@ -10,6 +10,7 @@ import {
   Res,
   Delete,
   NotFoundException,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
@@ -31,23 +32,28 @@ import { clientIp } from '../common/client-ip';
 import { effectivePrefs } from '../common/notify-prefs';
 import { NotifyPrefsDto } from '../notifications/notifications.dto';
 import { TripsService } from './trips.service';
-import {
-  AccountGuard,
-  CurrentUser,
-  OptionalAccountGuard,
-} from '../auth/account.guard';
+import { CurrentUser, OptionalAccountGuard } from '../auth/account.guard';
+import { AuthService } from '../auth/auth.service';
 import { User } from '../entities';
 
 @Controller('trips')
 export class TripsController {
   private readonly throttle = new Throttle(10, 60_000);
 
-  constructor(private readonly trips: TripsService) {}
+  constructor(
+    private readonly trips: TripsService,
+    private readonly auth: AuthService,
+  ) {}
 
-  /** Organizers need an account (plans and billing hang off it). */
+  /**
+   * Organizers need an account (plans and billing hang off it), as soon as
+   * this server offers any way to sign in. Until then trips start as before.
+   */
   @Post()
-  @UseGuards(AccountGuard)
-  create(@Body() dto: CreateTripDto, @CurrentUser() user: User) {
+  @UseGuards(OptionalAccountGuard)
+  create(@Body() dto: CreateTripDto, @CurrentUser() user: User | null) {
+    if (!user && this.auth.anySignIn())
+      throw new UnauthorizedException('Sign in to start a trip');
     return this.trips.create(dto, user);
   }
 

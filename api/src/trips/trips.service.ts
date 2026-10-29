@@ -62,7 +62,7 @@ export class TripsService {
       throw new BadRequestException('End date must be on or after start date');
   }
 
-  async create(dto: CreateTripDto, user: User): Promise<SessionResult> {
+  async create(dto: CreateTripDto, user: User | null): Promise<SessionResult> {
     this.assertDates(dto.startDate, dto.endDate);
 
     let inviteCode = generateInviteCode();
@@ -77,11 +77,17 @@ export class TripsService {
         endDate: dto.endDate,
         inviteCode,
         lodging: emptyLodging(),
-        ownerUserId: user.id,
+        ownerUserId: user?.id ?? null,
       }),
     );
     const member = await this.members.save(
-      this.newMember(trip.id, dto.memberName, true, dto.emoji, user.id),
+      this.newMember(
+        trip.id,
+        dto.memberName,
+        true,
+        dto.emoji,
+        user?.id ?? null,
+      ),
     );
     await this.activity.record(
       member,

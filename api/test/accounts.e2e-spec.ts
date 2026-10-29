@@ -650,6 +650,18 @@ describe('sign-in options when nothing is set up (e2e)', () => {
         .post('/api/auth/email/start')
         .send({ email: 'a@b.co' })
         .expect(503);
+      // With no way to sign in yet, trips still start the old way.
+      const t = await request(app.getHttpServer())
+        .post('/api/trips')
+        .send({
+          name: 'Early',
+          startDate: '2027-01-01',
+          endDate: '2027-01-02',
+          memberName: 'Mom',
+        })
+        .expect(201);
+      expect(t.body.member.isOwner).toBe(true);
+      expect(t.body.accountLinked).toBe(false);
     } finally {
       await app.close();
       process.env.MAIL_DEV_OUTBOX = saved;
