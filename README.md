@@ -62,8 +62,9 @@ See [deploy/README.md](deploy/README.md). Short version, in the Unraid terminal:
 curl -fsSL https://raw.githubusercontent.com/Leshko/letsgo-trip-planner/main/deploy/unraid-deploy.sh | bash
 ```
 
-Two containers (the app and PostgreSQL), port 3001. The setup for sign-in and
-the letsgotogether.app address is in the same guide.
+Two containers (the app and PostgreSQL), port 3001. Settings are variables on
+the `letsgo` container, edited in the Unraid Docker tab. The setup for sign-in
+and the letsgotogether.app address is in the same guide.
 
 ## Run it locally
 

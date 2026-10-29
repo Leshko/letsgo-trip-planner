@@ -10,12 +10,24 @@ curl -fsSL https://raw.githubusercontent.com/Leshko/letsgo-trip-planner/main/dep
 
 Then open `http://<unraid-ip>:3001`. Run the same command again any time to update.
 
-It runs two containers on a private Docker network:
+It runs two containers on Docker's standard bridge:
 
 | Container   | What it is                    | Data                                        |
 |-------------|-------------------------------|---------------------------------------------|
-| `letsgo-db` | PostgreSQL 16                 | `/mnt/user/appdata/letsgo/postgres`         |
-| `letsgo`    | the app, port 3001            | photos, push keys and settings in `/mnt/user/appdata/letsgo` |
+| `letsgo-db` | PostgreSQL 16, reachable only from containers on this server | `/mnt/user/appdata/letsgo/postgres` |
+| `letsgo`    | the app, port 3001            | photos and push keys in `/mnt/user/appdata/letsgo` |
+
+## Settings live in the Docker tab
+
+Every setting (AI key, admin key, sign-in, email) is a variable on the `letsgo`
+container, and the Docker tab is the source of truth: click the LetsGo icon →
+**Edit**, change a field, **Apply**. Secret fields are masked. Running the deploy
+line again keeps whatever is set there. (If you used a `letsgo.env` file
+before, the first deploy moves its values onto the container and renames the
+file to `letsgo.env.imported-<date>`.)
+
+Updating: either run the deploy line (database snapshot first, automatic
+rollback) or use the Docker tab's **apply update**; both keep your settings.
 
 The database password is generated on the first run and kept in
 `/mnt/user/appdata/letsgo/db.env` (only root can read it).
@@ -71,17 +83,12 @@ cover this; it needs an API key:
 1. Go to https://console.anthropic.com, create an account if needed, open
    **Billing** and add a few dollars of credit.
 2. Open **API Keys**, create a key, and copy it (it starts with `sk-ant-`).
-3. In the Unraid terminal:
+3. Docker tab → LetsGo icon → **Edit** → paste it into **Anthropic API key** →
+   **Apply**.
 
-   ```bash
-   echo 'ANTHROPIC_API_KEY=sk-ant-...' > /mnt/user/appdata/letsgo/letsgo.env
-   chmod 600 /mnt/user/appdata/letsgo/letsgo.env
-   ```
-
-4. Rerun the deploy line above. It prints "AI link summaries: on".
-
-Other settings for that file: `AI_MODEL` (default `claude-haiku-5-5`),
-`AI_DAILY_CAP` (default 150 per trip per day), `AI_ENRICH=0` to turn it off.
+Under **Show more settings** there's also the AI model (default
+`claude-haiku-5-5`), the daily cap (default 150 per trip per day) and an on/off
+switch (`0` turns it off).
 
 Privacy: only the text and image links of the pasted page are sent to Anthropic.
 Nothing about your trip, family or photos leaves the box, and nothing is sent at
@@ -127,15 +134,10 @@ rejoined under a different name, merge their new spot into their original one
 there: everything they did moves over, and their phone opens the original spot
 from then on.
 
-It's off until you give it a key. In the Unraid terminal:
-
-```bash
-echo "ADMIN_KEY=$(head -c 24 /dev/urandom | base64 | tr -dc 'A-Za-z0-9')" >> /mnt/user/appdata/letsgo/letsgo.env
-grep ADMIN_KEY /mnt/user/appdata/letsgo/letsgo.env
-```
-
-Rerun the deploy line, open `https://<your address>/admin`, and type the key
-it printed. Tap **Lock** on a shared device when you're done.
+It's off until you give it a key: Docker tab → LetsGo icon → **Edit** → **Admin
+key** (16 characters or more; a password manager's generator is handy) →
+**Apply**. Then open `https://<your address>/admin` and type it. Tap **Lock** on
+a shared device when you're done.
 
 ## Accounts and the letsgotogether.app address
 
@@ -196,28 +198,21 @@ current address until `PUBLIC_URL` points somewhere else.
 moment `PUBLIC_URL` is set, phones on the old address are sent there, so it has
 to work before you add it.
 
-Open the settings file in the Unraid terminal:
+Docker tab → LetsGo icon → **Edit**, fill in (open **Show more settings** for
+the SMTP port and user):
 
-```bash
-nano /mnt/user/appdata/letsgo/letsgo.env
-```
+| Field | Value |
+|-------|-------|
+| Public URL | `https://letsgotogether.app` |
+| Google client ID / secret | from step 2 |
+| Microsoft client ID / secret | from step 3 |
+| SMTP host | `smtp.resend.com` |
+| SMTP port | `465` |
+| SMTP user | `resend` |
+| SMTP password | your Resend key (`re_...`) |
+| Mail from | `LetsGo Together <trips@letsgotogether.app>` |
 
-Add these lines with your values (keep your existing `ADMIN_KEY` line):
-
-```
-PUBLIC_URL=https://letsgotogether.app
-GOOGLE_CLIENT_ID=...apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=...
-MICROSOFT_CLIENT_ID=...
-MICROSOFT_CLIENT_SECRET=...
-SMTP_HOST=smtp.resend.com
-SMTP_PORT=465
-SMTP_USER=resend
-SMTP_PASS=re_...
-MAIL_FROM=LetsGo Together <trips@letsgotogether.app>
-```
-
-Save with Ctrl+O, exit with Ctrl+X, and run the deploy command again. Then open
+**Apply**. Then open
 `https://letsgotogether.app/signin`: the Google, Microsoft and email options
 should all be there.
 
