@@ -192,6 +192,10 @@ current address until `PUBLIC_URL` points somewhere else.
 
 ### 5. Settings
 
+**First check that `https://letsgotogether.app` opens the app** (step 1). The
+moment `PUBLIC_URL` is set, phones on the old address are sent there, so it has
+to work before you add it.
+
 Open the settings file in the Unraid terminal:
 
 ```bash
