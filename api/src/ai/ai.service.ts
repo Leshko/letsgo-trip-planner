@@ -5,6 +5,7 @@ import { createHash } from 'crypto';
 import { UnfurlCache } from '../entities';
 import {
   bestAddress,
+  bestMenuLink,
   Digest,
   isThin,
   renderDigest,
@@ -116,8 +117,11 @@ export class AiService {
       const ai = sanitize(
         res.parsed,
         digest.candidates.map((c) => c.url),
+        digest.menuLinks.map((l) => l.url),
       );
       if (!ai.address) ai.address = bestAddress(digest);
+      if (!ai.menuUrl && ai.kind === 'food')
+        ai.menuUrl = bestMenuLink(digest, url);
       await this.cache.save(
         this.cache.create({
           urlHash: hash,
@@ -171,7 +175,11 @@ export function cacheKey(url: string): string {
 }
 
 /** Never trust the model's shape blindly: clamp to the idea form's limits. */
-export function sanitize(p: AiPreview, candidates: string[]): AiPreview {
+export function sanitize(
+  p: AiPreview,
+  candidates: string[],
+  menuCandidates: string[] = [],
+): AiPreview {
   const s = (v: unknown, max: number) =>
     typeof v === 'string' ? v.replace(/\s+/g, ' ').trim().slice(0, max) : '';
   const seen = new Set<string>();
@@ -186,6 +194,7 @@ export function sanitize(p: AiPreview, candidates: string[]): AiPreview {
     )
     .slice(0, 6);
   const cover = s(p.coverImage, 1000);
+  const menu = s(p.menuUrl, 500);
   return {
     title: s(p.title, 120),
     kind: p.kind === 'food' || p.kind === 'activity' ? p.kind : 'other',
@@ -199,6 +208,7 @@ export function sanitize(p: AiPreview, candidates: string[]): AiPreview {
     details,
     goodFor: s(p.goodFor, 120),
     bookingNote: s(p.bookingNote, 300),
+    menuUrl: menuCandidates.includes(menu) ? menu : '',
     coverImage: candidates.includes(cover) ? cover : '',
     confidence: Math.min(1, Math.max(0, Number(p.confidence) || 0)),
   };

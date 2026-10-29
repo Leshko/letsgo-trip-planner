@@ -1,5 +1,6 @@
 import {
   bestAddress,
+  bestMenuLink,
   buildDigest,
   DIGEST_MAX_CHARS,
   isThin,
@@ -45,6 +46,7 @@ const html = `<!doctype html><html><head>
   </main>
   <aside>Promo ASIDETEXT</aside>
   <footer>© Marina Taco Truck FOOTERTEXT <address>700 N Lake Blvd, Tahoe City, CA 96145</address> <a href="tel:+15305550199">Call</a> <a href="https://www.google.com/maps/place/Marina+Taco+Truck/@39.1,-120.1">Directions</a></footer>
+  <nav><a href="#nav" class="nav-toggle">Menu</a><a href="/food-and-drink">Food & drink</a><a href="/files/menu-2026.pdf">Our menu (PDF)</a></nav>
 </body></html>`;
 
 describe('unfurl digest', () => {
@@ -128,6 +130,28 @@ describe('unfurl digest', () => {
     expect(de.jsonLd[0]).toContain('address=1 Park Rd, Truckee, CA');
     expect(de.jsonLd[0]).toContain('geo=39.3,-120.2');
     expect(bestAddress(de)).toBe('1 Park Rd, Truckee, CA');
+  });
+
+  it('collects menu links and ranks the ones that say menu first', () => {
+    expect(digest.menuLinks.map((l) => l.url)).toEqual([
+      'https://tacos.example/files/menu-2026.pdf',
+      'https://tacos.example/food-and-drink',
+    ]);
+    expect(renderDigest(unfurled, digest)).toContain(
+      '<menu_links>\n[1] https://tacos.example/files/menu-2026.pdf — Our menu (PDF)',
+    );
+    expect(bestMenuLink(digest, base)).toBe(
+      'https://tacos.example/files/menu-2026.pdf',
+    );
+    const bare = buildDigest(
+      '<html><body><main><p>Hello</p></main></body></html>',
+      parseUnfurl('<html></html>', 'https://x.example/menu'),
+    );
+    expect(bare.menuLinks).toEqual([]);
+    expect(bestMenuLink(bare, 'https://x.example/menu')).toBe(
+      'https://x.example/menu',
+    );
+    expect(bestMenuLink(bare, 'https://x.example/about')).toBe('');
   });
 
   it('treats an empty page as thin', () => {

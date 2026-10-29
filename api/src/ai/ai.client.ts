@@ -65,6 +65,7 @@ export class FakeAiClient implements AiClient {
     const ld =
       /<structured_data>\n([\s\S]*?)\n<\/structured_data>/.exec(u)?.[1] ?? '';
     const img = /\[1\] (\S+)/.exec(u)?.[1] ?? '';
+    const menu = /<menu_links>\n\[1\] (\S+)/.exec(u)?.[1] ?? '';
     const grab = (key: string) =>
       new RegExp(`${key}=([^;\\n]+)`).exec(ld)?.[1]?.trim() ?? '';
     const isFood = /menu|restaurant|cuisine|dinner|lunch|tacos|brunch/i.test(u);
@@ -91,6 +92,7 @@ export class FakeAiClient implements AiClient {
         details,
         goodFor: 'kids 5+, rainy days',
         bookingNote: '',
+        menuUrl: menu,
         coverImage: img,
         confidence: 0.9,
       },

@@ -164,6 +164,7 @@
   }
 
   @if (showTour()) { <app-tour (done)="showTour.set(false)" /> }
+  @else if (showWhatsNew()) { <app-tour mode="new" (done)="showWhatsNew.set(false)" /> }
 
   @if (showIosHelp()) {
     <div class="modal-backdrop" (click)="showIosHelp.set(false)">
@@ -183,7 +184,7 @@
     <button class="toast toast--action" (click)="reloadForUpdate()">A new version is ready · Tap to update</button>
   }
 
-  @if (install.available && !install.bannerDismissed() && !showTour()) {
+  @if (install.available && !install.bannerDismissed() && !showTour() && !showWhatsNew()) {
     <div class="install-banner" role="region" aria-label="Install LetsGo">
       <img src="icons/icon-192.png" alt="" width="40" height="40" style="border-radius:10px" />
       <div class="grow"><strong>Add LetsGo to your home screen</strong><div class="tiny">Opens like an app, no browser bar.</div></div>

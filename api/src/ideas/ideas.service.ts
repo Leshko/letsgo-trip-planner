@@ -76,6 +76,7 @@ export class IdeasService {
         description: (dto.description ?? '').trim(),
         link: (dto.link ?? '').trim(),
         address: (dto.address ?? '').trim(),
+        menuUrl: safeImage(dto.menuUrl),
         cost: dto.cost ?? '',
         imageUrl: safeImage(dto.imageUrl),
         siteName: (dto.siteName ?? '').trim(),
@@ -108,6 +109,7 @@ export class IdeasService {
       idea.description = dto.description.trim();
     if (dto.link !== undefined) idea.link = dto.link.trim();
     if (dto.address !== undefined) idea.address = dto.address.trim();
+    if (dto.menuUrl !== undefined) idea.menuUrl = safeImage(dto.menuUrl);
     if (dto.cost !== undefined) idea.cost = dto.cost;
     if (dto.imageUrl !== undefined) idea.imageUrl = safeImage(dto.imageUrl);
     if (dto.siteName !== undefined) idea.siteName = dto.siteName.trim();
@@ -173,6 +175,7 @@ export class IdeasService {
 }
 
 /** Only http(s) image URLs are stored; anything else becomes empty. */
+/** Only http(s) links are stored, for images and menu links alike. */
 function safeImage(raw?: string): string {
   const s = (raw ?? '').trim();
   return /^https?:\/\//i.test(s) ? s : '';

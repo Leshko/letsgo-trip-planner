@@ -58,6 +58,12 @@
     <label for="iaddr">Address / area</label>
     <input id="iaddr" class="input" name="iaddr" [(ngModel)]="form.address" maxlength="300" />
   </div>
+  @if (kind() === 'food') {
+    <div class="field">
+      <label for="imenu">Menu link</label>
+      <input id="imenu" class="input" name="imenu" type="url" [(ngModel)]="form.menuUrl" maxlength="500" placeholder="https://…/menu" inputmode="url" autocomplete="off" />
+    </div>
+  }
   <div class="field">
     <span class="label">Cost</span>
     <div class="segmented">

@@ -6,6 +6,8 @@ export interface Digest {
   jsonLd: string[];
   /** Footer, contact and address signals: the places a street address usually hides. */
   contact: string[];
+  /** Links that look like they lead to a menu (places to eat). */
+  menuLinks: { url: string; text: string }[];
   candidates: { url: string; alt: string }[];
 }
 
@@ -45,6 +47,7 @@ export function buildDigest(html: string, unfurled: Unfurled): Digest {
     jsonLd: extractJsonLd(noComments),
     text,
     contact: extractContact(noComments, text, unfurled.url),
+    menuLinks: extractMenuLinks(noComments, unfurled.url),
     candidates: candidates(noComments, unfurled),
   };
 }
@@ -64,7 +67,10 @@ export function renderDigest(unfurled: Unfurled, digest: Digest): string {
   let contact = digest.contact.join('\n');
   if (contact.length > CONTACT_MAX_CHARS)
     contact = contact.slice(0, CONTACT_MAX_CHARS) + ' …[truncated]';
-  const fixed = `${head}\n<structured_data>\n${ld}\n</structured_data>\n<contact>\n${contact}\n</contact>\n<candidate_images>\n${imgs}\n</candidate_images>\n`;
+  const menus = digest.menuLinks
+    .map((l, i) => `[${i + 1}] ${l.url}${l.text ? ' — ' + l.text : ''}`)
+    .join('\n');
+  const fixed = `${head}\n<structured_data>\n${ld}\n</structured_data>\n<contact>\n${contact}\n</contact>\n<menu_links>\n${menus}\n</menu_links>\n<candidate_images>\n${imgs}\n</candidate_images>\n`;
   const room = Math.max(1_000, DIGEST_MAX_CHARS - fixed.length - 40);
   let text = digest.text;
   if (text.length > room) text = text.slice(0, room) + '\n…[truncated]';
@@ -434,4 +440,54 @@ function extractContact(
     if (++hits >= 3) break;
   }
   return out;
+}
+
+// ---- menu links ----
+
+const MENU_WORD =
+  /\b(menus?|carte|bill of fare|food & drink|food and drink|drinks? menu|wine list|order online)\b/i;
+
+function extractMenuLinks(
+  html: string,
+  baseUrl: string,
+): { url: string; text: string }[] {
+  const out: { url: string; text: string }[] = [];
+  const seen = new Set<string>();
+  const page = baseUrl.replace(/[#?].*$/, '').replace(/\/$/, '');
+  for (const m of html.matchAll(
+    /<a\b([^>]*)href\s*=\s*["']([^"']+)["']([^>]*)>([\s\S]*?)<\/a>/gi,
+  )) {
+    const href = decodeEntities(m[2]).trim();
+    if (!href || /^(#|javascript:|mailto:|tel:)/i.test(href)) continue;
+    const attrs = `${m[1]} ${m[3]}`;
+    const text = stripTags(m[4]).replace(/\s+/g, ' ').trim().slice(0, 80);
+    const aria =
+      /(?:aria-label|title)\s*=\s*["']([^"']*)["']/i.exec(attrs)?.[1] ?? '';
+    const label = text || decodeEntities(aria).trim().slice(0, 80);
+    const byText = MENU_WORD.test(label);
+    const byHref =
+      /menu|carte|order-online/i.test(href) ||
+      (/\.pdf(\?|$)/i.test(href) && /menu/i.test(label));
+    if (!byText && !byHref) continue;
+    // A link that only opens the site's navigation drawer is not a menu.
+    if (/\b(nav|hamburger|toggle|drawer|burger)\b/i.test(attrs) && !byHref)
+      continue;
+    const abs = absolute(href, baseUrl);
+    if (!abs || !/^https?:/i.test(abs)) continue;
+    const key = abs.replace(/[#]$/, '');
+    if (seen.has(key) || key.replace(/\/$/, '') === page) continue;
+    seen.add(key);
+    out.push({ url: abs.slice(0, 500), text: label });
+    if (out.length >= 8) break;
+  }
+  // Links that say "menu" outrank "food & drink", which outrank ones that only have it in the path.
+  const rank = (l: { url: string; text: string }) =>
+    /\bmenus?\b/i.test(l.text) ? 2 : MENU_WORD.test(l.text) ? 1 : 0;
+  return out.sort((a, b) => rank(b) - rank(a));
+}
+
+/** The menu link to use when the model leaves it blank or the AI is off. */
+export function bestMenuLink(digest: Digest, pageUrl = ''): string {
+  if (digest.menuLinks.length) return digest.menuLinks[0].url;
+  return /\/menu(s)?(\.|\/|\?|$)/i.test(pageUrl) ? pageUrl : '';
 }

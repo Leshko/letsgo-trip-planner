@@ -62,6 +62,8 @@ export class ShellComponent {
   readonly showInvite = signal(false);
   readonly showProfile = signal(false);
   readonly showTour = signal(TourComponent.shouldShow());
+  /** Members who took the tour before notifications and install existed see just those steps, once. */
+  readonly showWhatsNew = signal(!TourComponent.shouldShow() && TourComponent.shouldShowWhatsNew());
   readonly transfer = signal<TransferCode | null>(null);
   readonly transferBusy = signal(false);
   readonly transferLeft = signal('');
@@ -264,6 +266,7 @@ export class ShellComponent {
 
   startTour() {
     this.showProfile.set(false);
+    this.showWhatsNew.set(false);
     this.showTour.set(true);
   }
 

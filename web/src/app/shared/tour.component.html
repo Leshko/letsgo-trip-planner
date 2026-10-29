@@ -1,6 +1,7 @@
 <div class="modal-backdrop" style="align-items:center">
-  <div class="modal tour" role="dialog" aria-label="Welcome tour">
+  <div class="modal tour" role="dialog" [attr.aria-label]="mode() === 'new' ? 'What\'s new' : 'Welcome tour'" [attr.data-testid]="mode() === 'new' ? 'whats-new' : 'tour'">
     @let s = step();
+    @if (mode() === 'new') { <span class="chip chip--sea">✨ New in LetsGo</span> }
     @if (s.demoVote) {
       <button class="vote tour__demo" [class.is-on]="demoOn()" type="button" (click)="demoOn.set(!demoOn())" aria-label="Try voting">
         <span class="ico">{{ demoOn() ? '🙌' : '👍' }}</span><span class="n">{{ demoOn() ? 4 : 3 }}</span>
@@ -11,13 +12,46 @@
     }
     <h2>{{ s.title }}</h2>
     <p class="muted mt">{{ s.body }}</p>
+
+    @if (s.action === 'push') {
+      <div class="stack-v mt" style="gap:6px">
+        @if (push.subscribed()) {
+          <span class="chip chip--leaf" data-testid="tour-push-on">✓ Notifications are on for this device</span>
+        } @else if (push.supported) {
+          <button class="btn btn--tinted" type="button" (click)="enablePush()" [disabled]="pushBusy()" data-testid="tour-push">{{ pushBusy() ? 'Asking…' : '🔔 Turn on notifications' }}</button>
+          @if (pushError()) { <span class="tiny" style="color:var(--red)">{{ pushError() }}</span> }
+        } @else if (install.isIos && !install.installed()) {
+          <span class="tiny">On iPhone, add the app to your home screen first (next step), then turn notifications on from your profile.</span>
+        } @else {
+          <span class="tiny">This browser can't do push notifications, but the bell still keeps you up to date.</span>
+        }
+      </div>
+    }
+    @if (s.action === 'install') {
+      <div class="stack-v mt" style="gap:6px">
+        @if (install.installed()) {
+          <span class="chip chip--leaf">✓ You're using the installed app</span>
+        } @else if (install.canPrompt()) {
+          <button class="btn btn--tinted" type="button" (click)="installApp()" data-testid="tour-install">📲 Install the app</button>
+        } @else if (install.isIos) {
+          <ol class="ios-steps" style="text-align:left">
+            <li>Tap the <strong>Share</strong> button at the bottom of Safari <span class="ios-share" aria-hidden="true">⬆︎</span></li>
+            <li>Scroll down and tap <strong>Add to Home Screen</strong></li>
+            <li>Tap <strong>Add</strong></li>
+          </ol>
+        } @else {
+          <span class="tiny">In Chrome or Edge, look for "Install LetsGo" in the browser menu. You can also find it later under your profile.</span>
+        }
+      </div>
+    }
+
     <div class="tour__dots" aria-hidden="true">
       @for (st of steps(); track $index) { <span [class.is-on]="$index === index()"></span> }
     </div>
     <div class="row">
       @if (index() > 0) { <button class="btn" type="button" (click)="back()">Back</button> }
-      <button class="btn btn--primary grow" type="button" (click)="next()">{{ isLast() ? "Let's go" : 'Next' }}</button>
+      <button class="btn btn--primary grow" type="button" (click)="next()">{{ isLast() ? (mode() === 'new' ? 'Got it' : "Let's go") : 'Next' }}</button>
     </div>
-    @if (!isLast()) { <button class="btn btn--ghost btn--sm mt" type="button" (click)="finish()">Skip the tour</button> }
+    @if (!isLast() && mode() !== 'new') { <button class="btn btn--ghost btn--sm mt" type="button" (click)="finish()">Skip the tour</button> }
   </div>
 </div>

@@ -49,6 +49,8 @@ export interface Idea {
   description: string;
   link: string;
   address: string;
+  /** Link to the menu, for places to eat. */
+  menuUrl: string;
   cost: CostLevel;
   imageUrl: string;
   siteName: string;
@@ -125,6 +127,7 @@ export interface AiPreview {
   details: IdeaDetail[];
   goodFor: string;
   bookingNote: string;
+  menuUrl: string;
   coverImage: string;
   confidence: number;
 }
@@ -140,6 +143,8 @@ export interface Unfurled {
   icon: string;
   /** Best address found on the page without AI. */
   address: string;
+  /** Best menu link found on the page without AI. */
+  menuUrl: string;
   ai: AiPreview | null;
   aiStatus: AiStatus;
 }
@@ -167,6 +172,7 @@ export interface IdeaInput {
   description: string;
   link: string;
   address: string;
+  menuUrl: string;
   cost: CostLevel;
   imageUrl: string;
   siteName: string;

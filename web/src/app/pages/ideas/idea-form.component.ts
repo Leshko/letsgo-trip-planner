@@ -66,6 +66,8 @@ export class IdeaFormComponent {
       this.preview.set(carried.preview);
       this.lastUnfurled = carried.form.link;
       this.currentImage.set(carried.form.imageUrl);
+      const menu = carried.preview?.ai?.menuUrl || carried.preview?.menuUrl || '';
+      if (this.kind() === 'food' && !this.form.menuUrl.trim() && menu) this.form.menuUrl = menu;
     }
     const i = this.idea();
     if (i) {
@@ -74,6 +76,7 @@ export class IdeaFormComponent {
         description: i.description,
         link: i.link,
         address: i.address,
+        menuUrl: i.menuUrl,
         cost: i.cost,
         imageUrl: i.imageUrl,
         siteName: i.siteName,
@@ -107,6 +110,7 @@ export class IdeaFormComponent {
       this.form.siteName = u.siteName;
       if (!this.form.imageUrl && u.image) this.form.imageUrl = u.image;
       if ((replace || !this.form.address.trim()) && u.address) this.form.address = u.address.slice(0, 300);
+      if (this.kind() === 'food' && (replace || !this.form.menuUrl.trim()) && u.menuUrl) this.form.menuUrl = u.menuUrl;
       if (u.ai) {
         this.applyAi(u.ai, u, replace);
         if (replace) this.notice.set('Updated from the page. Save to keep it, Cancel to discard.');
@@ -128,6 +132,7 @@ export class IdeaFormComponent {
       this.form.description = ai.summary.slice(0, 2000);
     }
     if ((replace || !this.form.address.trim()) && ai.address) this.form.address = ai.address;
+    if (this.kind() === 'food' && (replace || !this.form.menuUrl.trim()) && ai.menuUrl) this.form.menuUrl = ai.menuUrl;
     if ((replace || !this.form.cost) && ai.priceLevel) this.form.cost = ai.priceLevel;
     this.form.details = this.form.details.filter((d) => d.label.trim() || d.value.trim());
     if (replace) {
@@ -212,5 +217,5 @@ export class IdeaFormComponent {
 }
 
 function blank(): IdeaInput {
-  return { title: '', description: '', link: '', address: '', cost: '', imageUrl: '', siteName: '', details: [] };
+  return { title: '', description: '', link: '', address: '', menuUrl: '', cost: '', imageUrl: '', siteName: '', details: [] };
 }

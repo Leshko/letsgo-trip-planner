@@ -40,6 +40,7 @@ export interface IdeaView {
   description: string;
   link: string;
   address: string;
+  menuUrl: string;
   cost: Idea['cost'];
   imageUrl: string;
   siteName: string;
@@ -96,6 +97,7 @@ export const ideaView = (i: Idea, meId: string, commentCount = 0): IdeaView => {
     description: i.description,
     link: i.link,
     address: i.address,
+    menuUrl: i.menuUrl ?? '',
     cost: i.cost,
     imageUrl: i.imageUrl ?? '',
     siteName: i.siteName ?? '',

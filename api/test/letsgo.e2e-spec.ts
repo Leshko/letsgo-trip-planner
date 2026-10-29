@@ -144,9 +144,24 @@ describe('LetsGo API (e2e)', () => {
     const t = await http
       .post(`/api/trips/${tripId}/ideas`)
       .set(auth(dadToken))
-      .send({ kind: 'food', title: 'Taco Truck' })
+      .send({
+        kind: 'food',
+        title: 'Taco Truck',
+        menuUrl: 'https://tacos.example/menu.pdf',
+      })
       .expect(201);
     tacoId = t.body.id;
+    expect(t.body.menuUrl).toBe('https://tacos.example/menu.pdf');
+    const noMenu = await http
+      .post(`/api/trips/${tripId}/ideas`)
+      .set(auth(dadToken))
+      .send({ kind: 'food', title: 'Sketchy', menuUrl: 'javascript:alert(1)' })
+      .expect(201);
+    expect(noMenu.body.menuUrl).toBe('');
+    await http
+      .delete(`/api/trips/${tripId}/ideas/${noMenu.body.id}`)
+      .set(auth(dadToken))
+      .expect(204);
 
     await http
       .post(`/api/trips/${tripId}/ideas`)
@@ -1499,19 +1514,21 @@ describe('AI link previews (e2e)', () => {
     ],
     goodFor: 'kids, sunset',
     bookingNote: '',
+    menuUrl: 'https://not-a-candidate.example/menu',
     coverImage: 'https://not-a-candidate.example/x.jpg',
     confidence: 0.8,
   };
   const page = (title: string, extra = '') =>
     `<html><head><title>${title}</title><meta property="og:title" content="${title}"><meta property="og:image" content="/c.jpg"></head><body><main>${extra}<p>${'Fresh fish tacos, agua fresca and a deck right on the marina. '.repeat(8)}</p></main></body></html>`;
   const ld = `<script type="application/ld+json">{"@type":"Restaurant","name":"Marina Taco Truck","telephone":"+1 530-555-0199"}</script>`;
+  const menuNav = `<nav><a href="/menu.pdf">See our menu</a></nav>`;
 
   beforeAll(async () => {
     fixture = nodeHttp
       .createServer((req, res) => {
         res.setHeader('content-type', 'text/html');
         if (req.url?.startsWith('/r'))
-          return res.end(page('Marina Taco Truck', ld));
+          return res.end(page('Marina Taco Truck', ld + menuNav));
         if (req.url?.startsWith('/a')) return res.end(page('Emerald Bay Hike'));
         if (req.url?.startsWith('/f')) {
           return res.end(
@@ -1600,6 +1617,9 @@ describe('AI link previews (e2e)', () => {
     expect(first.body.ai.summary).toBe(canned.summary);
     expect(first.body.ai.kind).toBe('food');
     expect(first.body.ai.coverImage).toBe('');
+    // The model's menu link was not on the page, so the real one found on the page is used.
+    expect(first.body.ai.menuUrl).toBe(base + '/menu.pdf');
+    expect(first.body.menuUrl).toBe(base + '/menu.pdf');
     expect(first.body.ai.details).toEqual([
       { label: 'Hours', value: 'Mon-Sun 11-8' },
       { label: 'Kids', value: 'High chairs available' },

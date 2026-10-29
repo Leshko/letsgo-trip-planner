@@ -14,6 +14,8 @@ export interface Unfurled {
   icon: string;
   /** Best address found on the page without AI (filled by the unfurl service). */
   address: string;
+  /** Best menu link found on the page without AI. */
+  menuUrl: string;
 }
 
 const META_RE = /<meta\b[^>]*>/gi;
@@ -144,6 +146,7 @@ export function parseUnfurl(html: string, baseUrl: string): Unfurled {
     images: images.slice(0, 8),
     icon,
     address: '',
+    menuUrl: '',
   };
 }
 

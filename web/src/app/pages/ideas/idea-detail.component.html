@@ -35,6 +35,14 @@
       </section>
     }
 
+    @if (i.menuUrl) {
+      <section class="card mt" data-testid="menu-section">
+        <h3>Menu</h3>
+        <p class="muted mt">Have a look before you vote.</p>
+        <a class="btn btn--tinted mt" [href]="i.menuUrl" target="_blank" rel="noopener">🍽️ View menu</a>
+      </section>
+    }
+
     @if (i.link || i.address) {
       <section class="card mt stack-v" style="gap:10px">
         @if (i.link) { <a class="row" [href]="i.link" target="_blank" rel="noopener">🔗 <span class="grow">{{ i.siteName || hostOf(i.link) }}</span><app-icon name="chevron" [size]="18" /></a> }

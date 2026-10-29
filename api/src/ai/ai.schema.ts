@@ -32,6 +32,11 @@ export const AiPreviewSchema = z.object({
   bookingNote: z
     .string()
     .describe('Whether booking/tickets are needed and how; empty if unknown'),
+  menuUrl: z
+    .string()
+    .describe(
+      'For places to eat: exactly one of the menu_links URLs that leads to the menu, else empty',
+    ),
   coverImage: z
     .string()
     .describe(

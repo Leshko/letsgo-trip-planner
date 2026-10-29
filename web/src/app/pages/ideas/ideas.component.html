@@ -47,6 +47,7 @@
             <span class="row" style="gap:4px"><app-avatar [member]="i.suggestedBy" size="sm" /> {{ i.suggestedBy.id === me()?.id ? 'you' : i.suggestedBy.name }} · {{ i.createdAt | ago }}</span>
             @if (i.link) { <a [href]="i.link" target="_blank" rel="noopener">🔗 {{ i.siteName || hostOf(i.link) }}</a> }
             @if (i.address) { <a [href]="'https://www.google.com/maps/search/?api=1&query=' + i.address" target="_blank" rel="noopener">📍 {{ i.address }}</a> }
+            @if (i.menuUrl) { <a [href]="i.menuUrl" target="_blank" rel="noopener" data-testid="menu-link">🍽️ Menu</a> }
           </div>
           @if (i.voters.length) {
             <div class="idea__meta"><app-avatar-stack [members]="i.voters" [max]="6" />

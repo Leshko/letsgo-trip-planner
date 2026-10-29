@@ -46,6 +46,10 @@ export class Idea extends Timestamped {
   @Column({ default: '' })
   address!: string;
 
+  /** Link to the menu, for places to eat. */
+  @Column({ default: '' })
+  menuUrl!: string;
+
   @Column({ type: 'varchar', default: '' })
   cost!: CostLevel;
 
