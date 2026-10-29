@@ -84,7 +84,14 @@ export class IdeaFormComponent {
     }
   }
 
-  async fetchPreview(force = false) {
+  readonly notice = signal('');
+
+  /** Edit form: read the page again and replace what the AI fills in. Nothing is saved until Save. */
+  reanalyze() {
+    return this.fetchPreview(true, true);
+  }
+
+  async fetchPreview(force = false, replace = false) {
     const url = this.form.link.trim();
     if (!url || (!force && url === this.lastUnfurled)) return;
     if (!/^(https?:\/\/)?[^\s/]+\.[^\s/]+/i.test(url)) return;
@@ -92,13 +99,19 @@ export class IdeaFormComponent {
     this.previewBusy.set(true);
     this.previewError.set('');
     try {
-      const u = await this.api.unfurl(this.session.tripId(), url);
+      this.notice.set('');
+      const u = await this.api.unfurl(this.session.tripId(), url, replace);
       this.preview.set(u);
       if (!this.form.title.trim() && u.title) this.form.title = u.title.slice(0, 120);
       if (!this.form.description.trim() && u.description) this.form.description = u.description.slice(0, 2000);
       this.form.siteName = u.siteName;
       if (!this.form.imageUrl && u.image) this.form.imageUrl = u.image;
-      if (u.ai) this.applyAi(u.ai, u);
+      if (u.ai) {
+        this.applyAi(u.ai, u, replace);
+        if (replace) this.notice.set('Updated from the page. Save to keep it, Cancel to discard.');
+      } else if (replace) {
+        this.notice.set(u.aiStatus === 'off' ? 'AI summaries are off; photos refreshed.' : "Couldn't get a summary this time; photos refreshed.");
+      }
     } catch (e: unknown) {
       this.preview.set(null);
       this.previewError.set(messageOf(e, "Couldn't read that link, but you can still save"));
@@ -108,14 +121,22 @@ export class IdeaFormComponent {
   }
 
   /** Fill only what the person hasn't typed; never overwrite their words. */
-  private applyAi(ai: AiPreview, u: Unfurled) {
+  private applyAi(ai: AiPreview, u: Unfurled, replace = false) {
     if (!this.form.title.trim() && ai.title) this.form.title = ai.title.slice(0, 120);
-    if ((!this.form.description.trim() || this.form.description === u.description) && ai.summary) {
+    if ((replace || !this.form.description.trim() || this.form.description === u.description) && ai.summary) {
       this.form.description = ai.summary.slice(0, 2000);
     }
-    if (!this.form.address.trim() && ai.address) this.form.address = ai.address;
-    if (!this.form.cost && ai.priceLevel) this.form.cost = ai.priceLevel;
+    if ((replace || !this.form.address.trim()) && ai.address) this.form.address = ai.address;
+    if ((replace || !this.form.cost) && ai.priceLevel) this.form.cost = ai.priceLevel;
     this.form.details = this.form.details.filter((d) => d.label.trim() || d.value.trim());
+    if (replace) {
+      // Rows the AI knows about get its latest values; the person's own rows stay.
+      const fresh = new Map(ai.details.map((d) => [d.label.trim().toLowerCase(), d.value]));
+      this.form.details = this.form.details.map((d) => {
+        const v = fresh.get(d.label.trim().toLowerCase());
+        return v ? { ...d, value: v.slice(0, 300) } : d;
+      });
+    }
     const extra: IdeaDetail[] = [
       ...ai.details,
       { label: 'Hours', value: ai.hours },
@@ -128,7 +149,7 @@ export class IdeaFormComponent {
       if (!d.label.trim() || !d.value.trim() || this.hasLabel(d.label)) continue;
       this.form.details.push({ label: d.label.trim().slice(0, 40), value: d.value.trim().slice(0, 300) });
     }
-    if (ai.coverImage && u.images.includes(ai.coverImage) && (!this.form.imageUrl || this.form.imageUrl === u.image)) {
+    if (ai.coverImage && u.images.includes(ai.coverImage) && (replace || !this.form.imageUrl || this.form.imageUrl === u.image)) {
       this.form.imageUrl = ai.coverImage;
     }
   }

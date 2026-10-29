@@ -123,8 +123,8 @@ export class ApiService {
     this.aiStatusPromise ??= this.get<AiStatusInfo>('/ai/status');
     return this.aiStatusPromise;
   }
-  unfurl(tripId: string, url: string) {
-    return this.get<Unfurled>(`/trips/${tripId}/unfurl`, { url });
+  unfurl(tripId: string, url: string, fresh = false) {
+    return this.get<Unfurled>(`/trips/${tripId}/unfurl`, fresh ? { url, fresh: '1' } : { url });
   }
   updateIdea(tripId: string, ideaId: string, body: Partial<IdeaInput>) {
     return this.patch<Idea>(`/trips/${tripId}/ideas/${ideaId}`, body);

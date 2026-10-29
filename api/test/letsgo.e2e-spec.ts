@@ -1612,6 +1612,21 @@ describe('AI link previews (e2e)', () => {
       .get<Repository<UnfurlCache>>(getRepositoryToken(UnfurlCache))
       .count();
     expect(rows).toBe(1);
+
+    // fresh=1 (the edit form's re-analyze) asks again and refreshes the cache
+    const fresh = await http
+      .get(
+        `/api/trips/${tripId}/unfurl?url=${encodeURIComponent(base + '/r')}&fresh=1`,
+      )
+      .set(auth)
+      .expect(200);
+    expect(fresh.body.aiStatus).toBe('ok');
+    expect(stub.summarize).toHaveBeenCalledTimes(2);
+    expect(
+      await app
+        .get<Repository<UnfurlCache>>(getRepositoryToken(UnfurlCache))
+        .count(),
+    ).toBe(1);
   });
 
   it('degrades to the basic preview on errors and bad output', async () => {

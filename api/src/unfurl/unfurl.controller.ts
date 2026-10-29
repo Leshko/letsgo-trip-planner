@@ -9,7 +9,11 @@ export class UnfurlController {
 
   /** Link preview for the add-idea form. Members only, so it can't be used as an open proxy. */
   @Get()
-  get(@Param('tripId') tripId: string, @Query('url') url: string) {
-    return this.unfurl.unfurl(url ?? '', tripId);
+  get(
+    @Param('tripId') tripId: string,
+    @Query('url') url: string,
+    @Query('fresh') fresh?: string,
+  ) {
+    return this.unfurl.unfurl(url ?? '', tripId, fresh === '1');
   }
 }

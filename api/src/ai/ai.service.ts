@@ -53,12 +53,15 @@ export class AiService {
     unfurled: Unfurled,
     digest: Digest,
     tripId: string,
+    fresh = false,
   ): Promise<EnrichResult> {
     const cfg = this.config();
     if (!cfg.enabled) return { ai: null, aiStatus: 'off' };
 
     const hash = createHash('sha256').update(cacheKey(url)).digest('hex');
-    const hit = await this.cache.findOne({ where: { urlHash: hash } });
+    const hit = fresh
+      ? null
+      : await this.cache.findOne({ where: { urlHash: hash } });
     if (hit) {
       if (Date.now() - hit.createdAt < CACHE_TTL_MS) {
         try {

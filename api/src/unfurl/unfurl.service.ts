@@ -26,10 +26,15 @@ export class UnfurlService {
 
   constructor(private readonly ai: AiService) {}
 
-  async unfurl(raw: string, tripId = ''): Promise<UnfurlResponse> {
+  /** `fresh` re-reads the page and asks the AI again, ignoring both caches (the edit form's re-analyze). */
+  async unfurl(
+    raw: string,
+    tripId = '',
+    fresh = false,
+  ): Promise<UnfurlResponse> {
     const url = normalize(raw);
     let hit = this.cache.get(url);
-    if (!hit || Date.now() - hit.at >= 10 * 60_000) {
+    if (fresh || !hit || Date.now() - hit.at >= 10 * 60_000) {
       await assertPublicHost(url);
       const html = await this.fetchHtml(url);
       const value = parseUnfurl(html.body, html.finalUrl);
@@ -44,6 +49,7 @@ export class UnfurlService {
       hit.value,
       hit.digest,
       tripId,
+      fresh,
     );
     return { ...hit.value, ai, aiStatus };
   }

@@ -4,11 +4,18 @@
     <div class="row">
       <input id="ilink" class="input grow" name="ilink" type="url" [(ngModel)]="form.link" maxlength="500" placeholder="https://…"
         inputmode="url" autocomplete="off" (paste)="onLinkPaste($event)" (change)="fetchPreview()" />
-      <button class="btn btn--sm" type="button" (click)="fetchPreview(true)" [disabled]="previewBusy() || !form.link.trim()">
-        {{ previewBusy() ? (aiEnabled() ? 'Reading the page…' : 'Reading…') : isEdit() ? 'Refresh photos' : 'Preview' }}
-      </button>
+      @if (isEdit()) {
+        <button class="btn btn--sm btn--tinted" type="button" (click)="reanalyze()" [disabled]="previewBusy() || !form.link.trim()" data-testid="reanalyze">
+          {{ previewBusy() ? 'Reading the page…' : aiEnabled() ? '✨ Re-analyze link' : 'Refresh from link' }}
+        </button>
+      } @else {
+        <button class="btn btn--sm" type="button" (click)="fetchPreview(true)" [disabled]="previewBusy() || !form.link.trim()">
+          {{ previewBusy() ? (aiEnabled() ? 'Reading the page…' : 'Reading…') : 'Preview' }}
+        </button>
+      }
     </div>
     @if (previewError()) { <span class="tiny" style="color:var(--danger)">{{ previewError() }}</span> }
+    @if (notice()) { <span class="tiny" style="color:var(--tint)" data-testid="reanalyze-notice">{{ notice() }}</span> }
   </div>
 
   @if (photoChoices().length || preview()?.ai) {
