@@ -22,7 +22,7 @@ import { RouterLink } from '@angular/router';
         <h2>Who sees it</h2>
         <p>Only the people in the same trip see what's in that trip. Your email address is shown to no one in the trip. The person who runs this server can see the trips on it to help when someone loses access.</p>
         <h2>Your location</h2>
-        <p>Only if you turn on <em>Share my location</em> during a trip. While it's on and LetsGo is open on your phone, your latest position is saved and shown to the people in that trip on the family map. Only your most recent spot is kept, never a history. Turning it off deletes it, and it's switched off and deleted automatically when the trip ends. Map pictures come from OpenStreetMap.</p>
+        <p>Only if you turn on <em>Share my location</em> during a trip. While it's on and LetsGo is open on your phone, your latest position is saved and shown to the people in that trip on the family map. Only your most recent spot is kept, never a history. Turning it off deletes it, and at midnight after the trip's last day (where the trip is) it's switched off for everyone and deleted automatically. Map pictures come from OpenStreetMap.</p>
         <h2>Other services</h2>
         <ul>
           <li>Sign-in codes are sent by email through Resend.</li>

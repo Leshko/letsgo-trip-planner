@@ -9,9 +9,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Repository } from 'typeorm';
 import { Member, MemberLocation, Trip } from '../entities';
 import { MemberView, memberView } from '../common/serializers';
+import { isTimeZone } from './location.dto';
 
 /** A day of slack either side, so no family's time zone cuts the trip short. */
 const SLACK_DAYS = 1;
+/** How often finished trips are checked, so sharing ends within minutes of midnight. */
+const SWEEP_MS = 5 * 60 * 1000;
 /** Locations older than this are not shown at all. */
 export const SHOW_FOR_MS = 6 * 60 * 60 * 1000;
 
@@ -34,11 +37,31 @@ function shiftDays(iso: string, n: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-/** Is the family map open for this trip right now? */
+/** Today's date (YYYY-MM-DD) where the trip is, or null if its zone isn't known. */
+export function tripToday(
+  trip: Pick<Trip, 'timeZone'>,
+  now = new Date(),
+): string | null {
+  if (!isTimeZone(trip.timeZone)) return null;
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: trip.timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now);
+}
+
+/**
+ * Is the family map open for this trip right now? From the first day to
+ * midnight after the last day, in the trip's own time zone. Before any phone
+ * has reported a zone, a day of slack each side covers every zone.
+ */
 export function isLive(
-  trip: Pick<Trip, 'startDate' | 'endDate'>,
+  trip: Pick<Trip, 'startDate' | 'endDate'> & Partial<Pick<Trip, 'timeZone'>>,
   now = new Date(),
 ): boolean {
+  const local = tripToday({ timeZone: trip.timeZone ?? '' }, now);
+  if (local) return local >= trip.startDate && local <= trip.endDate;
   const today = now.toISOString().slice(0, 10);
   return (
     today >= shiftDays(trip.startDate, -SLACK_DAYS) &&
@@ -61,14 +84,14 @@ export class LocationService implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   onModuleInit() {
-    // Sweep once at start and then hourly, so a finished trip's locations are gone even if nobody opens it again.
+    // Sweep at start and every few minutes, so a finished trip's locations are gone even if nobody opens it again.
     void this.sweep().catch((e) => this.log.warn(`Sweep failed: ${String(e)}`));
     this.timer = setInterval(
       () =>
         void this.sweep().catch((e) =>
           this.log.warn(`Sweep failed: ${String(e)}`),
         ),
-      60 * 60 * 1000,
+      SWEEP_MS,
     );
     this.timer.unref?.();
   }
@@ -77,20 +100,27 @@ export class LocationService implements OnModuleInit, OnModuleDestroy {
     if (this.timer) clearInterval(this.timer);
   }
 
-  /** Switch sharing off and delete the locations of every trip whose dates are over. */
+  /** Switch sharing off and delete the locations of every trip that is over. */
   async sweep(now = new Date()): Promise<number> {
-    const cutoff = shiftDays(now.toISOString().slice(0, 10), -SLACK_DAYS);
-    const ended = await this.ds
+    // Only trips where someone is sharing; a handful at most.
+    const sharing = await this.ds
       .getRepository(Trip)
       .createQueryBuilder('t')
-      .select('t.id', 'id')
-      .innerJoin(Member, 'm', 'm.tripId = t.id')
-      .where('t.endDate < :cutoff', { cutoff })
-      .andWhere('m.sharesLocation = true')
-      .groupBy('t.id')
-      .getRawMany<{ id: string }>();
-    for (const { id } of ended) await this.endSharing(id);
-    return ended.length;
+      .where(
+        'EXISTS (SELECT 1 FROM member m WHERE m."tripId" = t.id AND m."sharesLocation" = true)',
+      )
+      .getMany();
+    const over = sharing.filter((t) => !isLive(t, now));
+    for (const t of over) await this.endSharing(t.id);
+    return over.length;
+  }
+
+  /** Phones on the trip know where the trip is; remember their zone. */
+  private async noteTimeZone(trip: Trip, timeZone?: string) {
+    if (!timeZone || !isTimeZone(timeZone) || trip.timeZone === timeZone)
+      return;
+    await this.ds.getRepository(Trip).update({ id: trip.id }, { timeZone });
+    trip.timeZone = timeZone;
   }
 
   private async endSharing(tripId: string) {
@@ -108,7 +138,12 @@ export class LocationService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  async setSharing(me: Member, on: boolean): Promise<MemberView> {
+  async setSharing(
+    me: Member,
+    on: boolean,
+    timeZone?: string,
+  ): Promise<MemberView> {
+    await this.noteTimeZone(me.trip, timeZone);
     if (on && !isLive(me.trip)) {
       throw new ConflictException('The family map opens when the trip starts.');
     }
@@ -128,7 +163,9 @@ export class LocationService implements OnModuleInit, OnModuleDestroy {
     lat: number,
     lng: number,
     accuracy = 0,
+    timeZone?: string,
   ): Promise<{ ok: true }> {
+    await this.noteTimeZone(me.trip, timeZone);
     if (!isLive(me.trip)) {
       await this.endSharing(me.tripId);
       throw new ConflictException(

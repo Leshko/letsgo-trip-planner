@@ -12,12 +12,18 @@ export class LocationController {
 
   @Put('me/location-sharing')
   sharing(@CurrentMember() me: Member, @Body() dto: SharingDto) {
-    return this.location.setSharing(me, dto.on);
+    return this.location.setSharing(me, dto.on, dto.timeZone);
   }
 
   @Put('me/location')
   update(@CurrentMember() me: Member, @Body() dto: LocationDto) {
-    return this.location.update(me, dto.lat, dto.lng, dto.accuracy);
+    return this.location.update(
+      me,
+      dto.lat,
+      dto.lng,
+      dto.accuracy,
+      dto.timeZone,
+    );
   }
 
   @Get('locations')

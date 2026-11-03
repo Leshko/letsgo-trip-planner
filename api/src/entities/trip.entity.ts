@@ -65,6 +65,13 @@ export class Trip extends Timestamped {
   @JoinColumn({ name: 'ownerUserId' })
   ownerUser!: User | null;
 
+  /**
+   * Where the trip happens (IANA zone, e.g. America/Los_Angeles), reported by
+   * phones sharing their location. Used to end the family map at local midnight.
+   */
+  @Column({ default: '' })
+  timeZone!: string;
+
   @OneToMany(() => Member, (m) => m.trip)
   members!: Member[];
 }

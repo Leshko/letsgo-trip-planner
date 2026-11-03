@@ -20,6 +20,15 @@ const MOVE_M = 50;
 /** Re-send while the app stays open, so "last seen" stays current. */
 const HEARTBEAT_MS = 60_000;
 
+/** This phone's time zone (e.g. America/Los_Angeles); the trip ends at midnight there. */
+export function phoneTimeZone(): string | undefined {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export function metresBetween(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
   const R = 6_371_000;
   const toRad = (d: number) => (d * Math.PI) / 180;
@@ -64,6 +73,20 @@ export class LiveLocationService {
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', () => this.visible.set(document.visibilityState === 'visible'));
     }
+    // Midnight after the last day: stop, and catch up with the server, which
+    // switches everyone off and deletes the spots within a few minutes.
+    let hadTripDay = !!this.letsGo.tripDay();
+    effect(() => {
+      const onTrip = !!this.letsGo.tripDay();
+      if (hadTripDay && !onTrip) {
+        untracked(() => {
+          this.stop();
+          this.position.set(null);
+          setTimeout(() => void this.session.refreshTrip().catch(() => undefined), 6 * 60_000);
+        });
+      }
+      hadTripDay = onTrip;
+    });
     effect(() => {
       const on = this.sharing() && !!this.letsGo.tripDay() && this.visible();
       const tripId = this.session.tripId();
@@ -80,7 +103,7 @@ export class LiveLocationService {
     this.busy.set(true);
     try {
       const pos = await this.currentPosition();
-      const m = await this.api.setLocationSharing(this.session.tripId(), true);
+      const m = await this.api.setLocationSharing(this.session.tripId(), true, phoneTimeZone());
       this.session.setMember(m);
       await this.session.refreshTrip();
       this.position.set(pos);
@@ -93,7 +116,7 @@ export class LiveLocationService {
   async disable(): Promise<void> {
     this.busy.set(true);
     try {
-      const m = await this.api.setLocationSharing(this.session.tripId(), false);
+      const m = await this.api.setLocationSharing(this.session.tripId(), false, phoneTimeZone());
       this.session.setMember(m);
       await this.session.refreshTrip();
       this.stop();
@@ -170,7 +193,12 @@ export class LiveLocationService {
     if (!force && last && pos.at - last.at < MIN_GAP_MS && metresBetween(last, pos) < MOVE_M) return;
     this.sending = true;
     try {
-      await this.api.sendLocation(tripId, { lat: pos.lat, lng: pos.lng, accuracy: Math.round(pos.accuracy) });
+      await this.api.sendLocation(tripId, {
+        lat: pos.lat,
+        lng: pos.lng,
+        accuracy: Math.round(pos.accuracy),
+        timeZone: phoneTimeZone(),
+      });
       this.lastSent = pos;
     } catch (e) {
       // Switched off on another device, or the trip ended: catch up with the server.

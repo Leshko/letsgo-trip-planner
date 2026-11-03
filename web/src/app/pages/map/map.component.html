@@ -1,16 +1,24 @@
 <div class="page map-page" data-testid="family-map">
   @if (!isLive()) {
-    <div class="card empty">
-      <div class="big">🗺️</div>
-      <h2>The family map opens when the trip starts</h2>
-      <p class="muted mt">On the trip, everyone who wants to can share where they are, and you'll all see each other here.</p>
-    </div>
+    @if (tripOver()) {
+      <div class="card empty" data-testid="map-over">
+        <div class="big">🏁</div>
+        <h2>The trip is over, so the family map is off</h2>
+        <p class="muted mt">Location sharing switched off for everyone at midnight after the last day, and everyone's location was deleted.</p>
+      </div>
+    } @else {
+      <div class="card empty">
+        <div class="big">🗺️</div>
+        <h2>The family map opens when the trip starts</h2>
+        <p class="muted mt">On the trip, everyone who wants to can share where they are, and you'll all see each other here.</p>
+      </div>
+    }
   } @else {
     <div class="map-bar">
       <label class="switch-row map-bar__share">
         <span>
           Share my location
-          <span class="tiny" style="display:block">{{ location.sharing() ? 'On while LetsGo is open on this phone' : 'Only you decide; off by default' }}</span>
+          <span class="tiny" style="display:block" data-testid="share-hint">{{ location.sharing() ? 'On while LetsGo is open on this phone' : 'Only you decide; off by default' }}. Switches off by itself at midnight after {{ lastDay() }}.</span>
         </span>
         <input type="checkbox" class="switch" [checked]="location.sharing()" [disabled]="location.busy()" (change)="$any($event.target).checked = location.sharing(); toggleSharing()" data-testid="share-location" />
       </label>
@@ -46,7 +54,7 @@
         <div class="big" style="font-size:2.4rem;text-align:center">📍</div>
         <h2>Share where you are?</h2>
         <p class="muted">Everyone on this trip will see you on the family map while LetsGo is open on this phone. Close the app and they see where you were last, with the time.</p>
-        <p class="muted">It switches off by itself when the trip ends, and your location is deleted. You can turn it off any time.</p>
+        <p class="muted">It switches off by itself at midnight after the last day ({{ lastDay() }}), and your location is deleted. You can turn it off any time.</p>
         <button class="btn btn--primary" type="button" (click)="turnOn()" data-testid="share-confirm">Share my location</button>
         <button class="btn btn--ghost" type="button" (click)="showExplain.set(false)">Not now</button>
       </div>

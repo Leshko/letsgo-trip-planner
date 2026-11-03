@@ -129,10 +129,10 @@ export class ApiService {
     return firstValueFrom(this.http.delete<Member>(this.base + '/trips/me/avatar'));
   }
   // family map
-  setLocationSharing(tripId: string, on: boolean) {
-    return this.put<Member>(`/trips/${tripId}/me/location-sharing`, { on });
+  setLocationSharing(tripId: string, on: boolean, timeZone?: string) {
+    return this.put<Member>(`/trips/${tripId}/me/location-sharing`, { on, timeZone });
   }
-  sendLocation(tripId: string, body: { lat: number; lng: number; accuracy: number }) {
+  sendLocation(tripId: string, body: { lat: number; lng: number; accuracy: number; timeZone?: string }) {
     return this.put<{ ok: true }>(`/trips/${tripId}/me/location`, body);
   }
   familyMap(tripId: string) {

@@ -6,7 +6,7 @@ import { LetsGoService } from '../../core/lets-go';
 import { LiveLocationService } from '../../core/live-location.service';
 import { avatarHue, initials } from '../../core/avatar';
 import { MemberLocation } from '../../core/models';
-import { relativeTime } from '../../core/format';
+import { longDate, relativeTime, todayIso } from '../../core/format';
 import { usePolling } from '../../core/polling';
 import { IconComponent } from '../../shared/icon.component';
 import { messageOf } from '../landing/landing.component';
@@ -196,6 +196,15 @@ export class MapComponent implements OnDestroy {
   }
 
   readonly isLive = computed(() => this.live() && !!this.letsGo.tripDay());
+  readonly tripOver = computed(() => {
+    const t = this.session.trip();
+    return !!t && todayIso() > t.endDate;
+  });
+  /** "Sat, Jul 15": sharing ends at midnight after this day. */
+  readonly lastDay = computed(() => {
+    const t = this.session.trip();
+    return t ? longDate(t.endDate) : '';
+  });
 }
 
 function readExplained(): boolean {

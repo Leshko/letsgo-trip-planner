@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BeforeApplicationShutdown, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, IsNull, MoreThan, Repository } from 'typeorm';
 import { ActivityType, Member, Notification, Trip } from '../entities';
@@ -26,7 +26,7 @@ const KEEP_PER_MEMBER = 200;
 const PHOTO_PUSH_DEBOUNCE_MS = 10_000;
 
 @Injectable()
-export class NotificationsService {
+export class NotificationsService implements BeforeApplicationShutdown {
   private readonly inFlight = new Set<Promise<unknown>>();
   private readonly photoTimers = new Map<
     string,
@@ -146,6 +146,11 @@ export class NotificationsService {
         },
       });
     }
+  }
+
+  /** Send any batched photo push before the database closes (restarts, updates). */
+  async beforeApplicationShutdown(): Promise<void> {
+    await this.whenIdle();
   }
 
   /** Flush pending photo pushes now (tests) and wait for deliveries in flight. */

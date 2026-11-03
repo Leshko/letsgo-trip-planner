@@ -4,7 +4,11 @@ import request from 'supertest';
 import { DataSource } from 'typeorm';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
-import { LocationService, isLive } from '../src/location/location.service';
+import {
+  LocationService,
+  isLive,
+  tripToday,
+} from '../src/location/location.service';
 import { freshDatabase } from './db';
 import { organizer } from './accounts';
 
@@ -70,6 +74,95 @@ describe('family map (e2e)', () => {
     expect(
       isLive({ startDate: '2027-07-01', endDate: '2027-07-08' }, now),
     ).toBe(false);
+  });
+
+  it('ends at midnight after the last day in the trip time zone', () => {
+    const trip = {
+      startDate: '2027-07-12',
+      endDate: '2027-07-15',
+      timeZone: 'America/Los_Angeles',
+    };
+    // 11:30 pm on the last day in Los Angeles: still on.
+    expect(tripToday(trip, new Date('2027-07-16T06:30:00Z'))).toBe(
+      '2027-07-15',
+    );
+    expect(isLive(trip, new Date('2027-07-16T06:30:00Z'))).toBe(true);
+    // 12:30 am the next morning: over, with no extra day of slack.
+    expect(isLive(trip, new Date('2027-07-16T07:30:00Z'))).toBe(false);
+    // Not on yet the evening before the first day.
+    expect(isLive(trip, new Date('2027-07-12T06:30:00Z'))).toBe(false);
+    expect(isLive(trip, new Date('2027-07-12T07:30:00Z'))).toBe(true);
+    // Unknown or broken zone falls back to the slack rule.
+    expect(tripToday({ timeZone: '' })).toBeNull();
+    expect(tripToday({ timeZone: 'Mars/Olympus' })).toBeNull();
+  });
+
+  it('remembers the phone time zone and refuses bad ones', async () => {
+    const t = await trip(-1, 2, 'Zone');
+    await http
+      .put(`/api/trips/${t.id}/me/location-sharing`)
+      .set(auth(t.mom))
+      .send({ on: true, timeZone: 'Mars/Olympus' })
+      .expect(400);
+    await http
+      .put(`/api/trips/${t.id}/me/location-sharing`)
+      .set(auth(t.mom))
+      .send({ on: true, timeZone: 'UTC' })
+      .expect(200);
+    const row = await app
+      .get(DataSource)
+      .query(`SELECT "timeZone" FROM trip WHERE id = $1`, [t.id]);
+    expect(row[0].timeZone).toBe('UTC');
+    await http
+      .put(`/api/trips/${t.id}/me/location`)
+      .set(auth(t.mom))
+      .send({ lat: 1, lng: 2, timeZone: 'America/Denver' })
+      .expect(200);
+    const row2 = await app
+      .get(DataSource)
+      .query(`SELECT "timeZone" FROM trip WHERE id = $1`, [t.id]);
+    expect(row2[0].timeZone).toBe('America/Denver');
+  });
+
+  it('switches everyone off within minutes of midnight after the last day', async () => {
+    // A trip whose last day is today in UTC; at 00:05 tomorrow UTC it is over.
+    const t = await trip(-2, 0, 'Midnight');
+    for (const tok of [t.mom, t.dad]) {
+      await http
+        .put(`/api/trips/${t.id}/me/location-sharing`)
+        .set(auth(tok))
+        .send({ on: true, timeZone: 'UTC' })
+        .expect(200);
+      await http
+        .put(`/api/trips/${t.id}/me/location`)
+        .set(auth(tok))
+        .send({ lat: 3, lng: 4 })
+        .expect(200);
+    }
+    const svc = app.get(LocationService);
+    const ds = app.get(DataSource);
+    const count = async () =>
+      (
+        await ds.query(
+          `SELECT count(*)::int AS n FROM member_location ml JOIN member m ON m.id = ml."memberId" WHERE m."tripId" = $1`,
+          [t.id],
+        )
+      )[0].n;
+
+    // Late on the last day: nothing changes.
+    const lastEvening = new Date(iso(0) + 'T23:55:00Z');
+    await svc.sweep(lastEvening);
+    expect(await count()).toBe(2);
+
+    // Just after midnight: sharing is off for everyone and the spots are gone.
+    const afterMidnight = new Date(iso(1) + 'T00:05:00Z');
+    await svc.sweep(afterMidnight);
+    expect(await count()).toBe(0);
+    const sharers = await ds.query(
+      `SELECT count(*)::int AS n FROM member WHERE "tripId" = $1 AND "sharesLocation" = true`,
+      [t.id],
+    );
+    expect(sharers[0].n).toBe(0);
   });
 
   it('is off by default, and only sharers show on the map', async () => {

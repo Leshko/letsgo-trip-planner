@@ -59,6 +59,7 @@
           @if (sharers().length) { {{ sharers().length === 1 ? '1 person is' : sharers().length + ' people are' }} sharing where they are }
           @else { See where everyone is. Nobody is sharing yet. }
           @if (!location.sharing()) { · You're not sharing }
+          @if (day()?.isLast && sharers().length) { <span style="display:block">Sharing switches off tonight at midnight.</span> }
         </div>
       </div>
       @for (m of sharers().slice(0, 4); track m.id) { <app-avatar [member]="m" size="sm" /> }

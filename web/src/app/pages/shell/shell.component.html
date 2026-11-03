@@ -153,7 +153,7 @@
           <div class="stack-v" style="gap:8px" data-testid="profile-letsgo">
             <div class="label">On the trip · day {{ d.day }} of {{ d.total }}</div>
             <label class="switch-row">
-              <span>Share my location on the family map<span class="tiny" style="display:block">Only while LetsGo is open on this phone</span></span>
+              <span>Share my location on the family map<span class="tiny" style="display:block">Only while LetsGo is open on this phone. Off by itself at midnight after the last day.</span></span>
               <input type="checkbox" class="switch" [checked]="location.sharing()" [disabled]="location.busy()" (change)="$any($event.target).checked = location.sharing(); toggleLocation()" data-testid="profile-share-location" />
             </label>
             @if (locationError()) { <p class="tiny" style="color:var(--red)">{{ locationError() }}</p> }
