@@ -12,7 +12,7 @@ URL=http://127.0.0.1:3101
 fail() {
   echo "SMOKE FAILED at line $1: $2"
   docker logs --tail 120 smoke 2>&1 || true
-  ls -la "$D" "$D/backups" 2>/dev/null || true
+  sudo ls -la "$D" "$D/backups" 2>/dev/null || true
   exit 1
 }
 trap 'fail $LINENO "$BASH_COMMAND"' ERR
@@ -45,7 +45,7 @@ docker run -d --name smoke --restart unless-stopped -p 3101:3001 -v "$D:/data" \
   -e PORT=3001 -e DB_PATH=/data/letsgo.sqlite -e ADMIN_KEY=ci-admin-key-0123456789 "$IMG" >/dev/null
 up; check
 L=$(logs); has "$L" "Imported the old SQLite database"
-[ -f "$D/backups/letsgo-before-postgres.sqlite" ]
+docker exec smoke test -f /data/backups/letsgo-before-postgres.sqlite
 echo "   imported, signed in, admin ok"
 
 echo "== clean stop and start"
