@@ -160,7 +160,7 @@
             </div>
           } @else {
             <div class="label">Save this trip</div>
-            <p class="tiny">Sign in with Google, Microsoft or your email. You'll never lose this trip, and you can open all your trips on any device.</p>
+            <p class="tiny">Sign in with {{ signInPhrase() }}. You'll never lose this trip, and you can open all your trips on any device.</p>
             <button class="btn btn--tinted btn--sm mt" type="button" (click)="saveTrip()" data-testid="profile-save">Sign in to save it</button>
           }
         </div>

@@ -141,83 +141,78 @@ a shared device when you're done.
 
 ## Accounts and the letsgotogether.app address
 
-Sign-in with Google, Microsoft or an emailed code, and the move to
-letsgotogether.app, need a few one-time settings. Do these in order; each is a
-few minutes. Nothing breaks if you deploy before finishing: sign-in buttons only
-appear once their settings are in place, and the app keeps working at its
-current address until `PUBLIC_URL` points somewhere else.
+Sign-in is by email: people type their address and get a 6-digit code (no
+passwords). The app also moves to letsgotogether.app, and phones that open
+letsgo.jeremyleshko.com are carried over automatically, still signed in.
+Until email is set up, everything works as before, including starting trips.
 
-### 1. The address (Cloudflare)
+### 1. Install the release
 
-1. In the Cloudflare dashboard, **Domain Registration → Register Domains**, buy
-   `letsgotogether.app`.
-2. **Zero Trust → Networks → Tunnels**, open the tunnel that already serves
-   `letsgo.jeremyleshko.com`, and add a **public hostname**: leave Subdomain
-   empty, Domain `letsgotogether.app`, and the **same Service** the existing
-   hostname uses (e.g. `http://192.168.86.113:3001`).
-3. Keep the old hostname. Phones that open it are moved to the new address
-   automatically, still signed in.
+Run the deploy line at the top of this page once.
 
-### 2. Google
+### 2. Check that letsgotogether.app reaches this same app
 
-1. <https://console.cloud.google.com> → create a project named "LetsGo Together".
-2. **Google Auth Platform** (or **APIs & Services → OAuth consent screen**) →
-   **Get started**: app name *LetsGo Together*, your support email, audience
-   **External**, your contact email.
-3. **Branding**: home page `https://letsgotogether.app`, privacy policy
-   `https://letsgotogether.app/privacy`, authorized domain `letsgotogether.app`.
-4. **Clients → Create client** → *Web application* → **Authorized redirect URI**
-   `https://letsgotogether.app/api/auth/google/callback` → Create. Copy the
-   **Client ID** and **Client secret**.
-5. **Audience → Publish app**, so anyone can sign in (not just test users). Only
-   the basic name-and-email scopes are used, so Google doesn't need to review it.
+Open `https://letsgotogether.app/admin`, unlock it, and check your trips are
+listed; `https://letsgotogether.app/api/health` should show `{"ok":true}`. Both
+addresses must reach the same `letsgo` container: phones are moved from one to
+the other.
 
-### 3. Microsoft
+(No tunnel for it yet? In Cloudflare **Zero Trust → Networks → Tunnels**, open
+the tunnel that serves letsgo.jeremyleshko.com and add a public hostname for
+`letsgotogether.app` with the **same Service**.)
 
-1. <https://entra.microsoft.com> (sign in with any Microsoft account) →
-   **App registrations → New registration**.
-2. Name *LetsGo Together*; supported account types **Accounts in any
-   organizational directory and personal Microsoft accounts**; redirect URI
-   platform **Web**, `https://letsgotogether.app/api/auth/microsoft/callback`.
-   Register.
-3. Copy the **Application (client) ID** from the overview.
-4. **Certificates & secrets → New client secret** (24 months). Copy its
-   **Value** right away (it's shown once) and put a reminder in your calendar to
-   make a new one before it expires.
+### 3. Resend (sends the sign-in codes)
 
-### 4. Email codes (Resend)
+1. Sign up at <https://resend.com> (the free plan sends 3,000 emails a month).
+2. **Domains → Add Domain** → `letsgotogether.app`. Let it add the DNS records
+   in Cloudflare (or add them yourself as "DNS only"), then **Verify DNS
+   Records**.
+3. **API Keys → Create API Key**, sending access, limited to letsgotogether.app.
+   Copy the key (starts with `re_`; it's shown once).
 
-1. Sign up at <https://resend.com>. **Domains → Add domain** `letsgotogether.app`.
-2. Add the DNS records it shows (the **Sign in to Cloudflare** button adds them
-   for you) and press **Verify**.
-3. **API Keys → Create API key** with sending access. Copy it (starts with `re_`).
+### 4. Turn on email sign-in
 
-### 5. Settings
-
-**First check that `https://letsgotogether.app` opens the app** (step 1). The
-moment `PUBLIC_URL` is set, phones on the old address are sent there, so it has
-to work before you add it.
-
-Docker tab → LetsGo icon → **Edit**, fill in (open **Show more settings** for
-the SMTP port and user):
+Docker tab → LetsGo icon → **Edit**:
 
 | Field | Value |
 |-------|-------|
-| Public URL | `https://letsgotogether.app` |
-| Google client ID / secret | from step 2 |
-| Microsoft client ID / secret | from step 3 |
 | SMTP host | `smtp.resend.com` |
-| SMTP port | `465` |
-| SMTP user | `resend` |
 | SMTP password | your Resend key (`re_...`) |
 | Mail from | `LetsGo Together <trips@letsgotogether.app>` |
 
-**Apply**. Then open
-`https://letsgotogether.app/signin`: the Google, Microsoft and email options
-should all be there.
+**Apply**, then open `https://letsgo.jeremyleshko.com/signin` and send yourself
+a code. (Port and user fill themselves in for Resend.)
 
-What people notice: the next time anyone opens the old address, they land on
-letsgotogether.app, still in their trip, with a one-time card asking them to
-turn notifications back on and add the app to their home screen again (phones
-treat a new address as a new app). Starting a new trip now needs a free
-account; joining a trip still only needs a name.
+### 5. Move to the new address
+
+Once the code arrives: **Edit** again → **Public URL** `https://letsgotogether.app`
+→ **Apply**. From then on, anyone opening the old address lands on
+letsgotogether.app in the same trip, with a one-time card asking them to turn
+notifications back on and add the app to their home screen again (phones treat
+a new address as a new app). Starting a new trip now needs signing in; joining
+a trip still only needs a name.
+
+### Saving someone's spot to their email
+
+On `/admin`, open a trip's people and use **Link email** next to anyone. Their
+spot is saved to the account for that address (created if needed); when they
+sign in with an emailed code to it, the trip is in their My trips.
+
+### Later: Google and Microsoft sign-in
+
+Optional extra buttons on the sign-in screen. They appear once their fields are
+filled in (under **Show more settings** in the Docker tab).
+
+**Google:** <https://console.cloud.google.com> → new project → **Google Auth
+Platform → Get started** (External; support email) → **Branding**: home page
+`https://letsgotogether.app`, privacy policy `https://letsgotogether.app/privacy`,
+authorized domain `letsgotogether.app` → **Clients → Create client** → Web
+application, redirect URI `https://letsgotogether.app/api/auth/google/callback`
+→ copy the client ID and secret → **Audience → Publish app**.
+
+**Microsoft:** <https://entra.microsoft.com> → **App registrations → New
+registration** → "Accounts in any organizational directory and personal
+Microsoft accounts", Web redirect
+`https://letsgotogether.app/api/auth/microsoft/callback` → copy the
+Application (client) ID → **Certificates & secrets → New client secret** (copy
+the Value; set a reminder before it expires).

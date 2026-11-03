@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-/** Plain-language privacy page (Google and Microsoft sign-in ask for one). */
+/** Plain-language privacy page (sign-in providers ask for one). */
 @Component({
   selector: 'app-privacy',
   imports: [RouterLink],
@@ -16,7 +16,7 @@ import { RouterLink } from '@angular/router';
         <h2>What we keep</h2>
         <ul>
           <li><strong>Your trip spot:</strong> the name and avatar you pick, and what you add: ideas, votes, comments, wall posts, plan entries and photos.</li>
-          <li><strong>Your account, if you sign in:</strong> your email address and name from Google, Microsoft or the email you type, and an ID from that service so we recognise you next time. We never see or store a password.</li>
+          <li><strong>Your account, if you sign in:</strong> your email address, the name you give, and an ID from the sign-in method you use so we recognise you next time. We never see or store a password.</li>
           <li><strong>Notifications, if you turn them on:</strong> the address your browser gives us to deliver them.</li>
         </ul>
         <h2>Who sees it</h2>

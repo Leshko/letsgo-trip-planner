@@ -386,4 +386,103 @@ describe('admin screen (e2e)', () => {
       .expect(409);
     expect(refused.body.message).toMatch(/different accounts/);
   });
+
+  it('saves a spot to an email account, which then sees the trip after signing in', async () => {
+    const t = await http
+      .post('/api/trips')
+      .set(await organizer(app))
+      .send({
+        name: 'Linked',
+        startDate: '2027-04-01',
+        endDate: '2027-04-02',
+        memberName: 'Kate',
+      })
+      .expect(201);
+    const T = t.body.trip.id;
+    const tammy = await http
+      .post('/api/trips/join')
+      .send({ code: t.body.trip.inviteCode, name: 'Tammy' })
+      .expect(201);
+    const url = `/api/admin/trips/${T}/members/${tammy.body.member.id}/account`;
+    const r = await http
+      .post(url)
+      .set(admin)
+      .send({ email: 'Tammy@Example.com' })
+      .expect(200);
+    expect(
+      r.body.members.find((m: { name: string }) => m.name === 'Tammy').account,
+    ).toBe('tammy@example.com');
+    const signed = await organizer(app, 'tammy@example.com');
+    const mine = await http.get('/api/account').set(signed).expect(200);
+    expect(
+      mine.body.trips.map((x: { member: { name: string } }) => x.member.name),
+    ).toEqual(['Tammy']);
+    const me = await http
+      .get('/api/trips/me')
+      .set({ Authorization: `Bearer ${tammy.body.token}` })
+      .expect(200);
+    expect(me.body.accountLinked).toBe(true);
+    await http
+      .post(url)
+      .set(admin)
+      .send({ email: 'tammy@example.com' })
+      .expect(200);
+  });
+
+  it('asks before moving a spot to a different account, and keeps one spot per account', async () => {
+    const t = await http
+      .post('/api/trips')
+      .set(await organizer(app, 'kate@family.example'))
+      .send({
+        name: 'Swap',
+        startDate: '2027-04-01',
+        endDate: '2027-04-02',
+        memberName: 'Kate',
+      })
+      .expect(201);
+    const T = t.body.trip.id;
+    const url = (id: string) => `/api/admin/trips/${T}/members/${id}/account`;
+    const ask = await http
+      .post(url(t.body.member.id))
+      .set(admin)
+      .send({ email: 'kate.new@example.com' })
+      .expect(409);
+    expect(ask.body.code).toBe('replace_needed');
+    const moved = await http
+      .post(url(t.body.member.id))
+      .set(admin)
+      .send({ email: 'kate.new@example.com', replace: true })
+      .expect(200);
+    expect(moved.body.members[0].account).toBe('kate.new@example.com');
+    const [row] = await app
+      .get(DataSource)
+      .query(
+        `SELECT u.email FROM trip t JOIN app_user u ON u.id = t."ownerUserId" WHERE t.id = $1`,
+        [T],
+      );
+    expect(row.email).toBe('kate.new@example.com');
+    const sam = await http
+      .post('/api/trips/join')
+      .send({ code: t.body.trip.inviteCode, name: 'Sam' })
+      .expect(201);
+    const dup = await http
+      .post(url(sam.body.member.id))
+      .set(admin)
+      .send({ email: 'kate.new@example.com' })
+      .expect(409);
+    expect(dup.body.message).toMatch(/already Kate in this trip/);
+    const off = await http.delete(url(t.body.member.id)).set(admin).expect(200);
+    expect(
+      off.body.members.find((m: { name: string }) => m.name === 'Kate').account,
+    ).toBeNull();
+    await http
+      .post(url(sam.body.member.id))
+      .set(admin)
+      .send({ email: 'not-an-email' })
+      .expect(400);
+    await http
+      .post(url(sam.body.member.id))
+      .send({ email: 'x@example.com' })
+      .expect(401);
+  });
 });

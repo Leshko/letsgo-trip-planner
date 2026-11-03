@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
+import { SignInOptionsService } from '../../core/signin-options.service';
 import { Activity, Idea, Photo, Post } from '../../core/models';
 import { daysUntil, nights, todayIso } from '../../core/format';
 import { usePolling } from '../../core/polling';
@@ -33,6 +34,7 @@ export class HomeComponent {
   readonly trip = this.session.trip;
   readonly me = this.session.member;
   private readonly router = inject(Router);
+  private readonly signIn = inject(SignInOptionsService);
   private readonly saveDismissed = signal(readDismissed(this.session.tripId()));
 
   /**
@@ -46,7 +48,7 @@ export class HomeComponent {
       return {
         organizer: true,
         title: "You're the organizer. Save this trip to your account",
-        body: "Sign in once with Google, Microsoft or email. You'll never lose the trip, and you can open it on any device.",
+        body: `Sign in once with ${this.signIn.phrase()}. You'll never lose the trip, and you can open it on any device.`,
       };
     if (this.saveDismissed()) return null;
     return {
@@ -99,6 +101,7 @@ export class HomeComponent {
   readonly icons = ICONS;
 
   constructor() {
+    void this.signIn.load();
     usePolling(() => this.load());
   }
 

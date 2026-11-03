@@ -13,6 +13,8 @@ interface AdminMember {
   joinedAt: string;
   counts: { votes: number; ideas: number; comments: number; photos: number; posts: number };
   mergedDevices: number;
+  /** Email of the account this spot is saved to, or null. */
+  account: string | null;
 }
 
 interface AdminTrip {
@@ -84,6 +86,21 @@ const KEY_STORE = 'letsgo.adminKey';
                       <div class="grow">
                         <div><strong>{{ m.name }}</strong> @if (m.isOwner) { <span class="chip">organizer</span> }</div>
                         <div class="tiny">joined {{ ago(m.joinedAt) }} · {{ m.counts.votes }} votes · {{ m.counts.ideas }} ideas · {{ m.counts.comments }} comments · {{ m.counts.photos }} photos{{ m.mergedDevices ? ' · ' + m.mergedDevices + ' merged device' + (m.mergedDevices > 1 ? 's' : '') : '' }}</div>
+                        <div class="row tiny" style="gap:6px;margin-top:4px;flex-wrap:wrap" [attr.data-testid]="'account-' + m.name">
+                          <span>{{ m.account ? '✉️ ' + m.account : 'No account' }}</span>
+                          @if (linking() !== m.id) {
+                            <button class="btn btn--ghost btn--sm" type="button" (click)="startLink(m)">{{ m.account ? 'Change' : 'Link email' }}</button>
+                            @if (m.account) { <button class="btn btn--ghost btn--sm btn--danger" type="button" (click)="unlink(t, m)">Unlink</button> }
+                          }
+                        </div>
+                        @if (linking() === m.id) {
+                          <form class="row" style="gap:6px;margin-top:6px" (ngSubmit)="link(t, m)">
+                            <input class="input grow" type="email" [name]="'link-' + m.id" [(ngModel)]="linkEmail" placeholder="their@email.com" autocomplete="off" data-testid="link-email" />
+                            <button class="btn btn--sm btn--primary" type="submit" [disabled]="busy() || !linkEmail.trim()" data-testid="link-save">Save</button>
+                            <button class="btn btn--sm" type="button" (click)="linking.set(null)">Cancel</button>
+                          </form>
+                          <p class="tiny">When they sign in with an emailed code to this address, this trip shows up in their My trips.</p>
+                        }
                       </div>
                     </li>
                   }
@@ -135,6 +152,8 @@ export class AdminComponent {
   readonly toast = signal('');
   readonly open = signal<string | null>(null);
   readonly byId = computed(() => new Map(this.trips().flatMap((t) => t.members.map((m) => [m.id, m] as const))));
+  readonly linking = signal<string | null>(null);
+  linkEmail = '';
   keyInput = '';
   fromId = '';
   intoId = '';
@@ -248,6 +267,55 @@ export class AdminComponent {
     } finally {
       this.busy.set(false);
     }
+  }
+
+  startLink(m: AdminMember) {
+    this.linkEmail = m.account ?? '';
+    this.linking.set(m.id);
+  }
+
+  /** Save this person's spot to the account for an email address. */
+  async link(t: AdminTrip, m: AdminMember, replace = false): Promise<void> {
+    this.busy.set(true);
+    this.error.set('');
+    try {
+      const trip = await firstValueFrom(
+        this.http.post<AdminTrip>(
+          `/api/admin/trips/${t.id}/members/${m.id}/account`,
+          { email: this.linkEmail.trim(), replace },
+          this.headers(),
+        ),
+      );
+      this.replaceTrip(trip);
+      this.linking.set(null);
+      this.flash(`${m.name} is saved to ${this.linkEmail.trim().toLowerCase()}`);
+    } catch (e: unknown) {
+      const err = e as HttpErrorResponse;
+      if (err.status === 409 && err.error?.code === 'replace_needed' && !replace) {
+        if (confirm(`${messageOf(e)} Move it to ${this.linkEmail.trim()}?`)) {
+          this.busy.set(false);
+          return this.link(t, m, true);
+        }
+      } else {
+        this.error.set(messageOf(e));
+      }
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  async unlink(t: AdminTrip, m: AdminMember) {
+    if (!confirm(`Take ${m.name}'s spot off ${m.account}? Their votes and photos stay in the trip.`)) return;
+    try {
+      this.replaceTrip(await firstValueFrom(this.http.delete<AdminTrip>(`/api/admin/trips/${t.id}/members/${m.id}/account`, this.headers())));
+      this.flash(`${m.name} is no longer saved to an account`);
+    } catch (e: unknown) {
+      this.error.set(messageOf(e));
+    }
+  }
+
+  private replaceTrip(trip: AdminTrip) {
+    this.trips.update((list) => list.map((x) => (x.id === trip.id ? trip : x)));
   }
 
   range(t: AdminTrip) {

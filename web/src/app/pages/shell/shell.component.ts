@@ -18,6 +18,7 @@ import { InstallService } from '../../core/install.service';
 import { SwPush, SwUpdate } from '@angular/service-worker';
 import { ActivatedRoute } from '@angular/router';
 import { PushService } from '../../core/push.service';
+import { SignInOptionsService } from '../../core/signin-options.service';
 import { Notification, NotifyPrefs } from '../../core/models';
 
 @Component({
@@ -56,6 +57,8 @@ export class ShellComponent {
   readonly hasAccount = this.session.hasAccount;
   readonly accountLinked = this.session.accountLinked;
   readonly account = this.session.account;
+  private readonly signInOptions = inject(SignInOptionsService);
+  readonly signInPhrase = this.signInOptions.phrase;
   readonly dates = computed(() => {
     const t = this.trip();
     return t ? dateRangeLabel(t.startDate, t.endDate) : '';
@@ -89,6 +92,7 @@ export class ShellComponent {
     // Keeps the member list (who's joined) fresh across every page.
     usePolling(() => this.session.refreshTrip(), 20_000);
     void this.session.restoreAccount();
+    void this.signInOptions.load();
     if (this.updates.isEnabled) {
       this.updates.versionUpdates.subscribe((e) => {
         if (e.type === 'VERSION_READY') this.updateReady.set(true);

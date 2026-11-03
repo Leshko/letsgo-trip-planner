@@ -18,6 +18,7 @@ import {
   PhotoComment,
   Post,
   PushSubscription,
+  Identity,
   TransferCode,
   Trip,
   User,
@@ -287,6 +288,85 @@ export class AdminService {
 
       const trip = await m.findOneOrFail(Trip, { where: { id: tripId } });
       return { trip: await this.trip(trip, m), moved };
+    });
+  }
+
+  /**
+   * Save a trip spot to the account for an email address (creating that
+   * account if it doesn't exist yet). The person gets in by signing in with an
+   * emailed code to that address, so only its owner can use it.
+   */
+  async linkAccount(
+    tripId: string,
+    memberId: string,
+    rawEmail: string,
+    replace = false,
+  ): Promise<AdminTrip> {
+    const email = rawEmail.trim().toLowerCase();
+    return this.ds.transaction(async (m) => {
+      const member = await m.findOne(Member, { where: { id: memberId } });
+      if (!member || member.tripId !== tripId)
+        throw new NotFoundException('That person is not in this trip');
+      let user = await m.findOne(User, { where: { email } });
+      if (!user) {
+        user = await m.save(
+          m.create(User, { email, name: member.name, lastSignInAt: null }),
+        );
+        await m.save(
+          m.create(Identity, {
+            userId: user.id,
+            provider: 'email',
+            subject: email,
+            email,
+          }),
+        );
+      }
+      const trip = await m.findOneOrFail(Trip, { where: { id: tripId } });
+      if (member.userId === user.id) return this.trip(trip, m);
+      if (member.userId && !replace) {
+        const current = await m.findOne(User, { where: { id: member.userId } });
+        throw new ConflictException({
+          message: `${member.name} is already saved to ${current?.email || 'another account'}.`,
+          code: 'replace_needed',
+        });
+      }
+      const other = await m.findOne(Member, {
+        where: { tripId, userId: user.id },
+      });
+      if (other)
+        throw new ConflictException(
+          `${email} is already ${other.name} in this trip. Merge ${member.name} and ${other.name} first.`,
+        );
+      const previous = member.userId;
+      member.userId = user.id;
+      await m.save(Member, member);
+      if (
+        member.isOwner &&
+        (!trip.ownerUserId || trip.ownerUserId === previous)
+      ) {
+        trip.ownerUserId = user.id;
+        await m.save(Trip, trip);
+      }
+      return this.trip(trip, m);
+    });
+  }
+
+  /** Take a trip spot off its account; the spot and everything in it stay. */
+  async unlinkAccount(tripId: string, memberId: string): Promise<AdminTrip> {
+    return this.ds.transaction(async (m) => {
+      const member = await m.findOne(Member, { where: { id: memberId } });
+      if (!member || member.tripId !== tripId)
+        throw new NotFoundException('That person is not in this trip');
+      const trip = await m.findOneOrFail(Trip, { where: { id: tripId } });
+      if (member.userId) {
+        if (member.isOwner && trip.ownerUserId === member.userId) {
+          trip.ownerUserId = null;
+          await m.save(Trip, trip);
+        }
+        member.userId = null;
+        await m.save(Member, member);
+      }
+      return this.trip(trip, m);
     });
   }
 }

@@ -42,17 +42,8 @@ export class MailService {
       else appendFileSync(dev, JSON.stringify(mail) + '\n');
       return;
     }
-    if (!this.transport) {
-      const port = Number(process.env.SMTP_PORT ?? 465);
-      this.transport = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port,
-        secure: port === 465,
-        auth: process.env.SMTP_USER
-          ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS ?? '' }
-          : undefined,
-      });
-    }
+    if (!this.transport)
+      this.transport = nodemailer.createTransport(smtpOptions());
     try {
       await this.transport.sendMail({ from: this.from(), ...mail });
     } catch (e) {
@@ -60,4 +51,24 @@ export class MailService {
       throw e;
     }
   }
+}
+
+/**
+ * SMTP settings from the environment. Empty values (the Docker tab passes
+ * blank fields through) count as unset, and Resend needs only the host and
+ * the API key: its port (465) and user ("resend") are filled in.
+ */
+export function smtpOptions() {
+  const host = process.env.SMTP_HOST?.trim() ?? '';
+  const resend = /(^|\.)resend\.com$/i.test(host);
+  const port = Number(process.env.SMTP_PORT?.trim()) || 465;
+  const user = process.env.SMTP_USER?.trim() || (resend ? 'resend' : '');
+  return {
+    host,
+    port,
+    secure: port === 465,
+    auth: user
+      ? { user, pass: process.env.SMTP_PASS?.trim() ?? '' }
+      : undefined,
+  };
 }

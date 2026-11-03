@@ -256,15 +256,15 @@ if [ -d "$TEMPLATES" ]; then
     var "Anthropic API key" ANTHROPIC_API_KEY "AI link summaries (from console.anthropic.com). Leave empty to turn them off." always true
     var "Admin key" ADMIN_KEY "Unlocks /admin. 16 characters or more." always true
     var "Public URL" PUBLIC_URL "Main web address, e.g. https://letsgotogether.app. Only set once that address opens the app." always false
-    var "Google client ID" GOOGLE_CLIENT_ID "Google sign-in." always false
-    var "Google client secret" GOOGLE_CLIENT_SECRET "Google sign-in." always true
-    var "Microsoft client ID" MICROSOFT_CLIENT_ID "Microsoft sign-in." always false
-    var "Microsoft client secret" MICROSOFT_CLIENT_SECRET "Microsoft sign-in." always true
-    var "SMTP host" SMTP_HOST "Email for sign-in codes, e.g. smtp.resend.com" always false
-    var "SMTP password" SMTP_PASS "Resend API key (re_...)." always true
+    var "SMTP host" SMTP_HOST "Email for sign-in codes: smtp.resend.com" always false
+    var "SMTP password" SMTP_PASS "Your Resend API key (re_...)." always true
     var "Mail from" MAIL_FROM "e.g. LetsGo Together &lt;trips@letsgotogether.app&gt;" always false
-    var "SMTP port" SMTP_PORT "465 for Resend." advanced false
-    var "SMTP user" SMTP_USER "resend for Resend." advanced false
+    var "SMTP port" SMTP_PORT "Leave empty for Resend (465)." advanced false
+    var "SMTP user" SMTP_USER "Leave empty for Resend (resend)." advanced false
+    var "Google client ID" GOOGLE_CLIENT_ID "Google sign-in (optional; see the guide)." advanced false
+    var "Google client secret" GOOGLE_CLIENT_SECRET "Google sign-in." advanced true
+    var "Microsoft client ID" MICROSOFT_CLIENT_ID "Microsoft sign-in (optional; see the guide)." advanced false
+    var "Microsoft client secret" MICROSOFT_CLIENT_SECRET "Microsoft sign-in." advanced true
     var "Microsoft tenant" MICROSOFT_TENANT "Leave empty (common)." advanced false
     var "AI model" AI_MODEL "Leave empty for the default." advanced false
     var "AI on/off" AI_ENRICH "0 turns AI summaries off even with a key." advanced false

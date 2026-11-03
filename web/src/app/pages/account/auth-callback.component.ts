@@ -5,7 +5,7 @@ import { SessionService } from '../../core/session.service';
 import { messageOf } from '../landing/landing.component';
 import { safeAppPath } from './signin-panel.component';
 
-/** Lands here after Google/Microsoft (?code=) or from the emailed link (?t=). */
+/** Lands here after a provider sign-in (?code=) or from the emailed link (?t=). */
 @Component({
   selector: 'app-auth-callback',
   imports: [RouterLink],
