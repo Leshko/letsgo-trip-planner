@@ -81,7 +81,7 @@ template() {
   var "AI model" AI_MODEL "Leave empty for the default." advanced false
   var "AI on/off" AI_ENRICH "0 turns AI summaries off even with a key." advanced false
   var "AI daily cap" AI_DAILY_CAP "Summaries per trip per day (150)." advanced false
-  var "Push contact" VAPID_SUBJECT "mailto: address for push services." advanced false
+  var "Push contact" VAPID_SUBJECT "Optional, e.g. mailto:you@example.com. Leave empty for the default." advanced false
   if [ -n "${SET[DATABASE_URL]:-}" ]; then
     var "Outside database" DATABASE_URL "Only for setups that use a separate database container. Leave as is." advanced true
   fi

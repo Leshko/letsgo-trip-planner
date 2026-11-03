@@ -33,5 +33,5 @@
   <Config Name="AI model" Target="AI_MODEL" Default="" Mode="" Description="Leave empty for the default." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
   <Config Name="AI on/off" Target="AI_ENRICH" Default="" Mode="" Description="0 turns AI summaries off even with a key." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
   <Config Name="AI daily cap" Target="AI_DAILY_CAP" Default="" Mode="" Description="Summaries per trip per day (150)." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
-  <Config Name="Push contact" Target="VAPID_SUBJECT" Default="" Mode="" Description="mailto: address for push services." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Push contact" Target="VAPID_SUBJECT" Default="" Mode="" Description="Optional, e.g. mailto:you@example.com. Leave empty for the default." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
 </Container>

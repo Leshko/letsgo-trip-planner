@@ -42,7 +42,12 @@ check() {
 
 echo "== start the new image on an old single-file install"
 docker run -d --name smoke --restart unless-stopped -p 3101:3001 -v "$D:/data" \
-  -e PORT=3001 -e DB_PATH=/data/letsgo.sqlite -e ADMIN_KEY=ci-admin-key-0123456789 "$IMG" >/dev/null
+  -e PORT=3001 -e DB_PATH=/data/letsgo.sqlite -e ADMIN_KEY=ci-admin-key-0123456789 \
+  `# every other Unraid template field, empty, exactly as the Docker tab passes them` \
+  -e ANTHROPIC_API_KEY= -e PUBLIC_URL= -e SMTP_HOST= -e SMTP_PASS= -e MAIL_FROM= -e SMTP_PORT= -e SMTP_USER= \
+  -e GOOGLE_CLIENT_ID= -e GOOGLE_CLIENT_SECRET= -e MICROSOFT_CLIENT_ID= -e MICROSOFT_CLIENT_SECRET= \
+  -e MICROSOFT_TENANT= -e AI_MODEL= -e AI_ENRICH= -e AI_DAILY_CAP= -e VAPID_SUBJECT= \
+  "$IMG" >/dev/null
 up; check
 L=$(logs); has "$L" "Imported the old SQLite database"
 docker exec smoke test -f /data/backups/letsgo-before-postgres.sqlite

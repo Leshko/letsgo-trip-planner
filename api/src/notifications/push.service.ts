@@ -7,6 +7,7 @@ import * as webPush from 'web-push';
 import { Member, PushSubscription } from '../entities';
 import { dataDir } from '../common/paths';
 import { publicUrl } from '../auth/auth.config';
+import { pushSubject } from '../common/env';
 
 export interface PushTarget {
   endpoint: string;
@@ -89,11 +90,16 @@ export class PushService implements OnModuleInit {
         }
       }
     }
-    webPush.setVapidDetails(
-      process.env.VAPID_SUBJECT ?? 'mailto:letsgo@example.com',
-      pub,
-      priv,
-    );
+    // A mistyped contact must never stop the app: push just stays off.
+    const subject = pushSubject(process.env.VAPID_SUBJECT);
+    try {
+      if (!subject) throw new Error('it must look like mailto:you@example.com');
+      webPush.setVapidDetails(subject, pub, priv);
+    } catch (e) {
+      this.log.error(
+        `Push notifications are off: the push contact "${process.env.VAPID_SUBJECT ?? ''}" isn't valid (${String(e)}). Set it to mailto:you@example.com or leave it empty.`,
+      );
+    }
     this._publicKey = pub;
   }
 

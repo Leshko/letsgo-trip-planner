@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { dropEmptySettings } from './common/env';
 import { AppModule } from './app.module';
 import { configureApp } from './app.setup';
 import { backupBeforeUpgrade } from './database/backup';
@@ -8,6 +9,8 @@ import {
 } from './database/embedded-postgres';
 
 async function bootstrap() {
+  // Empty Docker-tab fields arrive as empty variables; they mean "not set".
+  dropEmptySettings();
   // No DATABASE_URL: use the database built into the container.
   let pg: EmbeddedPostgres | null = null;
   if (!process.env.DATABASE_URL) {
