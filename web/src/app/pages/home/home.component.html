@@ -1,4 +1,6 @@
-@if (trip(); as t) {
+@if (letsGo.active()) {
+  <app-today />
+} @else if (trip(); as t) {
   <div class="page">
     @if (savePrompt(); as p) {
       <section class="card card--sea save-trip" data-testid="save-trip" [attr.data-organizer]="p.organizer">

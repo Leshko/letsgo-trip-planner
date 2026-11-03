@@ -20,6 +20,15 @@ import { ActivatedRoute } from '@angular/router';
 import { PushService } from '../../core/push.service';
 import { SignInOptionsService } from '../../core/signin-options.service';
 import { Notification, NotifyPrefs } from '../../core/models';
+import { LetsGoService } from '../../core/lets-go';
+import { LiveLocationService } from '../../core/live-location.service';
+
+interface Tab {
+  path: string;
+  label: string;
+  ico: IconName;
+  exact: boolean;
+}
 
 @Component({
   selector: 'app-shell',
@@ -79,7 +88,11 @@ export class ShellComponent {
   profileName = '';
   profileEmoji = '';
 
-  readonly tabs: { path: string; label: string; ico: IconName; exact: boolean }[] = [
+  readonly letsGo = inject(LetsGoService);
+  readonly location = inject(LiveLocationService);
+  readonly locationError = signal('');
+
+  private readonly planningTabs: Tab[] = [
     { path: '/trip', label: 'Home', ico: 'home', exact: true },
     { path: '/trip/stay', label: 'Stay', ico: 'bed', exact: false },
     { path: '/trip/ideas', label: 'Ideas', ico: 'sparkles', exact: false },
@@ -87,6 +100,32 @@ export class ShellComponent {
     { path: '/trip/wall', label: 'Wall', ico: 'bubble', exact: false },
     { path: '/trip/photos', label: 'Photos', ico: 'camera', exact: false },
   ];
+
+  /** Let's Go mode: what's happening today, the family, the wall and photos come first. */
+  private readonly letsGoTabs: Tab[] = [
+    { path: '/trip', label: 'Today', ico: 'sun', exact: true },
+    { path: '/trip/plan', label: 'Plan', ico: 'calendar', exact: false },
+    { path: '/trip/map', label: 'Map', ico: 'map', exact: false },
+    { path: '/trip/wall', label: 'Wall', ico: 'bubble', exact: false },
+    { path: '/trip/photos', label: 'Photos', ico: 'camera', exact: false },
+    { path: '/trip/ideas', label: 'Ideas', ico: 'sparkles', exact: false },
+  ];
+
+  readonly tabs = computed(() => (this.letsGo.active() ? this.letsGoTabs : this.planningTabs));
+
+  /** Second line of the top bar: the day of the trip while it's on, otherwise where and when. */
+  readonly subtitle = computed(() => {
+    const t = this.trip();
+    if (!t) return '';
+    const d = this.letsGo.tripDay();
+    const where = t.destination || 'Somewhere great';
+    return d ? `Day ${d.day} of ${d.total} · ${where}` : `${where} · ${this.dates()}`;
+  });
+
+  /** The one-time "Let's go!" card, after any tour. */
+  readonly showLetsGoIntro = computed(
+    () => this.letsGo.introPending() && !this.showTour() && !this.showWhatsNew(),
+  );
 
   constructor() {
     // Keeps the member list (who's joined) fresh across every page.
@@ -328,6 +367,27 @@ export class ShellComponent {
   async myTrips() {
     this.showProfile.set(false);
     await this.router.navigate(['/trips']);
+  }
+
+  async letsGoIntroDone(share: boolean) {
+    this.letsGo.markIntroSeen();
+    if (share) await this.router.navigate(['/trip/map']);
+  }
+
+  setPlanningView(on: boolean) {
+    this.letsGo.setPlanningView(on);
+    this.showProfile.set(false);
+    void this.router.navigate(['/trip']);
+  }
+
+  async toggleLocation() {
+    this.locationError.set('');
+    try {
+      if (this.location.sharing()) await this.location.disable();
+      else await this.location.enable();
+    } catch (e: unknown) {
+      this.locationError.set(e instanceof Error && e.message ? e.message : messageOf(e, "Couldn't change location sharing"));
+    }
   }
 
   async signOutAccount() {

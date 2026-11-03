@@ -26,6 +26,7 @@ import {
   MyTrip,
   SignedIn,
   SignInOptions,
+  FamilyMap,
 } from './models';
 import { IdeaInput } from './models';
 
@@ -127,6 +128,17 @@ export class ApiService {
   removeAvatar() {
     return firstValueFrom(this.http.delete<Member>(this.base + '/trips/me/avatar'));
   }
+  // family map
+  setLocationSharing(tripId: string, on: boolean) {
+    return this.put<Member>(`/trips/${tripId}/me/location-sharing`, { on });
+  }
+  sendLocation(tripId: string, body: { lat: number; lng: number; accuracy: number }) {
+    return this.put<{ ok: true }>(`/trips/${tripId}/me/location`, body);
+  }
+  familyMap(tripId: string) {
+    return this.get<FamilyMap>(`/trips/${tripId}/locations`);
+  }
+
   updateProfile(body: { name?: string; emoji?: string }) {
     return this.patch<Member>('/trips/me', body);
   }

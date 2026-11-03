@@ -2,17 +2,17 @@
   <header class="topbar">
     <div class="topbar__inner">
       <button class="btn btn--sm btn--tinted topbar__left" (click)="showInvite.set(true)" aria-label="Invite family">
-        <app-avatar-stack [members]="t.members" [max]="3" /> <span>Invite</span>
+        <app-avatar-stack [members]="t.members" [max]="3" /> <span class="topbar__invite-label">Invite</span>
       </button>
       @if (hasAccount()) {
         <a class="topbar__center topbar__switch" routerLink="/trips" aria-label="Switch trip" data-testid="switch-trip">
-          <div class="topbar__title">{{ t.name }} <span aria-hidden="true">▾</span></div>
-          <div class="topbar__sub">{{ t.destination || 'Somewhere great' }} · {{ dates() }}</div>
+          <div class="topbar__title" data-testid="topbar-title">{{ t.name }} <span aria-hidden="true">▾</span></div>
+          <div class="topbar__sub" data-testid="topbar-sub">{{ subtitle() }}</div>
         </a>
       } @else {
         <div class="topbar__center">
-          <div class="topbar__title">{{ t.name }}</div>
-          <div class="topbar__sub">{{ t.destination || 'Somewhere great' }} · {{ dates() }}</div>
+          <div class="topbar__title" data-testid="topbar-title">{{ t.name }}</div>
+          <div class="topbar__sub" data-testid="topbar-sub">{{ subtitle() }}</div>
         </div>
       }
       <div class="topbar__right row" style="gap:2px">
@@ -30,7 +30,7 @@
   </header>
 
   <nav class="tabs" aria-label="Trip sections">
-    @for (tab of tabs; track tab.path) {
+    @for (tab of tabs(); track tab.path) {
       <a [routerLink]="tab.path" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: tab.exact }">
         <app-icon [name]="tab.ico" [size]="26" /><span>{{ tab.label }}</span>
       </a>
@@ -148,6 +148,21 @@
             }
           </div>
         </div>
+        @if (letsGo.tripDay(); as d) {
+          <hr style="border:0;border-top:1px solid var(--border);margin:4px 0" />
+          <div class="stack-v" style="gap:8px" data-testid="profile-letsgo">
+            <div class="label">On the trip · day {{ d.day }} of {{ d.total }}</div>
+            <label class="switch-row">
+              <span>Share my location on the family map<span class="tiny" style="display:block">Only while LetsGo is open on this phone</span></span>
+              <input type="checkbox" class="switch" [checked]="location.sharing()" [disabled]="location.busy()" (change)="$any($event.target).checked = location.sharing(); toggleLocation()" data-testid="profile-share-location" />
+            </label>
+            @if (locationError()) { <p class="tiny" style="color:var(--red)">{{ locationError() }}</p> }
+            <label class="switch-row">
+              <span>Trip-day layout<span class="tiny" style="display:block">Today, Map and Wall first. Off shows the planning layout.</span></span>
+              <input type="checkbox" class="switch" [checked]="!letsGo.planningView()" (change)="setPlanningView(!$any($event.target).checked)" data-testid="letsgo-toggle" />
+            </label>
+          </div>
+        }
         <hr style="border:0;border-top:1px solid var(--border);margin:4px 0" />
         <div data-testid="profile-account">
           @if (hasAccount()) {
@@ -184,6 +199,26 @@
         <button class="btn btn--ghost btn--danger btn--sm" type="button" (click)="leave()">Leave trip on this device</button>
       </form>
     </div>
+  }
+
+  @if (showLetsGoIntro()) {
+    @if (letsGo.tripDay(); as d) {
+      <div class="modal-backdrop">
+        <div class="modal stack-v" role="dialog" aria-label="Let's go" data-testid="letsgo-intro">
+          <div style="font-size:3rem;text-align:center" aria-hidden="true">🚗</div>
+          <h2 style="text-align:center">Let's go! Day {{ d.day }} of {{ d.total }}</h2>
+          <p class="muted" style="text-align:center">{{ t.name }} is on, so the app has switched to trip mode.</p>
+          <ul class="list-plain stack-v" style="gap:10px">
+            <li class="row" style="align-items:flex-start"><app-icon name="sun" [size]="24" /><span><strong>Today</strong> shows today's plan, directions, and the latest from the family.</span></li>
+            <li class="row" style="align-items:flex-start"><app-icon name="map" [size]="24" /><span><strong>Family map</strong>: share your location if you like, and see everyone who does.</span></li>
+            <li class="row" style="align-items:flex-start"><app-icon name="camera" [size]="24" /><span><strong>Photos and the Wall</strong> are right there. Ideas still work too.</span></li>
+          </ul>
+          <button class="btn btn--primary" type="button" (click)="letsGoIntroDone(true)" data-testid="letsgo-intro-map">Open the family map</button>
+          <button class="btn btn--ghost" type="button" (click)="letsGoIntroDone(false)" data-testid="letsgo-intro-done">Got it</button>
+          <p class="tiny" style="text-align:center">Prefer the planning layout? Switch it in your profile.</p>
+        </div>
+      </div>
+    }
   }
 
   @if (showTour()) { <app-tour (done)="showTour.set(false)" /> }

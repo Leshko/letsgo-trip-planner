@@ -2,7 +2,8 @@ import { Component, input } from '@angular/core';
 
 export type IconName =
   | 'home' | 'bed' | 'sparkles' | 'fork' | 'calendar' | 'bubble' | 'chevron' | 'plus' | 'pencil' | 'share'
-  | 'camera' | 'download' | 'trash' | 'close' | 'left' | 'right' | 'bell' | 'back';
+  | 'camera' | 'download' | 'trash' | 'close' | 'left' | 'right' | 'bell' | 'back'
+  | 'map' | 'sun' | 'locate';
 
 /** SF-Symbols-style line icons, drawn inline so they tint with `currentColor`. */
 @Component({
@@ -28,6 +29,9 @@ export type IconName =
         @case ('close') { <path d="m6 6 12 12" /><path d="M18 6 6 18" /> }
         @case ('left') { <path d="m15 6-6 6 6 6" /> }
         @case ('right') { <path d="m9 6 6 6-6 6" /> }
+        @case ('map') { <path d="M9 4.5 3.5 6.5v13l5.5-2 6 2 5.5-2v-13l-5.5 2z" /><path d="M9 4.5v13" /><path d="M15 6.5v13" /> }
+        @case ('sun') { <circle cx="12" cy="12" r="4" /><path d="M12 2.5v2" /><path d="M12 19.5v2" /><path d="m5.3 5.3 1.4 1.4" /><path d="m17.3 17.3 1.4 1.4" /><path d="M2.5 12h2" /><path d="M19.5 12h2" /><path d="m5.3 18.7 1.4-1.4" /><path d="m17.3 6.7 1.4-1.4" /> }
+        @case ('locate') { <circle cx="12" cy="12" r="6.5" /><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" /><path d="M12 2.5v3" /><path d="M12 18.5v3" /><path d="M2.5 12h3" /><path d="M18.5 12h3" /> }
         @case ('share') { <path d="M12 3v12" /><path d="m8 7 4-4 4 4" /><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" /> }
       }
     </svg>

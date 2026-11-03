@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
@@ -9,6 +9,8 @@ import { usePolling } from '../../core/polling';
 import { AvatarComponent } from '../../shared/avatar.component';
 import { AvatarStackComponent } from '../../shared/avatar-stack.component';
 import { AgoPipe } from '../../shared/pipes';
+import { LetsGoService } from '../../core/lets-go';
+import { TodayComponent } from '../today/today.component';
 
 const ICONS: Record<Activity['type'], string> = {
   joined: '👋',
@@ -24,7 +26,7 @@ const ICONS: Record<Activity['type'], string> = {
 
 @Component({
   selector: 'app-home',
-  imports: [RouterLink, AvatarComponent, AvatarStackComponent, AgoPipe],
+  imports: [RouterLink, AvatarComponent, AvatarStackComponent, AgoPipe, TodayComponent],
   templateUrl: './home.component.html',
 })
 export class HomeComponent {
@@ -33,6 +35,7 @@ export class HomeComponent {
 
   readonly trip = this.session.trip;
   readonly me = this.session.member;
+  readonly letsGo = inject(LetsGoService);
   private readonly router = inject(Router);
   private readonly signIn = inject(SignInOptionsService);
   private readonly saveDismissed = signal(readDismissed(this.session.tripId()));
@@ -103,11 +106,18 @@ export class HomeComponent {
   constructor() {
     void this.signIn.load();
     usePolling(() => this.load());
+    // Switching back to the planning view shows the planning cards right away.
+    let wasActive = this.letsGo.active();
+    effect(() => {
+      const active = this.letsGo.active();
+      if (wasActive && !active) untracked(() => void this.load());
+      wasActive = active;
+    });
   }
 
   async load() {
     const id = this.session.tripId();
-    if (!id) return;
+    if (!id || this.letsGo.active()) return;
     const [ideas, feed, posts, photos] = await Promise.all([
       this.api.listIdeas(id),
       this.api.activity(id, 25),

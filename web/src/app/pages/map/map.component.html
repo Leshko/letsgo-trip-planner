@@ -1,0 +1,55 @@
+<div class="page map-page" data-testid="family-map">
+  @if (!isLive()) {
+    <div class="card empty">
+      <div class="big">🗺️</div>
+      <h2>The family map opens when the trip starts</h2>
+      <p class="muted mt">On the trip, everyone who wants to can share where they are, and you'll all see each other here.</p>
+    </div>
+  } @else {
+    <div class="map-bar">
+      <label class="switch-row map-bar__share">
+        <span>
+          Share my location
+          <span class="tiny" style="display:block">{{ location.sharing() ? 'On while LetsGo is open on this phone' : 'Only you decide; off by default' }}</span>
+        </span>
+        <input type="checkbox" class="switch" [checked]="location.sharing()" [disabled]="location.busy()" (change)="$any($event.target).checked = location.sharing(); toggleSharing()" data-testid="share-location" />
+      </label>
+    </div>
+
+    @if (location.problem() === 'denied') {
+      <p class="card card--flat tiny mt" style="color:var(--red)" data-testid="location-denied">
+        Location is blocked for LetsGo. On iPhone: Settings › Privacy &amp; Security › Location Services › Safari Websites (or LetsGo) › While Using. On Android: tap the lock next to the address › Permissions › Location › Allow. Then try again.
+      </p>
+    } @else if (error()) {
+      <p class="error mt">{{ error() }}</p>
+    }
+
+    <div class="family-map-wrap mt">
+      <div #map class="family-map" data-testid="map-canvas"></div>
+      <div class="family-map__buttons">
+        <button class="btn btn--sm map-btn" type="button" (click)="showEveryone()" [disabled]="!pins().length">Show everyone</button>
+        <button class="btn btn--sm map-btn" type="button" (click)="centerOnMe()" aria-label="Center on me"><app-icon name="locate" [size]="18" /> Me</button>
+      </div>
+      @if (loaded() && !pins().length) {
+        <div class="family-map__empty">Nobody is sharing yet. Turn on <strong>Share my location</strong> to be the first.</div>
+      }
+    </div>
+
+    @if (others().length) {
+      <p class="tiny mt">{{ others().length === 1 ? '1 other person' : others().length + ' other people' }} on the map. Tap someone for directions to them.</p>
+    }
+  }
+
+  @if (showExplain()) {
+    <div class="modal-backdrop" (click)="showExplain.set(false)">
+      <div class="modal stack-v" (click)="$event.stopPropagation()" role="dialog" aria-label="Share your location">
+        <div class="big" style="font-size:2.4rem;text-align:center">📍</div>
+        <h2>Share where you are?</h2>
+        <p class="muted">Everyone on this trip will see you on the family map while LetsGo is open on this phone. Close the app and they see where you were last, with the time.</p>
+        <p class="muted">It switches off by itself when the trip ends, and your location is deleted. You can turn it off any time.</p>
+        <button class="btn btn--primary" type="button" (click)="turnOn()" data-testid="share-confirm">Share my location</button>
+        <button class="btn btn--ghost" type="button" (click)="showExplain.set(false)">Not now</button>
+      </div>
+    </div>
+  }
+</div>

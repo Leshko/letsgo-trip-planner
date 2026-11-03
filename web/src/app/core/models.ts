@@ -4,6 +4,23 @@ export interface Member {
   isOwner: boolean;
   emoji: string;
   avatarUrl: string;
+  /** Showing their spot on the family map while the trip is on. */
+  sharesLocation?: boolean;
+}
+
+export interface MemberLocation {
+  member: Member;
+  lat: number;
+  lng: number;
+  accuracy: number;
+  /** Epoch milliseconds. */
+  updatedAt: number;
+}
+
+export interface FamilyMap {
+  /** The trip is on, so the map is open. */
+  live: boolean;
+  locations: MemberLocation[];
 }
 
 export interface Lodging {

@@ -169,11 +169,18 @@ input[type='date'], input[type='time'] { min-height: 46px; }
   background: rgba(249, 249, 249, 0.92); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
   border-bottom: 1px solid var(--border); padding-top: env(safe-area-inset-top);
 }
-.topbar__inner { max-width: 760px; margin: 0 auto; min-height: var(--top-h); padding: 6px 12px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; }
+.topbar__inner { max-width: 760px; margin: 0 auto; min-height: var(--top-h); padding: 6px 12px; display: grid; grid-template-columns: 1fr minmax(0, auto) 1fr; align-items: center; gap: 8px; }
 .topbar__left { justify-self: start; }
 .topbar__right { justify-self: end; }
 .topbar__center { text-align: center; min-width: 0; }
-.topbar__title { font-weight: 600; font-size: 17px; letter-spacing: -0.01em; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topbar__title { font-weight: 600; font-size: 17px; letter-spacing: -0.01em; line-height: 1.2; overflow: hidden; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+/* Phones: the trip name gets the room. The sides shrink to what they need and the title wraps to two lines. */
+@media (max-width: 600px) {
+  .topbar__inner { grid-template-columns: auto minmax(0, 1fr) auto; gap: 6px; padding: 6px 8px; }
+  .topbar__invite-label { display: none; }
+  .topbar__left { padding-left: 6px; padding-right: 6px; }
+  .topbar__title { font-size: 16px; }
+}
 .topbar__sub { font-size: 12px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .tabs {
@@ -429,3 +436,38 @@ body.viewer-open { overflow: hidden; }
 .topbar__switch span { font-size: 12px; color: var(--text-2); }
 .save-trip { margin-bottom: 12px; }
 .card .btn--primary.btn--sm { background: var(--tint); color: #fff; }
+
+/* ---------- Let's Go mode ---------- */
+.today-hero { display: flex; align-items: center; gap: 12px; }
+.today-hero__sun { color: #ff9500; }
+.today-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.today-actions .btn { flex-direction: column; gap: 4px; font-size: 13px; padding: 10px 6px; text-align: center; height: auto; }
+.today-entry { display: flex; gap: 12px; align-items: flex-start; }
+.today-entry__time { flex: 0 0 64px; font-weight: 700; color: var(--tint); font-variant-numeric: tabular-nums; padding-top: 2px; font-size: 14px; }
+.today-entry__addr { display: inline-block; margin-top: 4px; color: var(--tint); text-decoration: none; }
+.today-map-ico { color: var(--tint); display: inline-flex; }
+
+.map-bar { background: var(--surface); border-radius: 14px; padding: 12px 14px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); }
+.family-map-wrap { position: relative; }
+.family-map {
+  height: calc(100dvh - var(--top-h) - var(--nav-h) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 170px);
+  min-height: 320px; border-radius: 16px; overflow: hidden; background: var(--surface-2); z-index: 0;
+}
+@media (min-width: 760px) { .family-map { height: 560px; } }
+.family-map__buttons { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; justify-content: space-between; gap: 8px; z-index: 500; pointer-events: none; }
+.family-map__buttons .btn { pointer-events: auto; }
+.map-btn { background: rgba(255, 255, 255, 0.95); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); }
+.family-map__empty { position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 500; background: rgba(255, 255, 255, 0.95); border-radius: 12px; padding: 10px 12px; font-size: 14px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); }
+.map-pin-wrap { background: none; border: 0; }
+.map-pin { display: flex; flex-direction: column; align-items: center; width: 52px; }
+.map-pin__face {
+  width: 44px; height: 44px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  background: hsl(var(--hue, 210) 65% 55%); color: #fff; font-weight: 700; font-size: 16px;
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+}
+.map-pin__face img { width: 100%; height: 100%; object-fit: cover; }
+.map-pin__emoji { font-size: 24px; line-height: 1; }
+.map-pin--me .map-pin__face { border-color: #007aff; }
+.map-pin__name { margin-top: 3px; font-size: 11px; font-weight: 600; background: rgba(255, 255, 255, 0.92); border-radius: 6px; padding: 1px 5px; white-space: nowrap; max-width: 90px; overflow: hidden; text-overflow: ellipsis; color: #111; }
+.map-pin--stale { opacity: 0.5; filter: grayscale(0.6); }
+.map-pop { font-size: 14px; display: flex; flex-direction: column; gap: 4px; }

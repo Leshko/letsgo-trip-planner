@@ -17,6 +17,7 @@ import { AdminModule } from './admin/admin.module';
 import { TripsModule } from './trips/trips.module';
 import { IdeasModule } from './ideas/ideas.module';
 import { ItineraryModule } from './itinerary/itinerary.module';
+import { LocationModule } from './location/location.module';
 
 export { ENTITIES } from './entities';
 
@@ -57,6 +58,7 @@ const webDist = join(__dirname, '..', '..', 'web', 'dist', 'web', 'browser');
     PhotosModule,
     AiModule,
     AdminModule,
+    LocationModule,
   ],
   controllers: [HealthController, ConfigController],
 })

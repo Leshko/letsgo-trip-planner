@@ -123,6 +123,11 @@ export class TourComponent {
         title: 'Where we\'re staying',
         body: 'The Stay tab has the address, map, check-in time, photos and house notes. Home shows the countdown and what everyone has been up to.',
       },
+      {
+        art: '🚗',
+        title: 'Once the trip starts',
+        body: "On day one the app switches to trip mode: today's plan up front, a family map where you can choose to share where you are, and the wall and photos one tap away.",
+      },
       ...this.newSteps,
     ];
   });

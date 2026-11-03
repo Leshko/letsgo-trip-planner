@@ -58,6 +58,7 @@ export const routes: Routes = [
       { path: 'photos', loadComponent: () => import('./pages/photos/photos.component').then((m) => m.PhotosComponent) },
       { path: 'plan', loadComponent: () => import('./pages/itinerary/itinerary.component').then((m) => m.ItineraryComponent) },
       { path: 'wall', loadComponent: () => import('./pages/wall/wall.component').then((m) => m.WallComponent) },
+      { path: 'map', loadComponent: () => import('./pages/map/map.component').then((m) => m.MapComponent) },
     ],
   },
   { path: '**', redirectTo: '' },

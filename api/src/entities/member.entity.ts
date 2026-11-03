@@ -64,4 +64,8 @@ export class Member extends Timestamped {
   /** Notification switches the person turned off; missing keys mean on. */
   @Column({ type: 'simple-json', default: '{}' })
   notifyPrefs!: Record<string, boolean>;
+
+  /** Opted in to showing their spot on the family map while the trip is on. */
+  @Column({ default: false })
+  sharesLocation!: boolean;
 }

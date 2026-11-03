@@ -15,6 +15,7 @@ export * from './unfurl-cache.entity';
 export * from './legacy-import.entity';
 export * from './account.entities';
 export * from './member-alias.entity';
+export * from './member-location.entity';
 
 import { Trip } from './trip.entity';
 import { Member } from './member.entity';
@@ -32,6 +33,7 @@ import { PushSubscription } from './push-subscription.entity';
 import { UnfurlCache } from './unfurl-cache.entity';
 import { LegacyImport } from './legacy-import.entity';
 import { MemberAlias } from './member-alias.entity';
+import { MemberLocation } from './member-location.entity';
 import {
   AccountSession,
   AuthFlow,
@@ -64,4 +66,5 @@ export const ENTITIES = [
   AuthFlow,
   AuthHandoff,
   MemberAlias,
+  MemberLocation,
 ];

@@ -19,6 +19,8 @@ export interface MemberView {
   emoji: string;
   /** Versioned URL of the uploaded photo, or '' when there is none. */
   avatarUrl: string;
+  /** Showing their spot on the family map while the trip is on. */
+  sharesLocation: boolean;
 }
 
 export interface TripView {
@@ -74,6 +76,7 @@ export const memberView = (m: Member): MemberView => ({
   isOwner: m.isOwner,
   emoji: m.emoji ?? '',
   avatarUrl: m.avatarVersion ? `/api/avatars/${m.id}?v=${m.avatarVersion}` : '',
+  sharesLocation: !!m.sharesLocation,
 });
 
 export const tripView = (t: Trip, members: Member[]): TripView => ({

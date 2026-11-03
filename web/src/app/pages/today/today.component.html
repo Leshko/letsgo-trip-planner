@@ -1,0 +1,120 @@
+@if (trip(); as t) {
+  <div class="page" data-testid="today">
+    @if (day(); as d) {
+      <section class="card card--accent today-hero">
+        <div class="grow">
+          <div class="tiny">{{ longDate(d.date) }}{{ t.destination ? ' · ' + t.destination : '' }}</div>
+          <div class="countdown" data-testid="day-of">Day {{ d.day }} of {{ d.total }}</div>
+          <div class="muted">{{ greeting() }}</div>
+        </div>
+        <span class="today-hero__sun" aria-hidden="true"><app-icon name="sun" [size]="40" /></span>
+      </section>
+    }
+
+    <div class="today-actions mt">
+      <a class="btn btn--tinted" routerLink="/trip/photos"><app-icon name="camera" [size]="20" /> Add photos</a>
+      <a class="btn btn--tinted" routerLink="/trip/map"><app-icon name="map" [size]="20" /> Family map</a>
+      <a class="btn btn--tinted" routerLink="/trip/ideas/do"><app-icon name="sparkles" [size]="20" /> Suggest an idea</a>
+    </div>
+
+    <div class="section-title"><h2>Today's plan</h2><a routerLink="/trip/plan">Full plan ›</a></div>
+    @if (loaded() && !todayPlan().length) {
+      <a routerLink="/trip/plan" class="card card--flat empty" style="display:block;text-decoration:none;color:inherit">
+        <div class="big">🌤️</div>Nothing planned for today. Wing it, or add something to the plan.
+      </a>
+    }
+    <div class="stack-v" data-testid="today-plan">
+      @for (e of todayPlan(); track e.id) {
+        <div class="card today-entry">
+          <div class="today-entry__time">{{ e.startTime ? time12(e.startTime) : 'Any time' }}</div>
+          <div class="grow">
+            @if (e.idea) { <a class="idea__title idea__title--link" [routerLink]="['/trip/idea', e.idea.id]">{{ e.title }}</a> }
+            @else { <div class="idea__title">{{ e.title }}</div> }
+            @if (e.notes) { <div class="tiny">{{ e.notes }}</div> }
+            @if (e.idea?.address; as addr) {
+              <a class="tiny today-entry__addr" [href]="directions(addr)" target="_blank" rel="noopener">🧭 {{ addr }}</a>
+            }
+          </div>
+          @if (e.idea?.imageUrl) { <img class="thumb" [src]="e.idea!.imageUrl" alt="" loading="lazy" (error)="$any($event.target).style.display='none'" /> }
+        </div>
+      }
+    </div>
+
+    @if (tomorrowPlan().length) {
+      <div class="card card--flat mt">
+        <div class="tiny">Tomorrow</div>
+        <ul class="list-plain stack-v mt" style="gap:4px;margin-top:6px">
+          @for (e of tomorrowPlan().slice(0, 4); track e.id) {
+            <li><strong>{{ e.startTime ? time12(e.startTime) : '·' }}</strong> {{ e.title }}</li>
+          }
+        </ul>
+      </div>
+    }
+
+    <a routerLink="/trip/map" class="card card--flat row mt" style="text-decoration:none;color:inherit" data-testid="today-map">
+      <span class="today-map-ico"><app-icon name="map" [size]="26" /></span>
+      <div class="grow">
+        <strong>Family map</strong>
+        <div class="tiny">
+          @if (sharers().length) { {{ sharers().length === 1 ? '1 person is' : sharers().length + ' people are' }} sharing where they are }
+          @else { See where everyone is. Nobody is sharing yet. }
+          @if (!location.sharing()) { · You're not sharing }
+        </div>
+      </div>
+      @for (m of sharers().slice(0, 4); track m.id) { <app-avatar [member]="m" size="sm" /> }
+      <span class="muted">›</span>
+    </a>
+
+    @if (t.lodging.name || t.lodging.address) {
+      <section class="card card--sea mt">
+        <div class="row">
+          @if (t.lodging.photos[0]) {
+            <img [src]="t.lodging.photos[0]" alt="" (error)="$any($event.target).style.display = 'none'" style="width:64px;height:52px;object-fit:cover;border-radius:10px" />
+          } @else { <span style="font-size:1.8rem">🏡</span> }
+          <div class="grow">
+            <div class="tiny">Home base</div>
+            <div style="font-weight:700">{{ t.lodging.name || t.lodging.address }}</div>
+            @if (day()?.isLast && t.lodging.checkOut) { <div class="tiny"><strong>Check-out today {{ t.lodging.checkOut }}</strong></div> }
+            @else if (day()?.isFirst && t.lodging.checkIn) { <div class="tiny">Check-in {{ t.lodging.checkIn }}</div> }
+          </div>
+        </div>
+        <div class="row row--wrap mt">
+          @if (t.lodging.address) { <a class="btn btn--sm" [href]="directions(t.lodging.address)" target="_blank" rel="noopener">🧭 Directions home</a> }
+          <a class="btn btn--sm" routerLink="/trip/stay">House notes</a>
+        </div>
+      </section>
+    }
+
+    <div class="section-title"><h2>The wall</h2><a routerLink="/trip/wall">All posts ›</a></div>
+    <form class="card stack-v" (ngSubmit)="post()" style="gap:8px">
+      <textarea class="textarea" name="draft" [(ngModel)]="draft" rows="2" maxlength="2000" placeholder="Where are you? Running late? Say it here." data-testid="today-post"></textarea>
+      @if (error()) { <p class="error">{{ error() }}</p> }
+      <button class="btn btn--primary btn--sm" type="submit" style="align-self:flex-end" [disabled]="posting() || !draft.trim()">{{ posting() ? 'Posting…' : 'Post' }}</button>
+    </form>
+    <div class="stack-v mt">
+      @for (p of posts().slice(0, 3); track p.id) {
+        <a routerLink="/trip/wall" class="post" style="text-decoration:none;color:inherit">
+          <app-avatar [member]="p.member" size="sm" />
+          <div class="post__bubble"><span class="comment__who">{{ p.member.id === me()?.id ? 'You' : p.member.name }}</span><span class="tiny">{{ p.createdAt | ago }}</span>
+            <div class="post__body" style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">{{ p.body }}</div>
+          </div>
+        </a>
+      }
+    </div>
+
+    <div class="section-title"><h2>Photos</h2><a routerLink="/trip/photos">Album ›</a></div>
+    @if (photos().length) {
+      <a routerLink="/trip/photos" class="home-photos" style="display:grid;text-decoration:none">
+        @for (ph of photos().slice(0, 8); track ph.id) {
+          <img [src]="ph.urls.thumb ?? ph.urls.preview ?? ph.urls.original" alt="" loading="lazy" />
+        }
+      </a>
+    } @else if (loaded()) {
+      <a routerLink="/trip/photos" class="card card--flat row" style="text-decoration:none;color:inherit">
+        <span style="font-size:1.6rem">📷</span>
+        <div class="grow"><strong>Start the trip album</strong><div class="tiny">Add today's photos so everyone has them</div></div>
+        <span class="muted">›</span>
+      </a>
+    }
+  </div>
+}
