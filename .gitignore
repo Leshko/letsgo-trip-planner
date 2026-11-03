@@ -4,5 +4,6 @@ dist/
 coverage/
 data/
 *.sqlite
+!api/test/fixtures/**/*.sqlite
 *.sqlite-journal
 .env
