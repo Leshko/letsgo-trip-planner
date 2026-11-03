@@ -1,53 +1,70 @@
 # Deploying LetsGo Together
 
-## Unraid (one command)
+## Unraid
 
-Open the Unraid terminal (top-right `>_` icon) and run:
+LetsGo Together is one container, `letsgo`, on port 3001. Its database is built
+in, so everything lives in `/mnt/user/appdata/letsgo`:
+
+| Folder / file | What it is |
+|---------------|------------|
+| `db/` | the database (PostgreSQL 16, only reachable inside the container) |
+| `photos/` | uploaded photos |
+| `backups/` | a database snapshot before every update (last 10) |
+| `vapid.json`, `db.password` | push-notification keys, database password |
+| `letsgo.sqlite` | the old single-file database, kept untouched after it's imported |
+
+### Updating
+
+Docker tab → **Check for Updates** → **apply update** on LetsGo. That's all: the
+app saves a database snapshot to `backups/` before it changes anything, and the
+first update from the old single-file version copies every trip, person, vote,
+comment, photo and sign-in into the new database (checking every table's count),
+so everyone stays signed in.
+
+To go back a version: Docker tab → LetsGo → **Edit** → set **Repository** to
+`ghcr.io/leshko/letsgo-trip-planner:<version>` (every build is also tagged with
+its short commit id, listed on the GitHub packages page) → **Apply**.
+
+### Installing from scratch
+
+In the Unraid terminal, fetch the template (every setting as a field, ready to
+fill in):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Leshko/letsgo-trip-planner/main/deploy/unraid/my-letsgo.xml \
+  -o /boot/config/plugins/dockerMan/templates-user/my-letsgo.xml
+mkdir -p /mnt/user/appdata/letsgo && chown 1000:1000 /mnt/user/appdata/letsgo
+```
+
+Then Docker tab → **Add Container** → Template: **letsgo** → fill in the fields →
+**Apply**, and open `http://<unraid-ip>:3001`.
+
+Or do all of that with one command (it also works for updates, and puts the
+previous container back by itself if a new version doesn't start):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Leshko/letsgo-trip-planner/main/deploy/unraid-deploy.sh | bash
 ```
 
-Then open `http://<unraid-ip>:3001`. Run the same command again any time to update.
-
-It runs two containers on Docker's standard bridge:
-
-| Container   | What it is                    | Data                                        |
-|-------------|-------------------------------|---------------------------------------------|
-| `letsgo-db` | PostgreSQL 16, reachable only from containers on this server | `/mnt/user/appdata/letsgo/postgres` |
-| `letsgo`    | the app, port 3001            | photos and push keys in `/mnt/user/appdata/letsgo` |
+If the pull is refused, the package is still private on GitHub: on github.com
+open your profile → Packages → `letsgo-trip-planner` → Package settings → Change
+visibility → Public.
 
 ## Settings live in the Docker tab
 
-Every setting (AI key, admin key, sign-in, email) is a variable on the `letsgo`
-container, and the Docker tab is the source of truth: click the LetsGo icon →
-**Edit**, change a field, **Apply**. Secret fields are masked. Running the deploy
-line again keeps whatever is set there. (If you used a `letsgo.env` file
-before, the first deploy moves its values onto the container and renames the
-file to `letsgo.env.imported-<date>`.)
+Every setting (AI key, admin key, sign-in email, address) is a variable on the
+`letsgo` container: click the LetsGo icon → **Edit**, change a field, **Apply**.
+Secret fields are masked. (The deploy line keeps whatever is set there, and
+moves an old `letsgo.env` file onto the container once.)
 
-Updating: either run the deploy line (database snapshot first, automatic
-rollback) or use the Docker tab's **apply update**; both keep your settings.
-
-The database password is generated on the first run and kept in
-`/mnt/user/appdata/letsgo/db.env` (only root can read it).
-
-**Upgrading from the single-container version** happens on its own the first
-time you run the command: the script copies `letsgo.sqlite` to
-`backups/letsgo-before-postgres.sqlite`, starts PostgreSQL, and the app copies
-every trip, person, vote, comment, photo record and sign-in across, checks every
-table's count, and only then starts. Everyone stays signed in. The old
-`letsgo.sqlite` is left exactly as it was.
-
-If the pull is refused, the package is still private on GitHub: on github.com
-open your profile → Packages → `letsgo-trip-planner` → Package settings → Change visibility →
-Public. (Or `docker login ghcr.io` on the box with a personal access token that
-has `read:packages`.)
+Boxes that ran the earlier two-container version keep their separate
+`letsgo-db` container: the app finds it through the **Outside database** field
+(under Show more settings). Leave that field as it is.
 
 ## Photos and disk space
 
 Uploaded photos are stored as files under `/mnt/user/appdata/letsgo/photos`,
-and the database lives in `/mnt/user/appdata/letsgo/postgres`, so backing up
+and the database in `/mnt/user/appdata/letsgo/db`, so backing up
 `/mnt/user/appdata/letsgo` covers everything. Originals
 are kept at full size (up to 25 MB each).
 
@@ -112,18 +129,13 @@ Tailscale) and share that URL. Invite links are `https://<your-host>/join/<CODE>
 
 ## Backups and rolling back
 
-Every update first saves a database snapshot to
+Before every update that changes the database, the app saves
 `/mnt/user/appdata/letsgo/backups/letsgo-<date>.sql.gz` (the last 10 are kept).
-If the new version doesn't start, the script puts the previous one back by
-itself and says so; nothing in the database has changed in that case.
-
-To restore a snapshot by hand:
+To restore one by hand:
 
 ```bash
-docker stop letsgo
-gunzip -c /mnt/user/appdata/letsgo/backups/letsgo-<date>.sql.gz | \
-  docker exec -i letsgo-db sh -c 'psql -U letsgo -d postgres -c "DROP DATABASE letsgo WITH (FORCE)" -c "CREATE DATABASE letsgo" && psql -U letsgo -d letsgo'
-docker start letsgo
+docker exec -i letsgo sh -c 'P=$(cat /data/db.password); export PGPASSWORD=$P; $PG_BIN/dropdb -h 127.0.0.1 -U letsgo letsgo && $PG_BIN/createdb -h 127.0.0.1 -U letsgo letsgo && gunzip -c /data/backups/letsgo-<date>.sql.gz | $PG_BIN/psql -q -h 127.0.0.1 -U letsgo -d letsgo'
+docker restart letsgo
 ```
 
 ## Admin screen
@@ -148,7 +160,7 @@ Until email is set up, everything works as before, including starting trips.
 
 ### 1. Install the release
 
-Run the deploy line at the top of this page once.
+Update LetsGo from the Docker tab (see Updating, above).
 
 ### 2. Check that letsgotogether.app reaches this same app
 

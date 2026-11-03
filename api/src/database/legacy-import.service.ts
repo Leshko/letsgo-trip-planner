@@ -1,11 +1,12 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import Database from 'better-sqlite3';
-import { existsSync } from 'fs';
+import { copyFileSync, existsSync, mkdirSync } from 'fs';
+import { join } from 'path';
 import { DataSource, EntityManager, EntityMetadata } from 'typeorm';
 import { ColumnMetadata } from 'typeorm/metadata/ColumnMetadata';
 import { LegacyImport, Trip } from '../entities';
-import { legacySqlitePath } from '../common/paths';
+import { dataDir, legacySqlitePath } from '../common/paths';
 
 const MARKER_ID = 'sqlite';
 const CHUNK = 200;
@@ -64,6 +65,12 @@ export class LegacyImportService implements OnModuleInit {
       return { status: 'already-imported' };
     if ((await this.ds.getRepository(Trip).count()) > 0)
       return { status: 'skipped-nonempty' };
+
+    // A copy of the old file next to the other backups, once, before anything is read.
+    const backups = join(dataDir(), 'backups');
+    mkdirSync(backups, { recursive: true });
+    const copy = join(backups, 'letsgo-before-postgres.sqlite');
+    if (!existsSync(copy)) copyFileSync(path, copy);
 
     const db = new Database(path, { readonly: true, fileMustExist: true });
     try {

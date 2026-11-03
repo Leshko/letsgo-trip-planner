@@ -62,9 +62,10 @@ See [deploy/README.md](deploy/README.md). Short version, in the Unraid terminal:
 curl -fsSL https://raw.githubusercontent.com/Leshko/letsgo-trip-planner/main/deploy/unraid-deploy.sh | bash
 ```
 
-Two containers (the app and PostgreSQL), port 3001. Settings are variables on
-the `letsgo` container, edited in the Unraid Docker tab. The setup for sign-in
-and the letsgotogether.app address is in the same guide.
+One container with its database built in, port 3001. Update it with the Docker
+tab's update button; settings are variables on the container, edited in the
+Docker tab. The setup for sign-in and the letsgotogether.app address is in the
+same guide.
 
 ## Run it locally
 
@@ -110,8 +111,9 @@ web/   Angular 20 (standalone, signals). iOS-style look: system font, translucen
 | Variable  | Default                 | Meaning                           |
 |-----------|-------------------------|-----------------------------------|
 | `PORT`    | `3001`                  | API (and web) port                |
-| `DATABASE_URL` | required | PostgreSQL connection string. |
-| `DATA_DIR` | `api/data` | Photos, push keys. |
+| `DATABASE_URL` | built in | PostgreSQL connection string. Unset: the app runs its own PostgreSQL in `<DATA_DIR>/db` (needs `PG_BIN`, set in the image). |
+| `PG_BIN` | `/usr/lib/postgresql/16/bin` | Where the built-in database's programs are. |
+| `DATA_DIR` | `api/data` | Database (built-in), photos, push keys, backups. |
 | `DB_PATH` | `<DATA_DIR>/letsgo.sqlite` | The old SQLite file, imported once on first start if present. |
 | `PUBLIC_URL` | unset | The app's main address, e.g. `https://letsgotogether.app`. Sign-in redirects and emailed links use it; other addresses hand phones over to it. |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | unset | Google sign-in. |

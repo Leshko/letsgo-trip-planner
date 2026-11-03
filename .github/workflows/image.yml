@@ -32,6 +32,18 @@ jobs:
             type=raw,value=latest
             type=sha,prefix=
 
+      # Build once, try the real image (upgrade from an old install, restart, hard kill), then publish.
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: letsgo:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke test the image
+        run: bash deploy/ci-smoke.sh letsgo:ci
+
       - uses: docker/build-push-action@v6
         with:
           context: .

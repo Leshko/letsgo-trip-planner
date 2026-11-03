@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>letsgo</Name>
+  <Repository>ghcr.io/leshko/letsgo-trip-planner:latest</Repository>
+  <Registry>https://github.com/Leshko/letsgo-trip-planner/pkgs/container/letsgo-trip-planner</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/Leshko/letsgo-trip-planner</Support>
+  <Project>https://github.com/Leshko/letsgo-trip-planner</Project>
+  <Overview>LetsGo Together: plan a family trip together. One container with its database built in; update with the Docker tab&apos;s update button. It saves a database snapshot to backups/ before every update.</Overview>
+  <Category>Productivity:</Category>
+  <WebUI>http://[IP]:[PORT:3001]/</WebUI>
+  <Icon>https://raw.githubusercontent.com/Leshko/letsgo-trip-planner/main/web/public/icons/icon-192.png</Icon>
+  <ExtraParams>--restart unless-stopped</ExtraParams>
+  <PostArgs/>
+  <Config Name="Web port" Target="3001" Default="3001" Mode="tcp" Description="Port the app is served on." Type="Port" Display="always" Required="true" Mask="false">3001</Config>
+  <Config Name="Data" Target="/data" Default="/mnt/user/appdata/letsgo" Mode="rw" Description="Database, photos, push keys and backups." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/letsgo</Config>
+  <Config Name="Anthropic API key" Target="ANTHROPIC_API_KEY" Default="" Mode="" Description="AI link summaries (from console.anthropic.com). Leave empty to turn them off." Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="Admin key" Target="ADMIN_KEY" Default="" Mode="" Description="Unlocks /admin. 16 characters or more." Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="Public URL" Target="PUBLIC_URL" Default="" Mode="" Description="Main web address, e.g. https://letsgotogether.app. Only set it once that address opens the app." Type="Variable" Display="always" Required="false" Mask="false"></Config>
+  <Config Name="SMTP host" Target="SMTP_HOST" Default="" Mode="" Description="Email for sign-in codes: smtp.resend.com" Type="Variable" Display="always" Required="false" Mask="false"></Config>
+  <Config Name="SMTP password" Target="SMTP_PASS" Default="" Mode="" Description="Your Resend API key (re_...)." Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="Mail from" Target="MAIL_FROM" Default="" Mode="" Description="e.g. LetsGo Together &lt;trips@letsgotogether.app&gt;" Type="Variable" Display="always" Required="false" Mask="false"></Config>
+  <Config Name="SMTP port" Target="SMTP_PORT" Default="" Mode="" Description="Leave empty for Resend (465)." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="SMTP user" Target="SMTP_USER" Default="" Mode="" Description="Leave empty for Resend (resend)." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Google client ID" Target="GOOGLE_CLIENT_ID" Default="" Mode="" Description="Google sign-in (optional; see the guide)." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Google client secret" Target="GOOGLE_CLIENT_SECRET" Default="" Mode="" Description="Google sign-in." Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="Microsoft client ID" Target="MICROSOFT_CLIENT_ID" Default="" Mode="" Description="Microsoft sign-in (optional; see the guide)." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Microsoft client secret" Target="MICROSOFT_CLIENT_SECRET" Default="" Mode="" Description="Microsoft sign-in." Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="Microsoft tenant" Target="MICROSOFT_TENANT" Default="" Mode="" Description="Leave empty (common)." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="AI model" Target="AI_MODEL" Default="" Mode="" Description="Leave empty for the default." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="AI on/off" Target="AI_ENRICH" Default="" Mode="" Description="0 turns AI summaries off even with a key." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="AI daily cap" Target="AI_DAILY_CAP" Default="" Mode="" Description="Summaries per trip per day (150)." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Push contact" Target="VAPID_SUBJECT" Default="" Mode="" Description="mailto: address for push services." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+</Container>
