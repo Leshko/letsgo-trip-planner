@@ -21,7 +21,7 @@ Files in this folder:
 
 ## 2. Google Play Console (personal, $25 once)
 1. Go to https://play.google.com/console/signup, sign in with your Google account, choose **Yourself**, pay $25, and verify your identity (ID photo). Takes a few days.
-2. Google's rule for new personal accounts: before the app can go public, it must run a **closed test with at least 12 testers for 14 days in a row**. Start gathering 12+ family members' Gmail addresses (the people on the Dad's 60th trip are perfect). Each needs an Android phone.
+2. Google's rule for new personal accounts: before the app can go public, it must run a **closed test with at least 12 testers for 14 days in a row**. A social post works: see `android-testers.md` for the setup and ready-to-paste posts.
 
 ## 3. Firebase (free, Android notifications)
 1. Go to https://console.firebase.google.com → **Create a project** → name it `LetsGo Together` → Google Analytics **off** → Create.
