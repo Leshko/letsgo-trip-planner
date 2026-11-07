@@ -1,0 +1,87 @@
+name: phone apps
+
+# Builds the iPhone and Android apps from the same web code on every change,
+# so breakage shows up long before a store release. Store uploads (signed
+# builds to TestFlight and Play) are added once the developer accounts exist.
+on:
+  push:
+    branches: ['main']
+    paths:
+      - 'web/**'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/mobile.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      # Set once Firebase is set up (Android notifications); empty means push stays off in the app.
+      GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @letsgo/web build
+      - name: Firebase file for Android notifications (when set up)
+        if: env.GOOGLE_SERVICES_JSON != ''
+        run: |
+          printf '%s' "$GOOGLE_SERVICES_JSON" > web/android/app/google-services.json
+          echo '{"androidPush":true}' > web/dist/web/browser/native.json
+      - run: pnpm --filter @letsgo/web exec cap sync android
+      - name: Build the Android app (debug)
+        working-directory: web/android
+        run: ./gradlew --no-daemon assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: letsgo-android-debug
+          path: web/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14
+
+  ios:
+    runs-on: macos-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @letsgo/web build
+      - run: pnpm --filter @letsgo/web exec cap sync ios
+      - name: Build the iPhone app (simulator, unsigned)
+        working-directory: web/ios/App
+        run: |
+          xcodebuild -project App.xcodeproj -scheme App -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO build | tail -40
+          test -d build/Build/Products/Debug-iphonesimulator/App.app
+      - name: Package the simulator app
+        working-directory: web/ios/App/build/Build/Products/Debug-iphonesimulator
+        run: zip -qr "$GITHUB_WORKSPACE/letsgo-ios-simulator.zip" App.app
+      - uses: actions/upload-artifact@v4
+        with:
+          name: letsgo-ios-simulator
+          path: letsgo-ios-simulator.zip
+          retention-days: 14
