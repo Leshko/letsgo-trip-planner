@@ -1,3 +1,4 @@
+import { absUrl, isNativeApp } from '../../core/platform';
 import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { Router } from '@angular/router';
@@ -39,7 +40,8 @@ export class PhotosComponent {
   readonly viewing = signal<number | null>(null);
   readonly totalBytes = computed(() => this.photos().reduce((n, p) => n + p.bytes, 0));
   readonly totalLabel = computed(() => formatBytes(this.totalBytes()));
-  readonly zipUrl = computed(() => `/api/trips/${this.session.tripId()}/photos.zip?token=${encodeURIComponent(this.session.token() ?? '')}`);
+  readonly native = isNativeApp();
+  readonly zipUrl = computed(() => absUrl(`/api/trips/${this.session.tripId()}/photos.zip?token=${encodeURIComponent(this.session.token() ?? '')}`));
   readonly busyCount = computed(() => this.uploads().filter((u) => u.status === 'resizing' || u.status === 'uploading').length);
 
   constructor() {

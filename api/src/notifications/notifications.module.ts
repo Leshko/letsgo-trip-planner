@@ -7,6 +7,7 @@ import {
 } from './notifications.controller';
 import { NotificationsService } from './notifications.service';
 import { PUSH_SENDER, PushService, WebPushSender } from './push.service';
+import { NATIVE_PUSH_SENDER, NativePushClient } from './native-push';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { PUSH_SENDER, PushService, WebPushSender } from './push.service';
     NotificationsService,
     PushService,
     { provide: PUSH_SENDER, useClass: WebPushSender },
+    { provide: NATIVE_PUSH_SENDER, useClass: NativePushClient },
   ],
   exports: [NotificationsService, PushService],
 })

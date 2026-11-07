@@ -7,6 +7,7 @@ import { databaseOptions } from './database/database.config';
 import { LegacyImportModule } from './database/legacy-import.module';
 import { HealthController } from './health.controller';
 import { ConfigController } from './config.controller';
+import { AppLinksController } from './app-links.controller';
 import { AuthModule } from './auth/auth.module';
 import { SocialModule } from './social/social.module';
 import { ActivityModule } from './activity/activity.module';
@@ -32,7 +33,7 @@ const webDist = join(__dirname, '..', '..', 'web', 'dist', 'web', 'browser');
       ? [
           ServeStaticModule.forRoot({
             rootPath: webDist,
-            exclude: ['/api/{*splat}'],
+            exclude: ['/api/{*splat}', '/.well-known/{*splat}'],
             serveStaticOptions: {
               // The service worker's manifest must always be revalidated or updates never land.
               setHeaders: (res: import('express').Response, path: string) => {
@@ -60,6 +61,6 @@ const webDist = join(__dirname, '..', '..', 'web', 'dist', 'web', 'browser');
     AdminModule,
     LocationModule,
   ],
-  controllers: [HealthController, ConfigController],
+  controllers: [HealthController, ConfigController, AppLinksController],
 })
 export class AppModule {}

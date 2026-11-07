@@ -4,3 +4,5 @@ node_modules
 **/.angular
 **/data
 *.sqlite
+web/android
+web/ios

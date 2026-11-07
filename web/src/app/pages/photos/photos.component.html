@@ -12,7 +12,7 @@
       <input type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif" style="display:none" (change)="onPicked($event)" data-testid="photo-picker" />
     </label>
     @if (photos().length) {
-      <a class="btn btn--tinted" [href]="zipUrl()" download data-testid="zip-link"><app-icon name="download" [size]="20" /> All as zip</a>
+      <a class="btn btn--tinted" [href]="zipUrl()" download [attr.target]="native ? '_blank' : null" data-testid="zip-link"><app-icon name="download" [size]="20" /> All as zip</a>
     }
   </div>
 

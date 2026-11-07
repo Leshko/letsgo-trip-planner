@@ -87,6 +87,12 @@ export class ApiService {
   pushSubscribe(body: { endpoint: string; keys: { p256dh: string; auth: string }; userAgent?: string }) {
     return this.post<{ ok: true }>('/trips/me/push', body);
   }
+  pushNativeChannels() {
+    return this.get<{ ios: boolean; android: boolean }>('/push/native');
+  }
+  pushNativeSubscribe(platform: 'ios' | 'android', token: string) {
+    return this.post<{ ok: true }>('/trips/me/push/native', { platform, token });
+  }
   pushUnsubscribe(endpoint: string) {
     return firstValueFrom(this.http.delete<void>(`${this.base}/trips/me/push`, { body: { endpoint } }));
   }

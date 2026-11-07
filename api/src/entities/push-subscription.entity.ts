@@ -9,7 +9,7 @@ import {
 import { Member } from './member.entity';
 import { Timestamped } from './created-at';
 
-/** A browser's Web Push endpoint for one member. A member can have several devices. */
+/** A browser's Web Push endpoint, or a phone app's push token, for one member. A member can have several devices. */
 @Entity()
 export class PushSubscription extends Timestamped {
   @PrimaryGeneratedColumn('uuid')
@@ -34,6 +34,10 @@ export class PushSubscription extends Timestamped {
 
   @Column({ default: '' })
   userAgent!: string;
+
+  /** 'web' (browser), 'apns' (iPhone app) or 'fcm' (Android app). For the apps, endpoint holds the device token. */
+  @Column({ default: 'web' })
+  kind!: string;
 
   /** The web address the subscription was made on (notifications open there). */
   @Column({ default: '' })

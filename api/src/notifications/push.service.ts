@@ -8,6 +8,12 @@ import { Member, PushSubscription } from '../entities';
 import { dataDir } from '../common/paths';
 import { publicUrl } from '../auth/auth.config';
 import { pushSubject } from '../common/env';
+import { NATIVE_PUSH_SENDER } from './native-push';
+import type {
+  NativeKind,
+  NativeMessage,
+  NativePushSender,
+} from './native-push';
 
 export interface PushTarget {
   endpoint: string;
@@ -46,7 +52,16 @@ export class PushService implements OnModuleInit {
     @InjectRepository(PushSubscription)
     private readonly subs: Repository<PushSubscription>,
     @Inject(PUSH_SENDER) private readonly sender: PushSender,
+    @Inject(NATIVE_PUSH_SENDER) private readonly native: NativePushSender,
   ) {}
+
+  /** Which phone apps the server can reach (the apps only ask for permission when it can). */
+  nativeChannels(): { ios: boolean; android: boolean } {
+    return {
+      ios: this.native.enabled('apns'),
+      android: this.native.enabled('fcm'),
+    };
+  }
 
   get publicKey(): string {
     return this._publicKey;
@@ -113,6 +128,7 @@ export class PushService implements OnModuleInit {
     if (main && origin === main)
       await this.subs.delete({
         memberId: me.id,
+        kind: 'web',
         origin: Not(main),
         endpoint: Not(input.endpoint),
       });
@@ -140,6 +156,34 @@ export class PushService implements OnModuleInit {
     );
   }
 
+  /** Save a phone app's push token. Tokens are unique per install. */
+  async upsertNative(
+    me: Member,
+    platform: 'ios' | 'android',
+    token: string,
+  ): Promise<void> {
+    const kind: NativeKind = platform === 'ios' ? 'apns' : 'fcm';
+    const existing = await this.subs.findOne({ where: { endpoint: token } });
+    if (existing) {
+      existing.memberId = me.id;
+      existing.kind = kind;
+      existing.origin = `app:${platform}`;
+      await this.subs.save(existing);
+      return;
+    }
+    await this.subs.save(
+      this.subs.create({
+        memberId: me.id,
+        endpoint: token,
+        kind,
+        p256dh: '',
+        auth: '',
+        userAgent: `LetsGo Together ${platform} app`,
+        origin: `app:${platform}`,
+      }),
+    );
+  }
+
   async remove(me: Member, endpoint: string): Promise<void> {
     await this.subs.delete({ endpoint, memberId: me.id });
   }
@@ -154,8 +198,14 @@ export class PushService implements OnModuleInit {
     const rows = await this.subs.find({ where: { memberId: In(memberIds) } });
     if (!rows.length) return;
     const body = JSON.stringify(payload);
+    const msg = nativeMessage(payload);
     await Promise.all(
       rows.map(async (row) => {
+        if (row.kind === 'apns' || row.kind === 'fcm') {
+          const res = await this.native.send(row.kind, row.endpoint, msg);
+          if (res === 'gone') await this.subs.delete({ id: row.id });
+          return;
+        }
         try {
           await this.sender.send(
             {
@@ -191,4 +241,26 @@ function mainOrigin(): string {
   } catch {
     return '';
   }
+}
+
+/** The same notification for the phone apps, from the browser (ngsw) payload. */
+export function nativeMessage(payload: object): NativeMessage {
+  const n =
+    (
+      payload as {
+        notification?: {
+          title?: string;
+          body?: string;
+          tag?: string;
+          data?: { url?: string; tripId?: string };
+        };
+      }
+    ).notification ?? {};
+  return {
+    title: n.title ?? 'LetsGo Together',
+    body: n.body ?? '',
+    tag: n.tag ?? '',
+    url: n.data?.url ?? '/trip',
+    tripId: n.data?.tripId ?? '',
+  };
 }

@@ -1,3 +1,4 @@
+import { isNativeApp } from './platform';
 /**
  * The app has one main web address (PUBLIC_URL on the server). When it's
  * opened anywhere else (the old letsgo.jeremyleshko.com), carry whatever this
@@ -8,6 +9,7 @@
  * the sign-in being invalid, the app simply stays on this address.
  */
 export async function moveToMainAddress(): Promise<void> {
+  if (isNativeApp()) return;
   const target = await mainOrigin();
   if (!target || target === location.origin) return;
 

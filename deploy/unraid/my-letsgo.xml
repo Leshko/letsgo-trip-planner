@@ -34,4 +34,9 @@
   <Config Name="AI on/off" Target="AI_ENRICH" Default="" Mode="" Description="0 turns AI summaries off even with a key." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
   <Config Name="AI daily cap" Target="AI_DAILY_CAP" Default="" Mode="" Description="Summaries per trip per day (150)." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
   <Config Name="Push contact" Target="VAPID_SUBJECT" Default="" Mode="" Description="Optional, e.g. mailto:you@example.com. Leave empty for the default." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Apple Team ID" Target="APPLE_TEAM_ID" Default="" Mode="" Description="Phone apps: your 10-character Apple Team ID (iPhone links and notifications)." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Apple push key ID" Target="APNS_KEY_ID" Default="" Mode="" Description="Phone apps: the 10-character Key ID of your Apple push key." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Apple push key" Target="APNS_KEY" Default="" Mode="" Description="Phone apps: the contents of the AuthKey_XXXX.p8 file, pasted as one line." Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="Firebase account" Target="FCM_SERVICE_ACCOUNT" Default="" Mode="" Description="Phone apps: the Firebase service account file (JSON), pasted as one line. Android notifications." Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="Android key fingerprint" Target="ANDROID_CERT_SHA256" Default="" Mode="" Description="Phone apps: SHA-256 fingerprint(s) from Play Console (App integrity), comma-separated. Android links." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
 </Container>

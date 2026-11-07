@@ -1,3 +1,4 @@
+import { webOrigin } from '../../core/platform';
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -206,7 +207,7 @@ export class AdminComponent {
   }
 
   joinLink(t: AdminTrip) {
-    return `${location.origin}/join/${t.inviteCode}`;
+    return `${webOrigin()}/join/${t.inviteCode}`;
   }
 
   async copy(t: AdminTrip) {

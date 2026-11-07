@@ -47,6 +47,7 @@ docker run -d --name smoke --restart unless-stopped -p 3101:3001 -v "$D:/data" \
   -e ANTHROPIC_API_KEY= -e PUBLIC_URL= -e SMTP_HOST= -e SMTP_PASS= -e MAIL_FROM= -e SMTP_PORT= -e SMTP_USER= \
   -e GOOGLE_CLIENT_ID= -e GOOGLE_CLIENT_SECRET= -e MICROSOFT_CLIENT_ID= -e MICROSOFT_CLIENT_SECRET= \
   -e MICROSOFT_TENANT= -e AI_MODEL= -e AI_ENRICH= -e AI_DAILY_CAP= -e VAPID_SUBJECT= \
+  -e APPLE_TEAM_ID= -e APNS_KEY_ID= -e APNS_KEY= -e FCM_SERVICE_ACCOUNT= -e ANDROID_CERT_SHA256= \
   "$IMG" >/dev/null
 up; check
 L=$(logs); has "$L" "Imported the old SQLite database"

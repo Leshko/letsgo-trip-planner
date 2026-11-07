@@ -21,6 +21,8 @@ import { PushService } from '../../core/push.service';
 import { SignInOptionsService } from '../../core/signin-options.service';
 import { Notification, NotifyPrefs } from '../../core/models';
 import { LetsGoService } from '../../core/lets-go';
+import { isNativeApp, webOrigin } from '../../core/platform';
+import { nativeShare } from '../../core/share.service';
 import { LiveLocationService } from '../../core/live-location.service';
 
 interface Tab {
@@ -72,7 +74,7 @@ export class ShellComponent {
     const t = this.trip();
     return t ? dateRangeLabel(t.startDate, t.endDate) : '';
   });
-  readonly inviteUrl = computed(() => `${location.origin}/join/${this.trip()?.inviteCode ?? ''}`);
+  readonly inviteUrl = computed(() => `${webOrigin()}/join/${this.trip()?.inviteCode ?? ''}`);
 
   readonly showInvite = signal(false);
   readonly showProfile = signal(false);
@@ -139,6 +141,11 @@ export class ShellComponent {
     }
     usePolling(() => this.loadNotifs(), 20_000);
     void this.push.sync();
+    // In the phone apps a notification that arrives while the app is open lands here.
+    this.push.nativeMessages.subscribe((m) => {
+      if (m.body) this.flash(m.body);
+      void this.loadNotifs();
+    });
     if (this.swPush.isEnabled) {
       this.swPush.messages.subscribe((m) => {
         const body = (m as { notification?: { body?: string } }).notification?.body;
@@ -226,6 +233,9 @@ export class ShellComponent {
     const t = this.trip();
     if (!t) return;
     const text = `Join "${t.name}" on LetsGo Together: ${this.inviteUrl()}  (code ${t.inviteCode})`;
+    if (isNativeApp()) {
+      if ((await nativeShare({ title: t.name, text })) === 'shared') return;
+    }
     const nav = navigator as Navigator & { share?: (d: ShareData) => Promise<void> };
     if (nav.share) {
       try {

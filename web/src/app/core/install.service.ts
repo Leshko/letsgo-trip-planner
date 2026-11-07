@@ -1,3 +1,4 @@
+import { isNativeApp } from './platform';
 import { Injectable, signal } from '@angular/core';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -17,7 +18,7 @@ export class InstallService {
 
   /** Native prompt available (Android / desktop Chrome). */
   readonly canPrompt = signal(false);
-  readonly installed = signal(isStandalone());
+  readonly installed = signal(isStandalone() || isNativeApp());
   readonly isIos = /iphone|ipad|ipod/i.test(navigator.userAgent) && !/crios|fxios/i.test(navigator.userAgent);
   readonly bannerDismissed = signal(readDismissed());
 

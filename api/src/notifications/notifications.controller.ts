@@ -18,6 +18,7 @@ import {
   MarkReadDto,
   PushSubscribeDto,
   PushUnsubscribeDto,
+  NativePushDto,
 } from './notifications.dto';
 import { NotificationsService } from './notifications.service';
 import { PushService } from './push.service';
@@ -60,6 +61,16 @@ export class NotificationsController {
     return { ok: true };
   }
 
+  /** Register the phone app on this device for push. Idempotent per token. */
+  @Post('me/push/native')
+  async subscribeNative(
+    @CurrentMember() me: Member,
+    @Body() dto: NativePushDto,
+  ) {
+    await this.push.upsertNative(me, dto.platform, dto.token);
+    return { ok: true };
+  }
+
   @Delete('me/push')
   @HttpCode(204)
   unsubscribe(@CurrentMember() me: Member, @Body() dto: PushUnsubscribeDto) {
@@ -75,5 +86,11 @@ export class PushController {
   @Get('public-key')
   key() {
     return { publicKey: this.push.publicKey };
+  }
+
+  /** Which phone apps can get notifications from this server. */
+  @Get('native')
+  native() {
+    return this.push.nativeChannels();
   }
 }

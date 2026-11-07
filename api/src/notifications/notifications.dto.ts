@@ -4,6 +4,8 @@ import {
   IsArray,
   IsBoolean,
   IsDefined,
+  IsIn,
+  Matches,
   IsObject,
   IsOptional,
   IsString,
@@ -26,6 +28,12 @@ export class PushSubscribeDto {
   @Type(() => PushKeysDto)
   keys!: PushKeysDto;
   @IsOptional() @IsString() @MaxLength(300) userAgent?: string;
+}
+
+export class NativePushDto {
+  @IsIn(['ios', 'android']) platform!: 'ios' | 'android';
+  /** Apple device tokens are 64 hex characters; Firebase tokens are longer. */
+  @IsString() @Matches(/^[A-Za-z0-9_:.-]{20,1000}$/) token!: string;
 }
 
 export class PushUnsubscribeDto {

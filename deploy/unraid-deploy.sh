@@ -32,7 +32,8 @@ STAMP="$(date +%Y%m%d-%H%M%S)"
 KEYS=(ANTHROPIC_API_KEY ADMIN_KEY PUBLIC_URL
       SMTP_HOST SMTP_PASS MAIL_FROM SMTP_PORT SMTP_USER
       GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET MICROSOFT_CLIENT_ID MICROSOFT_CLIENT_SECRET MICROSOFT_TENANT
-      AI_MODEL AI_ENRICH AI_DAILY_CAP VAPID_SUBJECT DATABASE_URL)
+      AI_MODEL AI_ENRICH AI_DAILY_CAP VAPID_SUBJECT
+      APPLE_TEAM_ID APNS_KEY_ID APNS_KEY FCM_SERVICE_ACCOUNT ANDROID_CERT_SHA256 DATABASE_URL)
 
 declare -A SET=()
 say() { echo "==> $*"; }
@@ -82,6 +83,11 @@ template() {
   var "AI on/off" AI_ENRICH "0 turns AI summaries off even with a key." advanced false
   var "AI daily cap" AI_DAILY_CAP "Summaries per trip per day (150)." advanced false
   var "Push contact" VAPID_SUBJECT "Optional, e.g. mailto:you@example.com. Leave empty for the default." advanced false
+  var "Apple Team ID" APPLE_TEAM_ID "Phone apps: your 10-character Apple Team ID (iPhone links and notifications)." advanced false
+  var "Apple push key ID" APNS_KEY_ID "Phone apps: the 10-character Key ID of your Apple push key." advanced false
+  var "Apple push key" APNS_KEY "Phone apps: the contents of the AuthKey_XXXX.p8 file, pasted as one line." advanced true
+  var "Firebase account" FCM_SERVICE_ACCOUNT "Phone apps: the Firebase service account file (JSON), pasted as one line. Android notifications." advanced true
+  var "Android key fingerprint" ANDROID_CERT_SHA256 "Phone apps: SHA-256 fingerprint(s) from Play Console (App integrity), comma-separated. Android links." advanced false
   if [ -n "${SET[DATABASE_URL]:-}" ]; then
     var "Outside database" DATABASE_URL "Only for setups that use a separate database container. Leave as is." advanced true
   fi

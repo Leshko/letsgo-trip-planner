@@ -1,4 +1,8 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import {
+  INestApplication,
+  RequestMethod,
+  ValidationPipe,
+} from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
 import { DbErrorFilter } from './common/db-error.filter';
 import type { NestExpressApplication } from '@nestjs/platform-express';
@@ -9,7 +13,16 @@ export function configureApp(app: INestApplication): void {
   const express = app as Partial<NestExpressApplication>;
   if (typeof express.useBodyParser === 'function')
     express.useBodyParser('json', { limit: '1mb' });
-  app.setGlobalPrefix('api');
+  // The app-link files live at the site root, where Apple and Google look for them.
+  app.setGlobalPrefix('api', {
+    exclude: [
+      {
+        path: '.well-known/apple-app-site-association',
+        method: RequestMethod.GET,
+      },
+      { path: '.well-known/assetlinks.json', method: RequestMethod.GET },
+    ],
+  });
   app.enableCors({ origin: true });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.useGlobalFilters(new DbErrorFilter(app.get(HttpAdapterHost).httpAdapter));
