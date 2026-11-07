@@ -18,13 +18,18 @@
       <label class="switch-row map-bar__share">
         <span>
           Share my location
-          <span class="tiny" style="display:block" data-testid="share-hint">{{ location.sharing() ? 'On while LetsGo is open on this phone' : 'Only you decide; off by default' }}. Switches off by itself at midnight after {{ lastDay() }}.</span>
+          <span class="tiny" style="display:block" data-testid="share-hint">{{ location.sharing() ? (location.native ? 'On, even while LetsGo is closed' : 'On while LetsGo is open on this phone') : 'Only you decide; off by default' }}. Switches off by itself at midnight after {{ lastDay() }}.</span>
         </span>
         <input type="checkbox" class="switch" [checked]="location.sharing()" [disabled]="location.busy()" (change)="$any($event.target).checked = location.sharing(); toggleSharing()" data-testid="share-location" />
       </label>
     </div>
 
-    @if (location.problem() === 'denied') {
+    @if (location.problem() === 'denied' && location.native) {
+      <div class="card card--flat mt stack-v" style="gap:8px" data-testid="location-denied">
+        <p class="tiny" style="color:var(--red)">Location is off for LetsGo. In Settings, set Location to <strong>Always</strong> (iPhone) or <strong>Allow all the time</strong> (Android) so the family map keeps working while the app is closed.</p>
+        <button class="btn btn--sm btn--tinted" type="button" style="align-self:flex-start" (click)="location.openSettings()">Open Settings</button>
+      </div>
+    } @else if (location.problem() === 'denied') {
       <p class="card card--flat tiny mt" style="color:var(--red)" data-testid="location-denied">
         Location is blocked for LetsGo. On iPhone: Settings › Privacy &amp; Security › Location Services › Safari Websites (or LetsGo) › While Using. On Android: tap the lock next to the address › Permissions › Location › Allow. Then try again.
       </p>
@@ -53,7 +58,12 @@
       <div class="modal stack-v" (click)="$event.stopPropagation()" role="dialog" aria-label="Share your location">
         <div class="big" style="font-size:2.4rem;text-align:center">📍</div>
         <h2>Share where you are?</h2>
-        <p class="muted">Everyone on this trip will see you on the family map while LetsGo is open on this phone. Close the app and they see where you were last, with the time.</p>
+        @if (location.native) {
+          <p class="muted">Everyone on this trip will see you on the family map, even while LetsGo is closed, so nobody gets lost on the trip day. Your phone shows a small notice while it's on.</p>
+          <p class="muted">Your phone will ask for permission next. Choose <strong>Allow While Using</strong>, and if asked later, <strong>Change to Always Allow</strong>.</p>
+        } @else {
+          <p class="muted">Everyone on this trip will see you on the family map while LetsGo is open on this phone. Close the app and they see where you were last, with the time.</p>
+        }
         <p class="muted">It switches off by itself at midnight after the last day ({{ lastDay() }}), and your location is deleted. You can turn it off any time.</p>
         <button class="btn btn--primary" type="button" (click)="turnOn()" data-testid="share-confirm">Share my location</button>
         <button class="btn btn--ghost" type="button" (click)="showExplain.set(false)">Not now</button>

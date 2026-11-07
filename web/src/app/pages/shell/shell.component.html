@@ -125,13 +125,15 @@
         <hr style="border:0;border-top:1px solid var(--border);margin:4px 0" />
         <div class="stack-v" style="gap:8px">
           <div class="label">Notifications</div>
-          @if (!push.supported) {
+          @if (!push.supported && push.native) {
+            <p class="tiny">Phone notifications are coming soon. The bell still shows what's new.</p>
+          } @else if (!push.supported) {
             <p class="tiny">Push isn't available in this browser. The bell still shows what's new.</p>
           } @else if (push.iosNeedsInstall) {
             <p class="tiny">On iPhone, add LetsGo Together to your Home Screen first, then turn on notifications from there.</p>
             <button class="btn btn--tinted btn--sm" type="button" style="align-self:flex-start" (click)="showProfile.set(false); showIosHelp.set(true)">Show me how</button>
           } @else if (push.permission() === 'denied') {
-            <p class="tiny" style="color:var(--red)">Notifications are blocked for this site in your browser settings.</p>
+            <p class="tiny" style="color:var(--red)">{{ push.native ? 'Notifications are turned off for LetsGo in your phone settings.' : 'Notifications are blocked for this site in your browser settings.' }}</p>
           } @else {
             <label class="switch-row">
               <span>Push notifications on this device</span>
@@ -153,7 +155,7 @@
           <div class="stack-v" style="gap:8px" data-testid="profile-letsgo">
             <div class="label">On the trip · day {{ d.day }} of {{ d.total }}</div>
             <label class="switch-row">
-              <span>Share my location on the family map<span class="tiny" style="display:block">Only while LetsGo is open on this phone. Off by itself at midnight after the last day.</span></span>
+              <span>Share my location on the family map<span class="tiny" style="display:block">{{ location.native ? 'Even while the app is closed.' : 'Only while LetsGo is open on this phone.' }} Off by itself at midnight after the last day.</span></span>
               <input type="checkbox" class="switch" [checked]="location.sharing()" [disabled]="location.busy()" (change)="$any($event.target).checked = location.sharing(); toggleLocation()" data-testid="profile-share-location" />
             </label>
             @if (locationError()) { <p class="tiny" style="color:var(--red)">{{ locationError() }}</p> }
