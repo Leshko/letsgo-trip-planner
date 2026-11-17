@@ -13,6 +13,8 @@ export function refUrl(kind: RefKind, id: string | null): string {
       return '/trip/stay';
     case 'post':
       return '/trip/wall';
+    case 'poll':
+      return id ? `/trip/poll/${id}` : '/trip/wall';
     default:
       return '/trip';
   }

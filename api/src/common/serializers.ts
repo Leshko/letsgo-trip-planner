@@ -153,7 +153,22 @@ export interface PostView {
     memberIds: string[];
     mine: boolean;
   }[];
+  poll: PollView | null;
   createdAt: string;
+}
+
+export interface PollView {
+  multiple: boolean;
+  closed: boolean;
+  /** How many different people have voted. */
+  voters: number;
+  options: {
+    id: string;
+    text: string;
+    count: number;
+    memberIds: string[];
+    mine: boolean;
+  }[];
 }
 
 export interface ActivityView {
@@ -186,6 +201,20 @@ export const postView = (p: Post, meId: string): PostView => ({
       memberIds,
       mine: memberIds.includes(meId),
     })),
+  poll: p.poll
+    ? {
+        multiple: !!p.poll.multiple,
+        closed: !!p.poll.closed,
+        voters: new Set(p.poll.options.flatMap((o) => o.votes)).size,
+        options: p.poll.options.map((o) => ({
+          id: o.id,
+          text: o.text,
+          count: o.votes.length,
+          memberIds: o.votes,
+          mine: o.votes.includes(meId),
+        })),
+      }
+    : null,
   createdAt: new Date(p.createdAt).toISOString(),
 });
 

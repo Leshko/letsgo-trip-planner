@@ -5,7 +5,9 @@ import {
   Get,
   HttpCode,
   Param,
+  ParseUUIDPipe,
   Post,
+  Put,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -13,7 +15,13 @@ import { MemberGuard } from '../common/member.guard';
 import { CurrentMember } from '../common/current-member.decorator';
 import { Member } from '../entities';
 import { ActivityService } from '../activity/activity.service';
-import { CreateCommentDto, CreatePostDto, ReactDto } from './social.dto';
+import {
+  CreateCommentDto,
+  CreatePostDto,
+  PollCloseDto,
+  PollVoteDto,
+  ReactDto,
+} from './social.dto';
 import { SocialService } from './social.service';
 
 @Controller('trips/:tripId')
@@ -44,7 +52,40 @@ export class SocialController {
     @CurrentMember() me: Member,
     @Body() dto: CreatePostDto,
   ) {
-    return this.social.createPost(tripId, me, dto.body);
+    return this.social.createPost(tripId, me, dto.body, dto.poll);
+  }
+
+  /** One post, for links that open straight to a poll. */
+  @Get('posts/:postId')
+  post(
+    @Param('tripId') tripId: string,
+    @Param('postId', ParseUUIDPipe) postId: string,
+    @CurrentMember() me: Member,
+  ) {
+    return this.social.getPost(tripId, me, postId);
+  }
+
+  /** Tap an option: adds or removes the caller's vote. */
+  @Post('posts/:postId/vote')
+  @HttpCode(200)
+  votePoll(
+    @Param('tripId') tripId: string,
+    @Param('postId', ParseUUIDPipe) postId: string,
+    @CurrentMember() me: Member,
+    @Body() dto: PollVoteDto,
+  ) {
+    return this.social.votePoll(tripId, me, postId, dto.optionId);
+  }
+
+  /** Close or reopen voting (the poll's author or the organizer). */
+  @Put('posts/:postId/poll')
+  closePoll(
+    @Param('tripId') tripId: string,
+    @Param('postId', ParseUUIDPipe) postId: string,
+    @CurrentMember() me: Member,
+    @Body() dto: PollCloseDto,
+  ) {
+    return this.social.setPollClosed(tripId, me, postId, dto.closed);
   }
 
   @Post('posts/:postId/react')

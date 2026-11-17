@@ -65,7 +65,7 @@
         <div class="post mt" style="margin-top:6px">
           <app-avatar [member]="p.member" size="sm" />
           <div class="post__bubble"><span class="comment__who">{{ p.member.name }}</span><span class="tiny">{{ p.createdAt | ago }}</span>
-            <div class="post__body" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ p.body }}</div>
+            <div class="post__body" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ p.poll ? '📊 Poll: ' : '' }}{{ p.body }}</div>
           </div>
         </div>
       </a>

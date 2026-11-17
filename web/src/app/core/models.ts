@@ -97,11 +97,30 @@ export interface Reaction {
   mine: boolean;
 }
 
+export interface PollOption {
+  id: string;
+  text: string;
+  count: number;
+  memberIds: string[];
+  mine: boolean;
+}
+
+/** A poll on a wall post; the post's body is the question. */
+export interface Poll {
+  /** People may pick more than one option. */
+  multiple: boolean;
+  closed: boolean;
+  /** How many different people have voted. */
+  voters: number;
+  options: PollOption[];
+}
+
 export interface Post {
   id: string;
   body: string;
   member: Member;
   reactions: Reaction[];
+  poll?: Poll | null;
   createdAt: string;
 }
 
@@ -110,7 +129,7 @@ export interface Activity {
   type: 'joined' | 'idea' | 'vote' | 'comment' | 'itinerary' | 'lodging' | 'trip' | 'photo' | 'post';
   message: string;
   member: Member;
-  refKind: 'idea' | 'itinerary' | 'lodging' | 'photo' | 'post' | null;
+  refKind: 'idea' | 'itinerary' | 'lodging' | 'photo' | 'post' | 'poll' | null;
   refId: string | null;
   createdAt: string;
 }

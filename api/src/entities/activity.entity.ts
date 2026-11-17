@@ -46,7 +46,7 @@ export class Activity extends Timestamped {
 
   /** What the line is about, so the UI can link to it. */
   @Column({ type: 'varchar', nullable: true })
-  refKind!: 'idea' | 'itinerary' | 'lodging' | 'photo' | 'post' | null;
+  refKind!: 'idea' | 'itinerary' | 'lodging' | 'photo' | 'post' | 'poll' | null;
 
   @Column({ type: 'varchar', nullable: true })
   refId!: string | null;

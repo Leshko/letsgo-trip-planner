@@ -106,7 +106,7 @@ export class TourComponent {
       {
         art: '💬',
         title: 'Talk it over',
-        body: 'Every idea has comments. The Wall tab is for everything else: questions, hype, who\'s bringing what. React with emoji.',
+        body: 'Every idea has comments. The Wall tab is for everything else: questions, hype, who\'s bringing what. React with emoji, or start a poll to settle it.',
       },
       {
         art: '🗓️',

@@ -197,8 +197,17 @@ export class ApiService {
   listPosts(tripId: string) {
     return this.get<Post[]>(`/trips/${tripId}/posts`);
   }
-  createPost(tripId: string, body: string) {
-    return this.post<Post>(`/trips/${tripId}/posts`, { body });
+  createPost(tripId: string, body: string, poll?: { options: string[]; multiple: boolean }) {
+    return this.post<Post>(`/trips/${tripId}/posts`, poll ? { body, poll } : { body });
+  }
+  getPost(tripId: string, postId: string) {
+    return this.get<Post>(`/trips/${tripId}/posts/${postId}`);
+  }
+  votePoll(tripId: string, postId: string, optionId: string) {
+    return this.post<Post>(`/trips/${tripId}/posts/${postId}/vote`, { optionId });
+  }
+  setPollClosed(tripId: string, postId: string, closed: boolean) {
+    return this.put<Post>(`/trips/${tripId}/posts/${postId}/poll`, { closed });
   }
   react(tripId: string, postId: string, emoji: string) {
     return this.post<Post>(`/trips/${tripId}/posts/${postId}/react`, { emoji });

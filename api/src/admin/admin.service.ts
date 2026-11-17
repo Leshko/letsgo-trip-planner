@@ -256,6 +256,28 @@ export class AdminService {
           await m.save(p);
           moved['reactions'] = (moved['reactions'] ?? 0) + 1;
         }
+        // Poll votes too. In a one-answer poll the kept spot's own answer wins.
+        if (p.poll?.options.some((o) => o.votes.includes(fromId))) {
+          const keptVoted = p.poll.options.some((o) =>
+            o.votes.includes(intoId),
+          );
+          const dropOld = !p.poll.multiple && keptVoted;
+          p.poll = {
+            ...p.poll,
+            options: p.poll.options.map((o) => ({
+              ...o,
+              votes: [
+                ...new Set(
+                  o.votes.flatMap((w) =>
+                    w === fromId ? (dropOld ? [] : [intoId]) : [w],
+                  ),
+                ),
+              ],
+            })),
+          };
+          await m.save(p);
+          moved['poll votes'] = (moved['poll votes'] ?? 0) + 1;
+        }
       }
 
       // Keep the old spot's name; fill in what it's missing.

@@ -198,7 +198,10 @@ export class MapComponent implements OnDestroy {
   readonly isLive = computed(() => this.live() && !!this.letsGo.tripDay());
   readonly tripOver = computed(() => {
     const t = this.session.trip();
-    return !!t && todayIso() > t.endDate;
+    if (!t) return false;
+    const today = todayIso();
+    // Past the last day here, or the server already ended it (midnight came first where the trip is).
+    return today > t.endDate || (!this.live() && today > t.startDate);
   });
   /** "Sat, Jul 15": sharing ends at midnight after this day. */
   readonly lastDay = computed(() => {

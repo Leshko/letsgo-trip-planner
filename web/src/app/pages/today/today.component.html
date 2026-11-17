@@ -97,7 +97,7 @@
         <a routerLink="/trip/wall" class="post" style="text-decoration:none;color:inherit">
           <app-avatar [member]="p.member" size="sm" />
           <div class="post__bubble"><span class="comment__who">{{ p.member.id === me()?.id ? 'You' : p.member.name }}</span><span class="tiny">{{ p.createdAt | ago }}</span>
-            <div class="post__body" style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">{{ p.body }}</div>
+            <div class="post__body" style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">{{ p.poll ? '📊 Poll: ' : '' }}{{ p.body }}</div>
           </div>
         </a>
       }
