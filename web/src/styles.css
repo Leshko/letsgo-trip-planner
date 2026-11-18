@@ -506,3 +506,6 @@ body.viewer-open { overflow: hidden; }
 .who-row { display: flex; flex-wrap: wrap; gap: 12px 14px; }
 .who { display: inline-flex; flex-direction: column; align-items: center; gap: 3px; width: 56px; text-align: center; }
 .who .tiny { max-width: 56px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- "You're in as" (signed in: the profile is reused) ---------- */
+.as-me { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 14px; background: var(--surface-2); }

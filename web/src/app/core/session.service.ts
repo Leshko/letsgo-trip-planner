@@ -31,6 +31,11 @@ export class SessionService {
   readonly isSignedIn = computed(() => !!this.token() && !!this.member());
   readonly hasAccount = computed(() => !!this.accountToken() && !!this.account());
   readonly tripId = computed(() => this.trip()?.id ?? '');
+  /** Signed in with a name and photo that follow them everywhere; null until that's set up. */
+  readonly profile = computed(() => {
+    const p = this.account()?.profile;
+    return this.hasAccount() && p?.name ? p : null;
+  });
   /** The open one is a gathering: wall and photos, no ideas, plan or family map. */
   readonly isGathering = computed(() => this.trip()?.kind === 'gathering');
   /** "trip" or "gathering", for wording. */

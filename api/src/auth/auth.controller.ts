@@ -118,6 +118,7 @@ export class AccountController {
   async me(@CurrentUser() user: User) {
     return {
       user: await this.auth.view(user),
+      profile: await this.account.profile(user),
       trips: await this.account.myTrips(user),
     };
   }

@@ -9,6 +9,13 @@ import { IsNull, Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { emptyLodging, Member, TransferCode, Trip, User } from '../entities';
 import { AccountService } from '../auth/account.service';
+import {
+  adoptSpot,
+  changeProfile,
+  dressSpot,
+  loadProfile,
+  profileForNewSpot,
+} from '../auth/profile';
 import { generateInviteCode, normalizeInviteCode } from '../common/invite-code';
 import { isIsoDate } from '../common/dates';
 import {
@@ -64,6 +71,15 @@ export class TripsService {
 
   async create(dto: CreateTripDto, user: User | null): Promise<SessionResult> {
     this.assertDates(dto.startDate, dto.endDate);
+    // Signed in: the account's profile is used (what was typed only matters the first time).
+    const profile = user
+      ? await profileForNewSpot(this.members.manager, user.id, {
+          name: dto.memberName,
+          emoji: dto.emoji,
+        })
+      : null;
+    const memberName = profile?.profileName ?? (dto.memberName ?? '').trim();
+    if (!memberName) throw new BadRequestException('Tell us your name');
 
     let inviteCode = generateInviteCode();
     while (await this.trips.exist({ where: { inviteCode } }))
@@ -81,14 +97,15 @@ export class TripsService {
         ownerUserId: user?.id ?? null,
       }),
     );
+    const spot = this.newMember(
+      trip.id,
+      memberName,
+      true,
+      dto.emoji,
+      user?.id ?? null,
+    );
     const member = await this.members.save(
-      this.newMember(
-        trip.id,
-        dto.memberName,
-        true,
-        dto.emoji,
-        user?.id ?? null,
-      ),
+      profile ? dressSpot(spot, profile) : spot,
     );
     await this.activity.record(
       member,
@@ -148,27 +165,69 @@ export class TripsService {
       : null;
     if (member) return this.session(trip, member);
 
-    const nameKey = dto.name.trim().toLowerCase();
-    member = await this.members.findOne({
-      where: { tripId: trip.id, nameKey },
-    });
+    // Signed in with a profile: that name is used. What was typed is only a
+    // fallback for when someone else in this trip already has the name.
+    const profile = user
+      ? await loadProfile(this.members.manager, user.id)
+      : null;
+    const typed = (dto.name ?? '').trim();
+    let name = profile?.profileName.trim() || typed;
+    if (!name) throw new BadRequestException('Tell us your name');
+    const find = (n: string) =>
+      this.members.findOne({
+        where: { tripId: trip.id, nameKey: n.toLowerCase() },
+      });
+    member = await find(name);
+    if (
+      member?.userId &&
+      user &&
+      typed &&
+      typed.toLowerCase() !== name.toLowerCase()
+    ) {
+      // Their usual name is taken here; they picked another for this one.
+      name = typed;
+      member = await find(name);
+    }
     if (member?.userId) {
-      throw new ConflictException(
-        user
-          ? `Someone named ${member.name} is already in this trip. Try a different name.`
+      throw new ConflictException({
+        message: user
+          ? `Someone named ${member.name} is already in this ${trip.kind === 'gathering' ? 'gathering' : 'trip'}. What should we call you here?`
           : `${member.name} signs in with an account. Sign in to continue as ${member.name}, or use a different name.`,
-      );
+        code: 'name_taken',
+      });
     }
     if (!member) {
-      member = await this.members.save(
-        this.newMember(trip.id, dto.name, false, dto.emoji, user?.id ?? null),
+      const spot = this.newMember(
+        trip.id,
+        name,
+        false,
+        dto.emoji,
+        user?.id ?? null,
       );
-      await this.activity.record(member, 'joined', 'joined the trip');
+      if (user) {
+        const p = await profileForNewSpot(this.members.manager, user.id, {
+          name,
+          emoji: dto.emoji,
+        });
+        dressSpot(spot, p);
+        // A different name just for this trip (their usual one was taken).
+        spot.name = name;
+        spot.nameKey = name.toLowerCase();
+      }
+      member = await this.members.save(spot);
+      await this.activity.record(
+        member,
+        'joined',
+        trip.kind === 'gathering' ? 'joined the gathering' : 'joined the trip',
+      );
     } else if (user) {
+      // An existing spot with that name becomes theirs, and takes on their profile.
       member.userId = user.id;
       if (dto.emoji && !member.emoji) member.emoji = dto.emoji.trim();
       await this.members.save(member);
       await this.account.adoptOwnership(member, user);
+      await adoptSpot(this.members.manager, user.id, member.id);
+      member = await this.members.findOneOrFail({ where: { id: member.id } });
     } else if (dto.emoji && !member.emoji) {
       member.emoji = dto.emoji.trim();
       await this.members.save(member);
@@ -255,6 +314,13 @@ export class TripsService {
 
   async setAvatar(me: Member, dto: AvatarDto | null): Promise<MemberView> {
     if (!dto) {
+      if (me.userId) {
+        // Their profile photo: removed from every trip and gathering.
+        await changeProfile(this.members.manager, me.userId, { photo: null });
+        return memberView(
+          await this.members.findOneOrFail({ where: { id: me.id } }),
+        );
+      }
       me.avatar = null;
       me.avatarType = '';
       me.avatarVersion = 0;
@@ -268,6 +334,15 @@ export class TripsService {
     const bytes = Buffer.from(m[2], 'base64');
     if (bytes.length < 100 || bytes.length > AVATAR_MAX_BYTES)
       throw new BadRequestException('Image must be under 250 KB');
+    if (me.userId) {
+      // Their profile photo: the same in every trip and gathering.
+      await changeProfile(this.members.manager, me.userId, {
+        photo: { bytes, type: m[1] },
+      });
+      return memberView(
+        await this.members.findOneOrFail({ where: { id: me.id } }),
+      );
+    }
     me.avatar = bytes;
     me.avatarType = m[1];
     me.avatarVersion = (me.avatarVersion ?? 0) + 1;
@@ -315,6 +390,13 @@ export class TripsService {
     }
     if (dto.emoji !== undefined) me.emoji = dto.emoji.trim();
     await this.members.save(me);
+    if (me.userId) {
+      // Saved to an account: it's their profile, so it follows them everywhere.
+      await changeProfile(this.members.manager, me.userId, {
+        name: dto.name,
+        emoji: dto.emoji,
+      });
+    }
     return memberView(me);
   }
 

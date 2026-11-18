@@ -4,7 +4,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, IsNull, Repository } from 'typeorm';
+import { In, IsNull, MoreThan, Repository } from 'typeorm';
+import { adoptSpot } from './profile';
 import { Member, Trip, User } from '../entities';
 import {
   memberView,
@@ -12,6 +13,14 @@ import {
   tripView,
   TripView,
 } from '../common/serializers';
+
+/** How the person appears in every trip and gathering their account is in. */
+export interface ProfileView {
+  name: string;
+  emoji: string;
+  /** Their photo, served from one of their trip spots; '' when they have none. */
+  avatarUrl: string;
+}
 
 export interface MyTrip {
   trip: TripView;
@@ -26,6 +35,21 @@ export class AccountService {
     @InjectRepository(Member) private readonly members: Repository<Member>,
     @InjectRepository(Trip) private readonly trips: Repository<Trip>,
   ) {}
+
+  async profile(user: User): Promise<ProfileView> {
+    const u = await this.members.manager.findOne(User, {
+      where: { id: user.id },
+    });
+    const withPhoto = await this.members.findOne({
+      where: { userId: user.id, avatarVersion: MoreThan(0) },
+      order: { createdAt: 'DESC' },
+    });
+    return {
+      name: u?.profileName ?? '',
+      emoji: u?.emoji ?? '',
+      avatarUrl: withPhoto ? memberView(withPhoto).avatarUrl : '',
+    };
+  }
 
   /** Every trip this account is part of, upcoming and most recent first. */
   async myTrips(user: User): Promise<MyTrip[]> {
@@ -75,6 +99,8 @@ export class AccountService {
       member.userId = user.id;
       await this.members.save(member);
       await this.adoptOwnership(member, user);
+      // The spot takes on their profile (or becomes it, for a new account).
+      await adoptSpot(this.members.manager, user.id, member.id);
     }
     return (await this.myTrips(user)).find((t) => t.member.id === member.id)!;
   }

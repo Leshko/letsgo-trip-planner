@@ -1,4 +1,4 @@
-import { TripKind } from '../../core/models';
+import { TripKind, Member } from '../../core/models';
 import { Component, computed, inject, input, OnDestroy, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -7,12 +7,13 @@ import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { addDays, todayIso } from '../../core/format';
 import { EmojiPickerComponent } from '../../shared/emoji-picker.component';
+import { AvatarComponent } from '../../shared/avatar.component';
 
 type Mode = 'join' | 'create' | 'code';
 
 @Component({
   selector: 'app-landing',
-  imports: [FormsModule, EmojiPickerComponent, SignInPanelComponent, RouterLink],
+  imports: [FormsModule, EmojiPickerComponent, SignInPanelComponent, RouterLink, AvatarComponent],
   templateUrl: './landing.component.html',
 })
 export class LandingComponent implements OnDestroy {
@@ -33,6 +34,14 @@ export class LandingComponent implements OnDestroy {
   readonly kind = signal<TripKind>('trip');
   /** A gathering is one day unless they say otherwise. */
   moreDays = false;
+  /** Signed in with a profile: their name and photo are reused, not asked for again. */
+  readonly profile = this.session.profile;
+  readonly profileFace = computed<Member | null>(() => {
+    const p = this.profile();
+    return p ? { id: 'me', name: p.name, isOwner: false, emoji: p.emoji, avatarUrl: p.avatarUrl } : null;
+  });
+  /** Their usual name is taken in the trip they're joining: ask for one to use there. */
+  readonly nameTaken = signal(false);
   readonly hasAccount = this.session.hasAccount;
   /** No sign-in method set up on this server yet: trips start the old way. */
   readonly noSignIn = signal(false);
@@ -119,7 +128,9 @@ export class LandingComponent implements OnDestroy {
 
   /** Signed in: start from the account's first name. */
   prefillName() {
-    const first = this.session.account()?.user.name.split(' ')[0] ?? '';
+    // Joined something on this phone before (without an account): start from that name.
+    const last = this.session.known()[0]?.memberName ?? '';
+    const first = this.session.account()?.user.name.split(' ')[0] || last;
     if (first && !this.memberName) this.memberName = first;
     if (first && !this.joinName) this.joinName = first;
   }
@@ -146,10 +157,17 @@ export class LandingComponent implements OnDestroy {
     this.error.set('');
     this.busy.set(true);
     try {
-      const s = await this.api.joinTrip({ code: this.joinCode, name: this.joinName, emoji: this.joinEmoji });
+      const asMe = !!this.profile() && !this.nameTaken();
+      const s = await this.api.joinTrip(
+        asMe ? { code: this.joinCode } : { code: this.joinCode, name: this.joinName, emoji: this.joinEmoji },
+      );
       this.session.start(s);
       await this.router.navigateByUrl(this.target());
     } catch (e: unknown) {
+      if (this.profile() && (e as { error?: { code?: string } }).error?.code === 'name_taken') {
+        this.joinName = '';
+        this.nameTaken.set(true);
+      }
       this.error.set(messageOf(e, "Couldn't find a trip with that code"));
     } finally {
       this.busy.set(false);
@@ -181,8 +199,7 @@ export class LandingComponent implements OnDestroy {
         destination: this.destination,
         startDate: this.startDate,
         endDate: gathering && !this.moreDays ? this.startDate : this.endDate,
-        memberName: this.memberName,
-        emoji: this.createEmoji,
+        ...(this.profile() ? {} : { memberName: this.memberName, emoji: this.createEmoji }),
       });
       this.session.start(s);
       await this.router.navigateByUrl(this.target());

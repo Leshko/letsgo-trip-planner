@@ -48,16 +48,30 @@
         <input id="code" class="input input--code" name="code" [(ngModel)]="joinCode" required minlength="4"
           maxlength="12" autocapitalize="characters" autocomplete="off" placeholder="ABC123" />
       </div>
-      <div class="field">
-        <label for="jname">Your name</label>
-        <input id="jname" class="input" name="jname" [(ngModel)]="joinName" required maxlength="40" placeholder="e.g. Aunt Carol" autocomplete="given-name" />
-      </div>
-      <div class="field">
-        <span class="label">Pick an avatar (optional)</span>
-        <app-emoji-picker [(value)]="joinEmoji" />
-      </div>
+      @if (profileFace(); as face) {
+        <div class="as-me" data-testid="join-as-me">
+          <app-avatar [member]="face" size="lg" />
+          <div><div class="tiny">You're in as</div><strong>{{ nameTaken() ? (joinName || face.name) : face.name }}</strong>
+            <div class="tiny">{{ nameTaken() ? 'Your photo comes along.' : 'Your name and photo, same as everywhere.' }}</div></div>
+        </div>
+        @if (nameTaken()) {
+          <div class="field">
+            <label for="jname">Your name here</label>
+            <input id="jname" class="input" name="jname" [(ngModel)]="joinName" required maxlength="40" [placeholder]="face.name + ' L'" autocomplete="off" data-testid="join-other-name" />
+          </div>
+        }
+      } @else {
+        <div class="field">
+          <label for="jname">Your name</label>
+          <input id="jname" class="input" name="jname" [(ngModel)]="joinName" required maxlength="40" placeholder="e.g. Aunt Carol" autocomplete="given-name" />
+        </div>
+        <div class="field">
+          <span class="label">Pick an avatar (optional)</span>
+          <app-emoji-picker [(value)]="joinEmoji" />
+        </div>
+      }
       @if (error()) { <p class="error">{{ error() }}</p> }
-      <button class="btn btn--primary btn--block" type="submit" [disabled]="busy() || !joinCode || !joinName">
+      <button class="btn btn--primary btn--block" type="submit" [disabled]="busy() || !joinCode || ((!profile() || nameTaken()) && !joinName)">
         {{ busy() ? 'Joining…' : "I'm in" }}
       </button>
       <button class="btn btn--ghost btn--sm" type="button" (click)="mode.set('code'); error.set('')">Already in on another device? I have a login code</button>
@@ -114,16 +128,24 @@
           </div>
         </div>
       }
-      <div class="field">
-        <label for="cname">Your name</label>
-        <input id="cname" class="input" name="cname" [(ngModel)]="memberName" required maxlength="40" placeholder="Mom" autocomplete="given-name" />
-      </div>
-      <div class="field">
-        <span class="label">Pick an avatar (optional)</span>
-        <app-emoji-picker [(value)]="createEmoji" />
-      </div>
+      @if (profileFace(); as face) {
+        <div class="as-me" data-testid="create-as-me">
+          <app-avatar [member]="face" size="lg" />
+          <div><div class="tiny">You're in as</div><strong>{{ face.name }}</strong>
+            <div class="tiny">Your name and photo, same as everywhere.</div></div>
+        </div>
+      } @else {
+        <div class="field">
+          <label for="cname">Your name</label>
+          <input id="cname" class="input" name="cname" [(ngModel)]="memberName" required maxlength="40" placeholder="Mom" autocomplete="given-name" />
+        </div>
+        <div class="field">
+          <span class="label">Pick an avatar (optional)</span>
+          <app-emoji-picker [(value)]="createEmoji" />
+        </div>
+      }
       @if (error()) { <p class="error">{{ error() }}</p> }
-      <button class="btn btn--primary btn--block" type="submit" [disabled]="busy() || !tripName || !memberName || !startDate || !endDate">
+      <button class="btn btn--primary btn--block" type="submit" [disabled]="busy() || !tripName || (!profile() && !memberName) || !startDate || !endDate">
         {{ busy() ? 'Creating…' : kind() === 'gathering' ? 'Create gathering & get invite code' : 'Create trip & get invite code' }}
       </button>
       <p class="tiny">You'll get a short code, a link and a QR code for the family. They join with just their name.</p>

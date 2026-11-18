@@ -7,6 +7,7 @@ import { TripTimeZone1793671798725 } from './1793671798725-TripTimeZone';
 import { NativePush1794015451049 } from './1794015451049-NativePush';
 import { Polls1794940115124 } from './1794940115124-Polls';
 import { TripKind1794960364361 } from './1794960364361-TripKind';
+import { UserProfile1794962118332 } from './1794962118332-UserProfile';
 
 /** Every migration, in order. New ones are appended here. */
 export const MIGRATIONS: (new () => unknown)[] = [
@@ -19,4 +20,5 @@ export const MIGRATIONS: (new () => unknown)[] = [
   NativePush1794015451049,
   Polls1794940115124,
   TripKind1794960364361,
+  UserProfile1794962118332,
 ];

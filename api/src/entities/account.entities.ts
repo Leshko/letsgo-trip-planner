@@ -28,6 +28,27 @@ export class User extends Timestamped {
   @Column({ default: '' })
   name!: string;
 
+  /**
+   * The person's profile: how they appear in every trip and gathering their
+   * account is in. Each of their trip spots carries a copy, kept in sync.
+   * Empty until they first start, join or save something.
+   */
+  @Column({ default: '' })
+  profileName!: string;
+
+  @Column({ default: '' })
+  emoji!: string;
+
+  /** Profile photo (small JPEG/PNG/WebP), stored inline so a database backup includes it. */
+  @Column({ type: 'bytea', nullable: true, select: false })
+  avatar!: Buffer | null;
+
+  @Column({ default: '' })
+  avatarType!: string;
+
+  @Column({ type: 'integer', default: 0 })
+  avatarVersion!: number;
+
   @Column({ type: 'bigint', nullable: true, transformer: epochMs })
   lastSignInAt!: number | null;
 }

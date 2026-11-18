@@ -313,8 +313,17 @@ export interface MyTrip {
   token: string;
 }
 
+/** How a signed-in person appears in every trip and gathering. Empty name: not set up yet. */
+export interface Profile {
+  name: string;
+  emoji: string;
+  avatarUrl: string;
+}
+
 export interface Account {
   user: AccountUser;
+  /** Older servers leave it out. */
+  profile?: Profile;
   trips: MyTrip[];
 }
 

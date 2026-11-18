@@ -100,6 +100,7 @@
     <div class="modal-backdrop" (click)="showProfile.set(false)">
       <form class="modal stack-v" (click)="$event.stopPropagation()" (ngSubmit)="saveProfile()" role="dialog" aria-label="Your profile">
         <h2>You</h2>
+        @if (accountLinked()) { <p class="tiny" data-testid="profile-everywhere">Your name and photo are used in all your trips and gatherings.</p> }
         @if (me(); as m) {
           <div class="row" style="gap:14px">
             <app-avatar [member]="m" size="lg" />

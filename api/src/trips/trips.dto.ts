@@ -20,13 +20,15 @@ export class CreateTripDto {
   @IsOptional() @IsString() @MaxLength(120) destination?: string;
   @IsString() @Matches(ISO_DATE) startDate!: string;
   @IsString() @Matches(ISO_DATE) endDate!: string;
-  @IsString() @Length(1, 40) memberName!: string;
+  /** Not needed when signed in with a profile; the account's name is used. */
+  @IsOptional() @IsString() @Length(1, 40) memberName?: string;
   @IsOptional() @IsString() @MaxLength(8) emoji?: string;
 }
 
 export class JoinTripDto {
   @IsString() @Length(4, 12) code!: string;
-  @IsString() @Length(1, 40) name!: string;
+  /** Not needed when signed in with a profile, unless that name is taken in this trip. */
+  @IsOptional() @IsString() @Length(1, 40) name?: string;
   @IsOptional() @IsString() @MaxLength(8) emoji?: string;
 }
 

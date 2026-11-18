@@ -59,12 +59,13 @@ export class ApiService {
     destination: string;
     startDate: string;
     endDate: string;
-    memberName: string;
-    emoji: string;
+    /** Left out when signed in with a profile: the account's name and photo are used. */
+    memberName?: string;
+    emoji?: string;
   }) {
     return this.post<Session>('/trips', body);
   }
-  joinTrip(body: { code: string; name: string; emoji: string }) {
+  joinTrip(body: { code: string; name?: string; emoji?: string }) {
     return this.post<Session>('/trips/join', body);
   }
   me() {

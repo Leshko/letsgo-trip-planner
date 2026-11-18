@@ -24,6 +24,7 @@ import {
   User,
   Vote,
 } from '../entities';
+import { adoptSpot } from '../auth/profile';
 
 export interface AdminMember {
   id: string;
@@ -292,6 +293,8 @@ export class AdminService {
       if (from.isOwner) into.isOwner = true;
       if (takeAccount) into.userId = takeAccount;
       await m.save(Member, into);
+      if (takeAccount)
+        await adoptSpot(m, takeAccount, into.id, { spotNameIfOnlySpot: true });
       // An organizer with an account owns the trip (plans and billing hang off this).
       if (into.isOwner && into.userId)
         await m
@@ -364,6 +367,8 @@ export class AdminService {
       const previous = member.userId;
       member.userId = user.id;
       await m.save(Member, member);
+      // The spot takes on that account's profile (or becomes it).
+      await adoptSpot(m, user.id, member.id);
       if (
         member.isOwner &&
         (!trip.ownerUserId || trip.ownerUserId === previous)

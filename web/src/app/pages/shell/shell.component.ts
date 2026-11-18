@@ -306,6 +306,7 @@ export class ShellComponent {
       const m = await this.api.uploadAvatar(dataUrl);
       this.session.setMember(m);
       await this.session.refreshTrip();
+      if (this.accountLinked()) void this.session.restoreAccount(true);
     } catch (e: unknown) {
       this.profileError.set(messageOf(e, "Couldn't use that photo"));
     } finally {
@@ -319,6 +320,7 @@ export class ShellComponent {
       const m = await this.api.removeAvatar();
       this.session.setMember(m);
       await this.session.refreshTrip();
+      if (this.accountLinked()) void this.session.restoreAccount(true);
     } finally {
       this.photoBusy.set(false);
     }
@@ -370,6 +372,7 @@ export class ShellComponent {
       const m = await this.api.updateProfile({ name: this.profileName, emoji: this.profileEmoji });
       this.session.setMember(m);
       await this.session.refreshTrip();
+      if (this.accountLinked()) void this.session.restoreAccount(true);
       this.showProfile.set(false);
     } catch (e: unknown) {
       this.profileError.set(messageOf(e, "Couldn't save"));
