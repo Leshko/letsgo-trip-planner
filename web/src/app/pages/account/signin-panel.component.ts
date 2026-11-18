@@ -102,6 +102,8 @@ export class SignInPanelComponent {
     this.busy.set(true);
     try {
       await this.api.emailStart(this.email.trim());
+      // The email also carries a sign-in link; remember where to return to if they tap that instead.
+      rememberReturn(this.next());
       this.code = '';
       this.step.set('code');
     } catch (e: unknown) {
@@ -116,6 +118,7 @@ export class SignInPanelComponent {
     this.busy.set(true);
     try {
       const s = await this.api.emailVerify({ email: this.email.trim(), code: this.code.replace(/\D/g, '') });
+      takeReturn();
       this.signedIn.emit(await this.session.startAccount(s));
     } catch (e: unknown) {
       this.error.set(messageOf(e, "That code didn't work"));
@@ -128,4 +131,31 @@ export class SignInPanelComponent {
 /** Only same-app paths, so links can't bounce people elsewhere after signing in. */
 export function safeAppPath(n: string | null | undefined, fallback = '/trips'): string {
   return n && n.length <= 300 && /^\/(?!\/)[^\s\\]*$/.test(n) ? n : fallback;
+}
+
+const RETURN_KEY = 'letsgo.signin.return';
+/** Sign-in codes and links last 15 minutes; a little longer covers slow email. */
+const RETURN_TTL_MS = 20 * 60_000;
+
+/** Where this browser was (an invite link, say) when it asked for a sign-in email. */
+export function rememberReturn(path: string): void {
+  try {
+    localStorage.setItem(RETURN_KEY, JSON.stringify({ path, at: Date.now() }));
+  } catch {
+    /* private mode: the emailed link lands on My trips instead */
+  }
+}
+
+/** Read it once (and forget it). Null when there's none, or it's stale. */
+export function takeReturn(): string | null {
+  try {
+    const raw = localStorage.getItem(RETURN_KEY);
+    localStorage.removeItem(RETURN_KEY);
+    if (!raw) return null;
+    const v = JSON.parse(raw) as { path?: string; at?: number };
+    if (typeof v.path !== 'string' || typeof v.at !== 'number' || Date.now() - v.at > RETURN_TTL_MS) return null;
+    return v.path;
+  } catch {
+    return null;
+  }
 }

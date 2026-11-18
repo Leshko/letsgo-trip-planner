@@ -3,7 +3,7 @@ import { Router, RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { messageOf } from '../landing/landing.component';
-import { safeAppPath } from './signin-panel.component';
+import { safeAppPath, takeReturn } from './signin-panel.component';
 
 /** Lands here after a provider sign-in (?code=) or from the emailed link (?t=). */
 @Component({
@@ -39,7 +39,9 @@ export class AuthCallbackComponent implements OnInit {
       const s = this.t() ? await this.api.emailVerify({ token: this.t()! }) : await this.api.exchangeSignIn(this.code() ?? '');
       const note = await this.session.startAccount(s);
       const fallback = this.session.token() ? '/trip' : '/trips';
-      await this.router.navigateByUrl(safeAppPath(this.next(), fallback), { replaceUrl: true, state: note ? { note } : {} });
+      // An emailed link has no return address of its own: go back to where they asked for it (an invite link).
+      const back = takeReturn();
+      await this.router.navigateByUrl(safeAppPath(this.next() ?? back, fallback), { replaceUrl: true, state: note ? { note } : {} });
     } catch (e: unknown) {
       this.error.set(messageOf(e, 'That sign-in link expired. Please try again.'));
     }

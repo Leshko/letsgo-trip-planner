@@ -509,3 +509,6 @@ body.viewer-open { overflow: hidden; }
 
 /* ---------- "You're in as" (signed in: the profile is reused) ---------- */
 .as-me { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 14px; background: var(--surface-2); }
+
+/* Buttons with a sentence in them: wrap on narrow phones instead of spilling out. */
+.btn--wrap { white-space: normal; height: auto; min-height: 44px; padding-top: 10px; padding-bottom: 10px; line-height: 1.25; text-align: center; }

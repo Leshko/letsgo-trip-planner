@@ -42,6 +42,12 @@ export class LandingComponent implements OnDestroy {
   });
   /** Their usual name is taken in the trip they're joining: ask for one to use there. */
   readonly nameTaken = signal(false);
+  /** This server offers sign-in (known once its options have loaded). */
+  readonly signInOffered = signal(false);
+  /** Joining, and they chose "sign in with email" instead of typing a name. */
+  readonly signInToJoin = signal(false);
+  /** Where signing in should come back to: this invite, with wherever it pointed. */
+  readonly inviteReturn = signal('/?join=1');
   readonly hasAccount = this.session.hasAccount;
   /** No sign-in method set up on this server yet: trips start the old way. */
   readonly noSignIn = signal(false);
@@ -91,7 +97,11 @@ export class LandingComponent implements OnDestroy {
     void this.session.restoreAccount().then(() => this.prefillName());
     this.api
       .signInOptions()
-      .then((o) => this.noSignIn.set(!o.google && !o.microsoft && !o.email))
+      .then((o) => {
+        const any = o.google || o.microsoft || o.email;
+        this.noSignIn.set(!any);
+        this.signInOffered.set(any);
+      })
       .catch(() => undefined);
   }
 
@@ -138,6 +148,32 @@ export class LandingComponent implements OnDestroy {
   signedInToCreate() {
     this.prefillName();
     this.mode.set('create');
+  }
+
+  /** On an invite link: the link itself, for the top "Sign in" button to return to. */
+  readonly linkReturn = computed(() => (this.code() ? this.invitePath() : null));
+
+  /** The invite being looked at, as an in-app path sign-in can return to. */
+  private invitePath(): string {
+    const code = (this.code() || this.joinCode).trim().toUpperCase();
+    if (!code) return '/?join=1';
+    const next = this.next();
+    return `/join/${encodeURIComponent(code)}${next ? `?next=${encodeURIComponent(next)}` : ''}`;
+  }
+
+  /** Sign in from the join screen (a browser that doesn't know them yet, e.g. after scanning a QR code). */
+  startSignInToJoin() {
+    this.error.set('');
+    this.inviteReturn.set(this.invitePath());
+    this.signInToJoin.set(true);
+  }
+
+  /** Signed in on the join screen: already in it → go in; otherwise the form now knows who they are. */
+  async signedInToJoin() {
+    this.signInToJoin.set(false);
+    this.prefillName();
+    const code = (this.code() || this.joinCode).trim();
+    if (code && (await this.session.openByCode(code)) === 'open') await this.router.navigateByUrl(this.target());
   }
 
   setKind(kind: TripKind) {

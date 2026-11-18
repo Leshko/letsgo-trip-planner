@@ -7,7 +7,7 @@
       } @else if (session.known().length) {
         <a class="btn btn--ghost btn--sm" routerLink="/trips" data-testid="landing-mine">My trips</a>
       } @else {
-        <a class="btn btn--ghost btn--sm" routerLink="/signin" data-testid="landing-signin">Sign in</a>
+        <a class="btn btn--ghost btn--sm" routerLink="/signin" [queryParams]="linkReturn() ? { next: linkReturn() } : {}" data-testid="landing-signin">Sign in</a>
       }
     </div>
     <h1 class="mt">Plan the family trip<br />together.</h1>
@@ -39,6 +39,14 @@
       <button class="btn btn--primary btn--block" type="submit" [disabled]="busy() || !loginCode">{{ busy() ? 'Signing in…' : 'Sign in' }}</button>
       <button class="btn btn--ghost btn--sm" type="button" (click)="mode.set('join'); error.set('')">Back</button>
     </form>
+  } @else if (mode() === 'join' && signInToJoin() && !hasAccount()) {
+    <!-- Its own card: the sign-in panel has forms of its own, which can't sit inside the join form. -->
+    <div class="card mt stack-v" data-testid="join-signin">
+      <h2>Sign in to join as yourself</h2>
+      <p class="muted">Your name, photo and everything you've already joined come with you.</p>
+      <app-signin-panel [next]="inviteReturn()" (signedIn)="signedInToJoin()" />
+      <button class="btn btn--ghost btn--sm" type="button" (click)="signInToJoin.set(false)" data-testid="join-signin-cancel">Join with just a name instead</button>
+    </div>
   } @else if (mode() === 'join') {
     <form class="card mt stack-v" (ngSubmit)="join()">
       <h2>Join your family</h2>
@@ -64,7 +72,11 @@
         <div class="field">
           <label for="jname">Your name</label>
           <input id="jname" class="input" name="jname" [(ngModel)]="joinName" required maxlength="40" placeholder="e.g. Aunt Carol" autocomplete="given-name" />
+          <span class="tiny">Joined before on another phone or browser? Type the same name to pick up where you left off.</span>
         </div>
+        @if (signInOffered() && !hasAccount()) {
+          <button class="btn btn--tinted btn--block btn--wrap" type="button" (click)="startSignInToJoin()" data-testid="join-signin-start">Have an account? Sign in with email</button>
+        }
         <div class="field">
           <span class="label">Pick an avatar (optional)</span>
           <app-emoji-picker [(value)]="joinEmoji" />
@@ -74,7 +86,7 @@
       <button class="btn btn--primary btn--block" type="submit" [disabled]="busy() || !joinCode || ((!profile() || nameTaken()) && !joinName)">
         {{ busy() ? 'Joining…' : "I'm in" }}
       </button>
-      <button class="btn btn--ghost btn--sm" type="button" (click)="mode.set('code'); error.set('')">Already in on another device? I have a login code</button>
+      <button class="btn btn--ghost btn--sm btn--wrap" type="button" (click)="mode.set('code'); error.set('')">Already in on another device? I have a login code</button>
     </form>
   } @else if (!hasAccount() && !noSignIn()) {
     <div class="card mt stack-v" data-testid="create-needs-account">
