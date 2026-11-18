@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { accountGuard, signedInGuard, signedOutGuard } from './core/guards';
+import { myTripsGuard, signedInGuard, signedOutGuard, tripOnlyGuard } from './core/guards';
 
 export const routes: Routes = [
   {
@@ -29,7 +29,7 @@ export const routes: Routes = [
   },
   {
     path: 'trips',
-    canActivate: [accountGuard],
+    canActivate: [myTripsGuard],
     loadComponent: () => import('./pages/account/my-trips.component').then((m) => m.MyTripsComponent),
   },
   {
@@ -52,14 +52,15 @@ export const routes: Routes = [
       { path: 'eat', redirectTo: 'ideas/eat' },
       {
         path: 'ideas/:kind',
+        canActivate: [tripOnlyGuard],
         loadComponent: () => import('./pages/ideas/ideas.component').then((m) => m.IdeasComponent),
       },
-      { path: 'idea/:id', loadComponent: () => import('./pages/ideas/idea-detail.component').then((m) => m.IdeaDetailComponent) },
+      { canActivate: [tripOnlyGuard], path: 'idea/:id', loadComponent: () => import('./pages/ideas/idea-detail.component').then((m) => m.IdeaDetailComponent) },
       { path: 'photos', loadComponent: () => import('./pages/photos/photos.component').then((m) => m.PhotosComponent) },
-      { path: 'plan', loadComponent: () => import('./pages/itinerary/itinerary.component').then((m) => m.ItineraryComponent) },
+      { canActivate: [tripOnlyGuard], path: 'plan', loadComponent: () => import('./pages/itinerary/itinerary.component').then((m) => m.ItineraryComponent) },
       { path: 'wall', loadComponent: () => import('./pages/wall/wall.component').then((m) => m.WallComponent) },
       { path: 'poll/:id', loadComponent: () => import('./pages/wall/poll-page.component').then((m) => m.PollPageComponent) },
-      { path: 'map', loadComponent: () => import('./pages/map/map.component').then((m) => m.MapComponent) },
+      { canActivate: [tripOnlyGuard], path: 'map', loadComponent: () => import('./pages/map/map.component').then((m) => m.MapComponent) },
     ],
   },
   { path: '**', redirectTo: '' },

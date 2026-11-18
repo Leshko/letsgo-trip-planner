@@ -20,6 +20,7 @@ interface AdminMember {
 
 interface AdminTrip {
   id: string;
+  kind?: 'trip' | 'gathering';
   name: string;
   destination: string;
   startDate: string;
@@ -64,6 +65,7 @@ const KEY_STORE = 'letsgo.adminKey';
                 <div class="row" style="justify-content:space-between;gap:8px">
                   <h2 style="margin:0">{{ t.name }}</h2>
                   <span class="chip">{{ t.inviteCode }}</span>
+                  @if (t.kind === 'gathering') { <span class="chip chip--sun">gathering</span> }
                 </div>
                 <div class="tiny">{{ t.destination || 'No destination' }} · {{ range(t) }}</div>
                 <div class="tiny">{{ t.counts.members }} people · {{ t.counts.ideas }} ideas · {{ t.counts.photos }} photos · {{ t.counts.posts }} posts · last active {{ ago(t.lastActivityAt || t.createdAt) }}</div>

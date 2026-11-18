@@ -54,6 +54,7 @@ export class ApiService {
 
   // trips
   createTrip(body: {
+    kind?: 'trip' | 'gathering';
     name: string;
     destination: string;
     startDate: string;

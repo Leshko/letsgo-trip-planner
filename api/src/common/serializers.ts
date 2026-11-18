@@ -25,6 +25,7 @@ export interface MemberView {
 
 export interface TripView {
   id: string;
+  kind: Trip['kind'];
   name: string;
   destination: string;
   startDate: string;
@@ -81,6 +82,7 @@ export const memberView = (m: Member): MemberView => ({
 
 export const tripView = (t: Trip, members: Member[]): TripView => ({
   id: t.id,
+  kind: t.kind ?? 'trip',
   name: t.name,
   destination: t.destination,
   startDate: t.startDate,

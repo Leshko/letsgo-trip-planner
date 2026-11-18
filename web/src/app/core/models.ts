@@ -33,8 +33,12 @@ export interface Lodging {
   photos: string[];
 }
 
+export type TripKind = 'trip' | 'gathering';
+
 export interface Trip {
   id: string;
+  /** A trip, or a simpler gathering (wall and photos only). Older servers leave it out. */
+  kind?: TripKind;
   name: string;
   destination: string;
   startDate: string;
@@ -43,6 +47,19 @@ export interface Trip {
   lodging: Lodging;
   members: Member[];
   createdAt: string;
+}
+
+/** A trip or gathering this phone has joined, kept so it can switch between them. */
+export interface KnownTrip {
+  id: string;
+  kind: TripKind;
+  name: string;
+  destination: string;
+  startDate: string;
+  endDate: string;
+  inviteCode: string;
+  memberName: string;
+  token: string;
 }
 
 export interface Session {

@@ -56,7 +56,9 @@
               "src/styles.css"
             ],
             "allowedCommonJsDependencies": [
-              "leaflet"
+              "leaflet",
+              "qrcode",
+              "dijkstrajs"
             ]
           },
           "configurations": {

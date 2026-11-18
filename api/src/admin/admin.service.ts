@@ -48,6 +48,7 @@ export interface AdminMember {
 
 export interface AdminTrip {
   id: string;
+  kind: Trip['kind'];
   name: string;
   destination: string;
   startDate: string;
@@ -141,6 +142,7 @@ export class AdminService {
       [...map.values()].reduce((a, b) => a + b, 0);
     return {
       id: t.id,
+      kind: t.kind ?? 'trip',
       name: t.name,
       destination: t.destination,
       startDate: t.startDate,

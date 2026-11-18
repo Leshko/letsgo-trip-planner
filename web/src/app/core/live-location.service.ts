@@ -101,7 +101,7 @@ export class LiveLocationService {
     });
     effect(() => {
       // The apps keep sharing in the background; a browser only while it's on screen.
-      const on = this.sharing() && !!this.letsGo.tripDay() && (this.native || this.visible());
+      const on = this.sharing() && !!this.letsGo.tripDay() && !this.session.isGathering() && (this.native || this.visible());
       const tripId = this.session.tripId();
       untracked(() => {
         if (on && tripId !== this.tripOfWatch) this.stop();

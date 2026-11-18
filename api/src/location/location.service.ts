@@ -57,9 +57,12 @@ export function tripToday(
  * has reported a zone, a day of slack each side covers every zone.
  */
 export function isLive(
-  trip: Pick<Trip, 'startDate' | 'endDate'> & Partial<Pick<Trip, 'timeZone'>>,
+  trip: Pick<Trip, 'startDate' | 'endDate'> &
+    Partial<Pick<Trip, 'timeZone' | 'kind'>>,
   now = new Date(),
 ): boolean {
+  // Gatherings never share locations, on the day or any other.
+  if (trip.kind === 'gathering') return false;
   const local = tripToday({ timeZone: trip.timeZone ?? '' }, now);
   if (local) return local >= trip.startDate && local <= trip.endDate;
   const today = now.toISOString().slice(0, 10);
@@ -144,6 +147,9 @@ export class LocationService implements OnModuleInit, OnModuleDestroy {
     timeZone?: string,
   ): Promise<MemberView> {
     await this.noteTimeZone(me.trip, timeZone);
+    if (on && me.trip.kind === 'gathering') {
+      throw new ConflictException("Gatherings don't have a family map.");
+    }
     if (on && !isLive(me.trip)) {
       throw new ConflictException('The family map opens when the trip starts.');
     }

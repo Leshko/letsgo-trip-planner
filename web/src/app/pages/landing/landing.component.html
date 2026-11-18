@@ -4,25 +4,27 @@
       <p class="chip chip--accent">🌴 LetsGo Together</p>
       @if (hasAccount()) {
         <a class="btn btn--ghost btn--sm" routerLink="/trips">My trips</a>
+      } @else if (session.known().length) {
+        <a class="btn btn--ghost btn--sm" routerLink="/trips" data-testid="landing-mine">My trips</a>
       } @else {
         <a class="btn btn--ghost btn--sm" routerLink="/signin" data-testid="landing-signin">Sign in</a>
       }
     </div>
     <h1 class="mt">Plan the family trip<br />together.</h1>
-    <p class="muted mt">One place to pitch ideas, vote on them, see where you're staying, and build the plan day by day.</p>
+    <p class="muted mt">One place to pitch ideas, vote on them, see where you're staying, and build the plan day by day. Or keep it simple for a gathering like Thanksgiving: a wall, polls and a shared photo album.</p>
   </div>
 
   @if (unreachable()) {
     <div class="card card--sea mt stack-v" data-testid="unreachable">
       <h2>Can't reach LetsGo Together right now</h2>
-      <p class="muted">Your trip is still saved on this device. The server may be restarting, or your connection dropped. Try again in a moment.</p>
+      <p class="muted">Everything is still saved on this device. The server may be restarting, or your connection dropped. Try again in a moment.</p>
       <button class="btn btn--primary btn--block" type="button" (click)="retry()" [disabled]="retrying()">{{ retrying() ? 'Trying…' : 'Try again' }}</button>
     </div>
   }
 
   <div class="segmented mt-lg" role="tablist">
     <button role="tab" [class.is-active]="mode() === 'join'" (click)="mode.set('join')">I have a code</button>
-    <button role="tab" [class.is-active]="mode() === 'create'" (click)="mode.set('create')">Start a new trip</button>
+    <button role="tab" [class.is-active]="mode() === 'create'" (click)="mode.set('create')" data-testid="tab-create">Start something new</button>
   </div>
 
   @if (mode() === 'code') {
@@ -39,7 +41,7 @@
     </form>
   } @else if (mode() === 'join') {
     <form class="card mt stack-v" (ngSubmit)="join()">
-      <h2>Join your family's trip</h2>
+      <h2>Join your family</h2>
       @if (fromLink()) { <p class="muted">You've been invited. Just tell us who you are{{ next() ? " and we'll take you straight there" : '' }}.</p> }
       <div class="field">
         <label for="code">Invite code</label>
@@ -62,31 +64,56 @@
     </form>
   } @else if (!hasAccount() && !noSignIn()) {
     <div class="card mt stack-v" data-testid="create-needs-account">
-      <h2>Start a new trip</h2>
-      <p class="muted">Organizers sign in with a free account, so your trip is always safe and you can open it from any device. Your family still joins with just their name.</p>
+      <h2>Start a trip or a gathering</h2>
+      <p class="muted">Organizers sign in with a free account, so it's always safe and you can open it from any device. Your family still joins with just their name.</p>
       <app-signin-panel next="/?create=1" (signedIn)="signedInToCreate()" />
     </div>
   } @else {
-    <form class="card mt stack-v" (ngSubmit)="create()">
-      <h2>Start a new trip</h2>
+    <form class="card mt stack-v" (ngSubmit)="create()" data-testid="create-form">
+      <h2>{{ kind() === 'gathering' ? 'Start a gathering' : 'Start a new trip' }}</h2>
+      <div class="segmented" role="tablist" aria-label="What are you planning?">
+        <button type="button" role="tab" [class.is-active]="kind() === 'trip'" (click)="setKind('trip')" data-testid="kind-trip">🧳 A trip</button>
+        <button type="button" role="tab" [class.is-active]="kind() === 'gathering'" (click)="setKind('gathering')" data-testid="kind-gathering">🦃 A gathering</button>
+      </div>
+      <p class="tiny">
+        @if (kind() === 'gathering') { For Thanksgiving, a birthday, a reunion: a wall for messages and polls, and a shared photo album. No trip planning, no location sharing. }
+        @else { Going somewhere: ideas to vote on, a day-by-day plan, where you're staying, and a family map on the trip. }
+      </p>
       <div class="field">
-        <label for="tname">Trip name</label>
-        <input id="tname" class="input" name="tname" [(ngModel)]="tripName" required maxlength="80" placeholder="Lake week 2027" />
+        <label for="tname">{{ kind() === 'gathering' ? 'What is it?' : 'Trip name' }}</label>
+        <input id="tname" class="input" name="tname" [(ngModel)]="tripName" required maxlength="80" [placeholder]="kind() === 'gathering' ? 'Thanksgiving 2026' : 'Lake week 2027'" />
       </div>
       <div class="field">
-        <label for="dest">Where</label>
-        <input id="dest" class="input" name="dest" [(ngModel)]="destination" maxlength="120" placeholder="Lake Tahoe, CA" />
+        <label for="dest">Where{{ kind() === 'gathering' ? ' (optional)' : '' }}</label>
+        <input id="dest" class="input" name="dest" [(ngModel)]="destination" maxlength="120" [placeholder]="kind() === 'gathering' ? 'Grandma\'s house' : 'Lake Tahoe, CA'" />
       </div>
-      <div class="form-grid form-grid--2">
+      @if (kind() === 'gathering') {
         <div class="field">
-          <label for="start">First day</label>
-          <input id="start" class="input" type="date" name="start" [(ngModel)]="startDate" required />
+          <label for="start">{{ moreDays ? 'First day' : 'Date' }}</label>
+          <input id="start" class="input" type="date" name="start" [(ngModel)]="startDate" (ngModelChange)="endDate < $event ? (endDate = $event) : null" required />
         </div>
-        <div class="field">
-          <label for="end">Last day</label>
-          <input id="end" class="input" type="date" name="end" [(ngModel)]="endDate" required [min]="startDate" />
+        <label class="switch-row">
+          <span>More than one day</span>
+          <input type="checkbox" class="switch" name="moreDays" [(ngModel)]="moreDays" data-testid="more-days" />
+        </label>
+        @if (moreDays) {
+          <div class="field">
+            <label for="end">Last day</label>
+            <input id="end" class="input" type="date" name="end" [(ngModel)]="endDate" required [min]="startDate" />
+          </div>
+        }
+      } @else {
+        <div class="form-grid form-grid--2">
+          <div class="field">
+            <label for="start">First day</label>
+            <input id="start" class="input" type="date" name="start" [(ngModel)]="startDate" required />
+          </div>
+          <div class="field">
+            <label for="end">Last day</label>
+            <input id="end" class="input" type="date" name="end" [(ngModel)]="endDate" required [min]="startDate" />
+          </div>
         </div>
-      </div>
+      }
       <div class="field">
         <label for="cname">Your name</label>
         <input id="cname" class="input" name="cname" [(ngModel)]="memberName" required maxlength="40" placeholder="Mom" autocomplete="given-name" />
@@ -97,9 +124,9 @@
       </div>
       @if (error()) { <p class="error">{{ error() }}</p> }
       <button class="btn btn--primary btn--block" type="submit" [disabled]="busy() || !tripName || !memberName || !startDate || !endDate">
-        {{ busy() ? 'Creating…' : 'Create trip & get invite code' }}
+        {{ busy() ? 'Creating…' : kind() === 'gathering' ? 'Create gathering & get invite code' : 'Create trip & get invite code' }}
       </button>
-      <p class="tiny">You'll get a short code to text the family. They join with just their name.</p>
+      <p class="tiny">You'll get a short code, a link and a QR code for the family. They join with just their name.</p>
     </form>
   }
 </div>

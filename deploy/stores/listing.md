@@ -31,6 +31,10 @@ ON THE TRIP
 • The wall for "running late", "who's bringing the cooler", and everything in between.
 • One shared photo album. Everyone adds their photos; anyone can download them all.
 
+NOT A TRIP? START A GATHERING
+• For Thanksgiving, birthdays and reunions: just the wall, polls ("Turkey or ham?") and a shared photo album, with where and when on the front page.
+• Print or show the QR code and everyone joins by scanning it.
+
 PRIVATE BY DESIGN
 • Only the people in your trip see your trip.
 • Location sharing is off until you turn it on, and your location is deleted when the trip ends.

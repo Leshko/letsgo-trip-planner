@@ -53,8 +53,8 @@ export class LetsGoService {
     return !!id && read(VIEW_KEY(id)) === '1';
   });
 
-  /** The Let's Go layout is showing. */
-  readonly active = computed(() => !!this.tripDay() && !this.planningView());
+  /** The Let's Go layout is showing. Gatherings keep their own simple layout. */
+  readonly active = computed(() => !!this.tripDay() && !this.planningView() && !this.session.isGathering());
 
   readonly introPending = computed(() => {
     this.prefs();

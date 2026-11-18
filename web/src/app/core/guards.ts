@@ -31,3 +31,18 @@ export const accountGuard: CanActivateFn = async (_route, state) => {
     ? true
     : router.createUrlTree(['/signin'], { queryParams: { next: state.url } });
 };
+
+/** Ideas, the plan and the family map belong to trips; a gathering's links to them land on Home. */
+export const tripOnlyGuard: CanActivateFn = () => {
+  const session = inject(SessionService);
+  return session.isGathering() ? inject(Router).createUrlTree(['/trip']) : true;
+};
+
+/** The list of my trips: for a signed-in account, or a phone that has joined something. */
+export const myTripsGuard: CanActivateFn = async (_route, state) => {
+  const session = inject(SessionService);
+  const router = inject(Router);
+  if (await session.restoreAccount()) return true;
+  await session.restore();
+  return session.known().length ? true : router.createUrlTree(['/signin'], { queryParams: { next: state.url } });
+};

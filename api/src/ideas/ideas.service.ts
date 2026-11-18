@@ -9,6 +9,7 @@ import { Comment, Idea, IdeaKind, Member, Vote } from '../entities';
 import { ActivityService } from '../activity/activity.service';
 import { ideaView, IdeaView } from '../common/serializers';
 import { CreateIdeaDto, UpdateIdeaDto } from './ideas.dto';
+import { assertTripOnly } from '../common/trip-kind';
 
 @Injectable()
 export class IdeasService {
@@ -68,6 +69,7 @@ export class IdeasService {
     me: Member,
     dto: CreateIdeaDto,
   ): Promise<IdeaView> {
+    assertTripOnly(me, 'ideas');
     const saved = await this.ideas.save(
       this.ideas.create({
         tripId,

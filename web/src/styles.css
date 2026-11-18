@@ -495,3 +495,14 @@ body.viewer-open { overflow: hidden; }
 .poll--closed .poll__opt.is-mine { box-shadow: inset 0 0 0 1px var(--tint); }
 .poll__foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
 .poll-form { gap: 8px; }
+
+/* ---------- QR code to join ---------- */
+.qr-card { text-align: center; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.qr { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.qr__img { width: 220px; height: 220px; border-radius: 12px; background: #fff; image-rendering: pixelated; }
+.qr__img--loading { background: var(--surface-2); }
+
+/* ---------- gatherings ---------- */
+.who-row { display: flex; flex-wrap: wrap; gap: 12px 14px; }
+.who { display: inline-flex; flex-direction: column; align-items: center; gap: 3px; width: 56px; text-align: center; }
+.who .tiny { max-width: 56px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

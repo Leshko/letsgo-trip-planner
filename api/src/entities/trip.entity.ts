@@ -31,10 +31,18 @@ export const emptyLodging = (): Lodging => ({
   photos: [],
 });
 
+/** A trip (ideas, plan, stay, family map) or a simpler gathering (wall and photos). */
+export type TripKind = 'trip' | 'gathering';
+export const TRIP_KINDS: TripKind[] = ['trip', 'gathering'];
+
 @Entity()
 export class Trip extends Timestamped {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
+
+  /** Chosen when it's created; gatherings have no ideas, plan or location sharing. */
+  @Column({ default: 'trip' })
+  kind!: TripKind;
 
   @Column()
   name!: string;

@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
-import { dateRangeLabel } from '../../core/format';
+import { dateRangeLabel, longDate } from '../../core/format';
 import { usePolling } from '../../core/polling';
 import { AvatarComponent } from '../../shared/avatar.component';
 import { AvatarStackComponent } from '../../shared/avatar-stack.component';
@@ -21,6 +21,7 @@ import { PushService } from '../../core/push.service';
 import { SignInOptionsService } from '../../core/signin-options.service';
 import { Notification, NotifyPrefs } from '../../core/models';
 import { LetsGoService } from '../../core/lets-go';
+import { QrCodeComponent } from '../../shared/qr-code.component';
 import { isNativeApp, webOrigin } from '../../core/platform';
 import { nativeShare } from '../../core/share.service';
 import { LiveLocationService } from '../../core/live-location.service';
@@ -34,7 +35,7 @@ interface Tab {
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, FormsModule, AvatarComponent, AvatarStackComponent, EmojiPickerComponent, TourComponent, IconComponent, AgoPipe],
+  imports: [QrCodeComponent, RouterOutlet, RouterLink, RouterLinkActive, FormsModule, AvatarComponent, AvatarStackComponent, EmojiPickerComponent, TourComponent, IconComponent, AgoPipe],
   templateUrl: './shell.component.html',
 })
 export class ShellComponent {
@@ -53,15 +54,30 @@ export class ShellComponent {
   readonly showNotifs = signal(false);
   readonly notifsLoaded = signal(false);
   readonly pushError = signal('');
-  readonly prefLabels: { key: keyof NotifyPrefs; label: string }[] = [
-    { key: 'ideas', label: 'New ideas' },
-    { key: 'votes', label: 'Votes on my ideas' },
-    { key: 'comments', label: 'Comments' },
-    { key: 'wall', label: 'Wall posts' },
-    { key: 'plan', label: 'Plan and stay changes' },
-    { key: 'photos', label: 'New photos' },
-    { key: 'members', label: 'Someone joins' },
-  ];
+  /** Notification switches; a gathering only has the ones that can happen in it. */
+  readonly prefLabels = computed<{ key: keyof NotifyPrefs; label: string }[]>(() =>
+    this.session.isGathering()
+      ? [
+          { key: 'wall', label: 'Wall posts and polls' },
+          { key: 'votes', label: 'Votes on my polls' },
+          { key: 'photos', label: 'New photos' },
+          { key: 'plan', label: 'Where & when changes' },
+          { key: 'members', label: 'Someone joins' },
+        ]
+      : [
+          { key: 'ideas', label: 'New ideas' },
+          { key: 'votes', label: 'Votes on my ideas and polls' },
+          { key: 'comments', label: 'Comments' },
+          { key: 'wall', label: 'Wall posts and polls' },
+          { key: 'plan', label: 'Plan and stay changes' },
+          { key: 'photos', label: 'New photos' },
+          { key: 'members', label: 'Someone joins' },
+        ],
+  );
+  readonly noun = this.session.noun;
+  readonly isGathering = this.session.isGathering;
+  /** More than one trip to choose from: the account's, or others joined on this phone. */
+  readonly canSwitch = computed(() => this.hasAccount() || this.session.known().length > 1);
 
   readonly trip = this.session.trip;
   readonly me = this.session.member;
@@ -113,14 +129,28 @@ export class ShellComponent {
     { path: '/trip/ideas', label: 'Ideas', ico: 'sparkles', exact: false },
   ];
 
-  readonly tabs = computed(() => (this.letsGo.active() ? this.letsGoTabs : this.planningTabs));
+  /** A gathering is the wall and the photos; where and when live on Home. */
+  private readonly gatheringTabs: Tab[] = [
+    { path: '/trip', label: 'Home', ico: 'home', exact: true },
+    { path: '/trip/wall', label: 'Wall', ico: 'bubble', exact: false },
+    { path: '/trip/photos', label: 'Photos', ico: 'camera', exact: false },
+  ];
+
+  readonly tabs = computed(() =>
+    this.session.isGathering() ? this.gatheringTabs : this.letsGo.active() ? this.letsGoTabs : this.planningTabs,
+  );
 
   /** Second line of the top bar: the day of the trip while it's on, otherwise where and when. */
   readonly subtitle = computed(() => {
     const t = this.trip();
     if (!t) return '';
     const d = this.letsGo.tripDay();
-    const where = t.destination || 'Somewhere great';
+    const gathering = this.session.isGathering();
+    const where = t.destination || (gathering ? 'Together' : 'Somewhere great');
+    if (gathering) {
+      const when = t.startDate === t.endDate ? longDate(t.startDate) : this.dates();
+      return d ? `${d.total > 1 ? `Day ${d.day} of ${d.total}` : 'Today'} · ${where}` : `${where} · ${when}`;
+    }
     return d ? `Day ${d.day} of ${d.total} · ${where}` : `${where} · ${this.dates()}`;
   });
 
@@ -348,12 +378,13 @@ export class ShellComponent {
 
   async leave() {
     const msg = this.accountLinked()
-      ? 'Close this trip on this device? It stays in My trips.'
-      : 'Leave this trip on this device? You can rejoin any time with the invite code.';
+      ? `Close this ${this.noun()} on this device? It stays in My trips.`
+      : `Leave this ${this.noun()} on this device? You can rejoin any time with the invite code.`;
     if (!confirm(msg)) return;
     await this.push.disable().catch(() => undefined);
     this.session.signOut();
-    await this.router.navigate([this.hasAccount() ? '/trips' : '/']);
+    // Other trips joined on this phone are still there to open.
+    await this.router.navigate([this.hasAccount() || this.session.known().length ? '/trips' : '/']);
   }
 
   /** Not signed in: sign in, and the trip on this device is saved to the account. */
@@ -370,7 +401,7 @@ export class ShellComponent {
       await this.session.restoreAccount(true);
       this.flash('Saved to your account');
     } catch (e: unknown) {
-      this.flash(messageOf(e, "Couldn't save this trip to your account"));
+      this.flash(messageOf(e, `Couldn't save this ${this.noun()} to your account`));
     }
   }
 

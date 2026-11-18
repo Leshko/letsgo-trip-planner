@@ -1,16 +1,21 @@
 import {
   ArrayMaxSize,
   IsArray,
+  IsIn,
   IsOptional,
   IsString,
   Length,
   Matches,
   MaxLength,
 } from 'class-validator';
+import { TRIP_KINDS } from '../entities';
+import type { TripKind } from '../entities';
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export class CreateTripDto {
+  /** 'trip' (the default) or 'gathering'. */
+  @IsOptional() @IsIn(TRIP_KINDS) kind?: TripKind;
   @IsString() @Length(1, 80) name!: string;
   @IsOptional() @IsString() @MaxLength(120) destination?: string;
   @IsString() @Matches(ISO_DATE) startDate!: string;

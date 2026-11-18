@@ -1,25 +1,26 @@
-<div class="page">
+<div class="page" data-testid="stay-page">
+  @if (g()) { <a routerLink="/trip" class="btn btn--ghost btn--sm" style="margin-left:-10px;margin-bottom:6px">‹ Home</a> }
   @if (editing()) {
     <form class="card stack-v" (ngSubmit)="save()">
-      <h2>Where we're staying</h2>
-      <div class="field"><label for="lname">Place name</label>
-        <input id="lname" class="input" name="lname" [(ngModel)]="form.name" maxlength="120" placeholder="The Pine Cabin" /></div>
+      <h2>{{ g() ? 'Where & when' : "Where we're staying" }}</h2>
+      <div class="field"><label for="lname">{{ g() ? 'Place' : 'Place name' }}</label>
+        <input id="lname" class="input" name="lname" [(ngModel)]="form.name" maxlength="120" [placeholder]="g() ? 'Grandma\'s house' : 'The Pine Cabin'" /></div>
       <div class="field"><label for="laddr">Address</label>
-        <input id="laddr" class="input" name="laddr" [(ngModel)]="form.address" maxlength="300" placeholder="123 Lakeshore Dr, Tahoe City, CA" />
+        <input id="laddr" class="input" name="laddr" [(ngModel)]="form.address" maxlength="300" [placeholder]="g() ? '12 Maple St, Springfield' : '123 Lakeshore Dr, Tahoe City, CA'" />
         <span class="tiny">The map and directions come from this.</span></div>
       <div class="form-grid form-grid--2">
-        <div class="field"><label for="lin">Check-in</label>
-          <input id="lin" class="input" name="lin" [(ngModel)]="form.checkIn" maxlength="60" placeholder="4:00 pm" /></div>
-        <div class="field"><label for="lout">Check-out</label>
-          <input id="lout" class="input" name="lout" [(ngModel)]="form.checkOut" maxlength="60" placeholder="11:00 am" /></div>
+        <div class="field"><label for="lin">{{ g() ? 'Starts at' : 'Check-in' }}</label>
+          <input id="lin" class="input" name="lin" [(ngModel)]="form.checkIn" maxlength="60" [placeholder]="g() ? '2:00 pm' : '4:00 pm'" /></div>
+        <div class="field"><label for="lout">{{ g() ? 'Ends around (optional)' : 'Check-out' }}</label>
+          <input id="lout" class="input" name="lout" [(ngModel)]="form.checkOut" maxlength="60" [placeholder]="g() ? '8:00 pm' : '11:00 am'" /></div>
       </div>
-      <div class="field"><label for="llink">Listing link</label>
-        <input id="llink" class="input" name="llink" type="url" [(ngModel)]="form.link" maxlength="500" placeholder="https://airbnb.com/…" /></div>
-      <div class="field"><label for="lphotos">Photo links (one per line)</label>
+      <div class="field"><label for="llink">{{ g() ? 'Link (optional)' : 'Listing link' }}</label>
+        <input id="llink" class="input" name="llink" type="url" [(ngModel)]="form.link" maxlength="500" [placeholder]="g() ? 'A sign-up sheet, the restaurant, a wish list…' : 'https://airbnb.com/…'" /></div>
+      <div class="field" [hidden]="g()"><label for="lphotos">Photo links (one per line)</label>
         <textarea id="lphotos" class="textarea" name="lphotos" [(ngModel)]="form.photosText" rows="3" placeholder="https://…/front.jpg&#10;https://…/deck.jpg"></textarea>
         <span class="tiny">Paste image URLs from the listing. The first one is the cover.</span></div>
-      <div class="field"><label for="lnotes">Notes for the family</label>
-        <textarea id="lnotes" class="textarea" name="lnotes" [(ngModel)]="form.notes" rows="4" maxlength="4000" placeholder="Door code, parking, who sleeps where, wifi…"></textarea></div>
+      <div class="field"><label for="lnotes">{{ g() ? 'Notes for everyone' : 'Notes for the family' }}</label>
+        <textarea id="lnotes" class="textarea" name="lnotes" [(ngModel)]="form.notes" rows="4" maxlength="4000" [placeholder]="g() ? 'What to bring, where to park, who\'s cooking what…' : 'Door code, parking, who sleeps where, wifi…'"></textarea></div>
       @if (error()) { <p class="error">{{ error() }}</p> }
       <div class="row">
         <button class="btn btn--primary grow" type="submit" [disabled]="busy()">{{ busy() ? 'Saving…' : 'Save' }}</button>
@@ -28,10 +29,10 @@
     </form>
   } @else if (!hasLodging()) {
     <div class="card empty">
-      <div class="big">🏡</div>
-      <h2>Where are we staying?</h2>
-      <p class="muted mt">Add the cabin, hotel or rental so everyone can see photos, the address and check-in details.</p>
-      <button class="btn btn--primary mt-lg" (click)="edit()">Add our place</button>
+      <div class="big">{{ g() ? '📍' : '🏡' }}</div>
+      <h2>{{ g() ? 'Where and when?' : 'Where are we staying?' }}</h2>
+      <p class="muted mt">{{ g() ? 'Add the place, the address, what time it starts and what to bring, so nobody has to ask.' : 'Add the cabin, hotel or rental so everyone can see photos, the address and check-in details.' }}</p>
+      <button class="btn btn--primary mt-lg" (click)="edit()" data-testid="stay-add">{{ g() ? 'Add where & when' : 'Add our place' }}</button>
     </div>
   } @else {
     @let l = lodging();
@@ -45,20 +46,20 @@
     <div class="card mt">
       <div class="row row--between">
         <div>
-          <div class="tiny">Our home base · {{ nights() }} nights</div>
-          <h2>{{ l.name || 'Our place' }}</h2>
+          <div class="tiny">{{ g() ? 'Where & when' : 'Our home base · ' + nights() + ' nights' }}</div>
+          <h2>{{ l.name || (g() ? 'The place' : 'Our place') }}</h2>
         </div>
         <button class="btn btn--sm" (click)="edit()">Edit</button>
       </div>
       @if (l.address) { <p class="muted mt">{{ l.address }}</p> }
       <div class="row row--wrap mt">
         @if (l.address) { <a class="btn btn--sm" [href]="directionsUrl()" target="_blank" rel="noopener">🧭 Directions</a> }
-        @if (l.link) { <a class="btn btn--sm" [href]="l.link" target="_blank" rel="noopener">🔗 View listing</a> }
+        @if (l.link) { <a class="btn btn--sm" [href]="l.link" target="_blank" rel="noopener">🔗 {{ g() ? 'Open link' : 'View listing' }}</a> }
       </div>
       @if (l.checkIn || l.checkOut) {
         <dl class="kv mt-lg">
-          @if (l.checkIn) { <dt>Check-in</dt><dd>{{ l.checkIn }}</dd> }
-          @if (l.checkOut) { <dt>Check-out</dt><dd>{{ l.checkOut }}</dd> }
+          @if (l.checkIn) { <dt>{{ g() ? 'Starts at' : 'Check-in' }}</dt><dd>{{ l.checkIn }}</dd> }
+          @if (l.checkOut) { <dt>{{ g() ? 'Ends around' : 'Check-out' }}</dt><dd>{{ l.checkOut }}</dd> }
         </dl>
       }
       @if (l.notes) {

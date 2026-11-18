@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { Lodging } from '../../core/models';
@@ -9,7 +10,7 @@ import { messageOf } from '../landing/landing.component';
 
 @Component({
   selector: 'app-stay',
-  imports: [FormsModule],
+  imports: [FormsModule, RouterLink],
   templateUrl: './stay.component.html',
 })
 export class StayComponent {
@@ -18,10 +19,12 @@ export class StayComponent {
   readonly session = inject(SessionService);
 
   readonly trip = this.session.trip;
+  /** A gathering uses this page for its "Where & when". */
+  readonly g = this.session.isGathering;
   readonly lodging = computed<Lodging>(() => this.trip()?.lodging ?? emptyLodging());
   readonly hasLodging = computed(() => {
     const l = this.lodging();
-    return !!(l.name || l.address || l.link || l.notes || l.photos.length);
+    return !!(l.name || l.address || l.checkIn || l.link || l.notes || l.photos.length);
   });
   readonly nights = computed(() => {
     const t = this.trip();

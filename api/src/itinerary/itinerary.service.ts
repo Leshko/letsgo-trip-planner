@@ -11,6 +11,7 @@ import { CreateEntryDto, ReorderDto, UpdateEntryDto } from './itinerary.dto';
 import { dateRange } from '../common/dates';
 import { TripsService } from '../trips/trips.service';
 import { ActivityService } from '../activity/activity.service';
+import { assertTripOnly } from '../common/trip-kind';
 
 export interface ItineraryDay {
   date: string;
@@ -65,6 +66,7 @@ export class ItineraryService {
     me: Member,
     dto: CreateEntryDto,
   ): Promise<ItineraryEntryView> {
+    assertTripOnly(me, 'a plan');
     let title = (dto.title ?? '').trim();
     let ideaId: string | null = null;
     if (dto.ideaId) {

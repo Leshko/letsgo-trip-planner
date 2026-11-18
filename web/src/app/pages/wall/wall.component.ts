@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, effect, inject, input, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
@@ -75,8 +75,14 @@ export class WallComponent {
     this.posts.update((all) => all.map((p) => (p.id === updated.id ? updated : p)));
   }
 
+  /** ?poll=1 (from "Start a poll" buttons) opens the composer in poll mode. */
+  readonly poll = input<string>();
+
   constructor() {
     usePolling(() => this.load(), 8_000);
+    effect(() => {
+      if (this.poll() === '1') untracked(() => this.pollMode.set(true));
+    });
   }
 
   async load() {

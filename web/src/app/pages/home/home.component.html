@@ -1,4 +1,6 @@
-@if (letsGo.active()) {
+@if (session.isGathering()) {
+  <app-gathering-home />
+} @else if (letsGo.active()) {
   <app-today />
 } @else if (trip(); as t) {
   <div class="page">

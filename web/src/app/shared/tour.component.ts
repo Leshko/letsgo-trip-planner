@@ -86,6 +86,31 @@ export class TourComponent {
         : this.newSteps;
     const t = this.session.trip();
     const name = this.session.member()?.name ?? 'there';
+    // A gathering is simpler, and so is its tour.
+    if (this.session.isGathering())
+      return [
+        {
+          art: '🎉',
+          title: `Hi ${name}! Welcome to ${t?.name ?? 'the gathering'}`,
+          body: 'This is where everyone coming keeps in touch before, during and after. Takes half a minute to show you around.',
+        },
+        {
+          art: '📍',
+          title: 'Where and when',
+          body: 'Home has the place, the address with directions, what time it starts and what to bring, plus a countdown and who\'s in.',
+        },
+        {
+          art: '💬',
+          title: 'The Wall',
+          body: 'Questions, hype, who\'s bringing what. React with emoji, or start a poll ("Turkey or ham?") and everyone votes with one tap.',
+        },
+        {
+          art: '📷',
+          title: 'Share the photos',
+          body: 'The Photos tab is the shared album. Everyone adds their pictures, and anyone can download them all.',
+        },
+        ...this.newSteps,
+      ];
     return [
       {
         art: '🌴',

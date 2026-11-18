@@ -11,6 +11,7 @@ import { AvatarStackComponent } from '../../shared/avatar-stack.component';
 import { AgoPipe } from '../../shared/pipes';
 import { LetsGoService } from '../../core/lets-go';
 import { TodayComponent } from '../today/today.component';
+import { GatheringHomeComponent } from './gathering-home.component';
 
 const ICONS: Record<Activity['type'], string> = {
   joined: '👋',
@@ -26,7 +27,7 @@ const ICONS: Record<Activity['type'], string> = {
 
 @Component({
   selector: 'app-home',
-  imports: [RouterLink, AvatarComponent, AvatarStackComponent, AgoPipe, TodayComponent],
+  imports: [RouterLink, AvatarComponent, AvatarStackComponent, AgoPipe, TodayComponent, GatheringHomeComponent],
   templateUrl: './home.component.html',
 })
 export class HomeComponent {
@@ -117,7 +118,7 @@ export class HomeComponent {
 
   async load() {
     const id = this.session.tripId();
-    if (!id || this.letsGo.active()) return;
+    if (!id || this.letsGo.active() || this.session.isGathering()) return;
     const [ideas, feed, posts, photos] = await Promise.all([
       this.api.listIdeas(id),
       this.api.activity(id, 25),

@@ -4,8 +4,8 @@
       <button class="btn btn--sm btn--tinted topbar__left" (click)="showInvite.set(true)" aria-label="Invite family">
         <app-avatar-stack [members]="t.members" [max]="3" /> <span class="topbar__invite-label">Invite</span>
       </button>
-      @if (hasAccount()) {
-        <a class="topbar__center topbar__switch" routerLink="/trips" aria-label="Switch trip" data-testid="switch-trip">
+      @if (canSwitch()) {
+        <a class="topbar__center topbar__switch" routerLink="/trips" aria-label="Switch to another trip or gathering" data-testid="switch-trip">
           <div class="topbar__title" data-testid="topbar-title">{{ t.name }} <span aria-hidden="true">▾</span></div>
           <div class="topbar__sub" data-testid="topbar-sub">{{ subtitle() }}</div>
         </a>
@@ -29,7 +29,7 @@
     </div>
   </header>
 
-  <nav class="tabs" aria-label="Trip sections">
+  <nav class="tabs" [attr.aria-label]="isGathering() ? 'Gathering sections' : 'Trip sections'">
     @for (tab of tabs(); track tab.path) {
       <a [routerLink]="tab.path" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: tab.exact }">
         <app-icon [name]="tab.ico" [size]="26" /><span>{{ tab.label }}</span>
@@ -43,7 +43,7 @@
     <div class="modal-backdrop" (click)="showInvite.set(false)">
       <div class="modal stack-v" (click)="$event.stopPropagation()" role="dialog" aria-label="Invite family">
         <h2>Invite the family</h2>
-        <p class="muted">Text them the link or read them the code. They just type their name.</p>
+        <p class="muted">Text them the link, read them the code, or let them scan the QR code. They just type their name.</p>
         <div class="card card--flat" style="text-align:center">
           <div class="tiny">Invite code</div>
           <div class="input--code" style="font-size:2rem;font-weight:700">{{ t.inviteCode }}</div>
@@ -52,6 +52,10 @@
         <div class="row">
           <button class="btn btn--primary grow" (click)="share()">Share link</button>
           <button class="btn" (click)="copy(inviteUrl())">Copy</button>
+        </div>
+        <div class="card card--flat qr-card">
+          <div class="tiny">Scan to join. Already in? It opens right to {{ isGathering() ? 'the gathering' : 'the trip' }}.</div>
+          <app-qr-code [link]="inviteUrl()" [title]="t.name" [caption]="'Scan to join · code ' + t.inviteCode" />
         </div>
         <div>
           <div class="label">Who's in ({{ t.members.length }})</div>
@@ -142,7 +146,7 @@
             @if (pushError()) { <p class="tiny" style="color:var(--red)">{{ pushError() }}</p> }
           }
           <div class="check-list">
-            @for (p of prefLabels; track p.key) {
+            @for (p of prefLabels(); track p.key) {
               <label class="check-row">
                 <input type="checkbox" [checked]="session.notifyPrefs()[p.key]" (change)="setPref(p.key, $any($event.target).checked)" />
                 <span>{{ p.label }}</span>
@@ -150,7 +154,7 @@
             }
           </div>
         </div>
-        @if (letsGo.tripDay(); as d) {
+        @if (!isGathering() && letsGo.tripDay(); as d) {
           <hr style="border:0;border-top:1px solid var(--border);margin:4px 0" />
           <div class="stack-v" style="gap:8px" data-testid="profile-letsgo">
             <div class="label">On the trip · day {{ d.day }} of {{ d.total }}</div>
@@ -169,15 +173,16 @@
         <div data-testid="profile-account">
           @if (hasAccount()) {
             <div class="label">Account</div>
-            <p class="tiny">Signed in as {{ account()?.user?.email || account()?.user?.name }}.{{ accountLinked() ? ' This trip is saved to your account.' : '' }}</p>
-            @if (!accountLinked()) { <button class="btn btn--tinted btn--sm mt" type="button" (click)="claimHere()" data-testid="claim-here">Save this trip to my account</button> }
+            <p class="tiny">Signed in as {{ account()?.user?.email || account()?.user?.name }}.{{ accountLinked() ? ' This ' + noun() + ' is saved to your account.' : '' }}</p>
+            @if (!accountLinked()) { <button class="btn btn--tinted btn--sm mt" type="button" (click)="claimHere()" data-testid="claim-here">Save this {{ noun() }} to my account</button> }
             <div class="row mt" style="gap:8px">
               <button class="btn btn--sm" type="button" (click)="myTrips()">My trips</button>
               <button class="btn btn--ghost btn--sm" type="button" (click)="signOutAccount()" data-testid="profile-signout">Sign out</button>
             </div>
           } @else {
-            <div class="label">Save this trip</div>
-            <p class="tiny">Sign in with {{ signInPhrase() }}. You'll never lose this trip, and you can open all your trips on any device.</p>
+            <div class="label">Save this {{ noun() }}</div>
+            <p class="tiny">Sign in with {{ signInPhrase() }}. You'll never lose this {{ noun() }}, and you can open all your trips and gatherings on any device.</p>
+            @if (session.known().length > 1) { <button class="btn btn--sm mt" type="button" (click)="myTrips()" data-testid="profile-switch">Switch trip or gathering</button> }
             <button class="btn btn--tinted btn--sm mt" type="button" (click)="saveTrip()" data-testid="profile-save">Sign in to save it</button>
           }
         </div>
@@ -198,7 +203,7 @@
           <button class="btn btn--tinted btn--sm" type="button" (click)="installApp()">📲 Install the app on this device</button>
         }
         <button class="btn btn--ghost btn--sm" type="button" (click)="startTour()">Show me around again</button>
-        <button class="btn btn--ghost btn--danger btn--sm" type="button" (click)="leave()">Leave trip on this device</button>
+        <button class="btn btn--ghost btn--danger btn--sm" type="button" (click)="leave()">Leave {{ noun() }} on this device</button>
       </form>
     </div>
   }

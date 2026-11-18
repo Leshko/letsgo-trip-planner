@@ -71,6 +71,7 @@ export class TripsService {
 
     const trip = await this.trips.save(
       this.trips.create({
+        kind: dto.kind ?? 'trip',
         name: dto.name.trim(),
         destination: (dto.destination ?? '').trim(),
         startDate: dto.startDate,
@@ -92,7 +93,9 @@ export class TripsService {
     await this.activity.record(
       member,
       'trip',
-      `started planning ${trip.name}`,
+      trip.kind === 'gathering'
+        ? `set up ${trip.name}`
+        : `started planning ${trip.name}`,
       undefined,
       'none',
     );
@@ -331,7 +334,9 @@ export class TripsService {
     await this.activity.record(
       me,
       'trip',
-      'updated the trip details',
+      trip.kind === 'gathering'
+        ? 'updated the gathering details'
+        : 'updated the trip details',
       undefined,
       'none',
     );
@@ -360,9 +365,13 @@ export class TripsService {
     await this.activity.record(
       me,
       'lodging',
-      trip.lodging.name
-        ? `updated where we're staying: ${trip.lodging.name}`
-        : "updated where we're staying",
+      trip.kind === 'gathering'
+        ? trip.lodging.name
+          ? `updated where & when: ${trip.lodging.name}`
+          : 'updated where & when'
+        : trip.lodging.name
+          ? `updated where we're staying: ${trip.lodging.name}`
+          : "updated where we're staying",
       { kind: 'lodging', id: tripId },
     );
     return this.getView(tripId);

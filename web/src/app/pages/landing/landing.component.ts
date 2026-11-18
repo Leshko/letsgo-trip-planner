@@ -1,3 +1,4 @@
+import { TripKind } from '../../core/models';
 import { Component, computed, inject, input, OnDestroy, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -16,7 +17,7 @@ type Mode = 'join' | 'create' | 'code';
 })
 export class LandingComponent implements OnDestroy {
   private readonly api = inject(ApiService);
-  private readonly session = inject(SessionService);
+  readonly session = inject(SessionService);
   private readonly router = inject(Router);
 
   /** Bound from /join/:code by the router. */
@@ -26,6 +27,12 @@ export class LandingComponent implements OnDestroy {
   /** ?create=1 / ?join=1 from My trips. */
   readonly createParam = input<string | undefined>(undefined, { alias: 'create' });
   readonly joinParam = input<string | undefined>(undefined, { alias: 'join' });
+  /** ?kind=gathering from My trips. */
+  readonly kindParam = input<string | undefined>(undefined, { alias: 'kind' });
+  /** What's being started: a trip, or a simpler gathering. */
+  readonly kind = signal<TripKind>('trip');
+  /** A gathering is one day unless they say otherwise. */
+  moreDays = false;
   readonly hasAccount = this.session.hasAccount;
   /** No sign-in method set up on this server yet: trips start the old way. */
   readonly noSignIn = signal(false);
@@ -71,10 +78,7 @@ export class LandingComponent implements OnDestroy {
   createEmoji = '';
 
   constructor() {
-    // The session may already exist when arriving via a /join link.
-    void this.session.restore().then((signedIn) => {
-      if (signedIn && !this.createParam() && !this.joinParam()) void this.router.navigateByUrl(this.target());
-    });
+    void this.arrive();
     void this.session.restoreAccount().then(() => this.prefillName());
     this.api
       .signInOptions()
@@ -86,6 +90,22 @@ export class LandingComponent implements OnDestroy {
     return safeNext(this.next());
   }
 
+  /**
+   * Arriving here with something already on this phone. An invite link or QR
+   * code for a trip this phone (or account) is already in opens that trip;
+   * for one it isn't in yet, the join form stays, even if another trip is open.
+   */
+  private async arrive() {
+    const signedIn = await this.session.restore();
+    if (this.createParam() || this.joinParam()) return;
+    const code = this.code();
+    if (!code) {
+      if (signedIn) await this.router.navigateByUrl(this.target());
+      return;
+    }
+    if ((await this.session.openByCode(code)) === 'open') await this.router.navigateByUrl(this.target());
+  }
+
   ngOnInit() {
     const c = this.code();
     if (c) {
@@ -94,6 +114,7 @@ export class LandingComponent implements OnDestroy {
     } else if (this.createParam()) {
       this.mode.set('create');
     }
+    if (this.kindParam() === 'gathering') this.setKind('gathering');
   }
 
   /** Signed in: start from the account's first name. */
@@ -106,6 +127,19 @@ export class LandingComponent implements OnDestroy {
   signedInToCreate() {
     this.prefillName();
     this.mode.set('create');
+  }
+
+  setKind(kind: TripKind) {
+    this.kind.set(kind);
+    // A gathering is usually soon and one day; a trip defaults to a month out.
+    if (kind === 'gathering') {
+      this.startDate = addDays(todayIso(), 14);
+      this.endDate = this.startDate;
+      this.moreDays = false;
+    } else {
+      this.startDate = addDays(todayIso(), 30);
+      this.endDate = addDays(todayIso(), 34);
+    }
   }
 
   async join() {
@@ -140,18 +174,20 @@ export class LandingComponent implements OnDestroy {
     this.error.set('');
     this.busy.set(true);
     try {
+      const gathering = this.kind() === 'gathering';
       const s = await this.api.createTrip({
+        kind: this.kind(),
         name: this.tripName,
         destination: this.destination,
         startDate: this.startDate,
-        endDate: this.endDate,
+        endDate: gathering && !this.moreDays ? this.startDate : this.endDate,
         memberName: this.memberName,
         emoji: this.createEmoji,
       });
       this.session.start(s);
       await this.router.navigateByUrl(this.target());
     } catch (e: unknown) {
-      this.error.set(messageOf(e, "Couldn't create the trip"));
+      this.error.set(messageOf(e, this.kind() === 'gathering' ? "Couldn't create the gathering" : "Couldn't create the trip"));
     } finally {
       this.busy.set(false);
     }
