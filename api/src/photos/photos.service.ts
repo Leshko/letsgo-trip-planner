@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { stat } from 'fs/promises';
+import { readFile, stat } from 'fs/promises';
 import { Member, Photo, PhotoComment, Trip } from '../entities';
 import {
   photoCommentView,
@@ -25,6 +25,8 @@ export type UploadedFiles = Record<
 >;
 
 const DERIVATIVE_MAX_BYTES = 2_500_000;
+/** The most an AI is sent for one photo. */
+const SMALL_COPY_MAX_BYTES = 3_500_000;
 
 export interface ZipEntry {
   path: string;
@@ -63,6 +65,24 @@ export class PhotosService {
     files: UploadedFiles | undefined,
     dto: UploadPhotoDto,
   ): Promise<PhotoView> {
+    const photo = await this.store(tripId, me, files, dto);
+    const inBatch = await this.photos.count({
+      where: { tripId, batchId: dto.batchId, memberId: me.id },
+    });
+    await this.activity.recordBatch(me, dto.batchId, inBatch);
+    return photoView(photo);
+  }
+
+  /**
+   * Store an uploaded photo in the album without the "added a photo" feed
+   * line, for features that announce it their own way (the selfie game).
+   */
+  async store(
+    tripId: string,
+    me: Member,
+    files: UploadedFiles | undefined,
+    dto: UploadPhotoDto,
+  ): Promise<Photo> {
     const original = files?.original?.[0];
     const thumb = files?.thumb?.[0];
     const preview = files?.preview?.[0];
@@ -108,15 +128,60 @@ export class PhotosService {
         await this.storage.remove(photo);
         throw e;
       }
-      const inBatch = await this.photos.count({
-        where: { tripId, batchId: dto.batchId, memberId: me.id },
-      });
-      await this.activity.recordBatch(me, dto.batchId, inBatch);
-      return photoView(await this.load(tripId, photo.id));
+      return await this.load(tripId, photo.id);
     } finally {
       // Anything still sitting in tmp (validation failed, commit failed) goes away now.
       for (const f of staged) await this.storage.unlinkQuiet(f.path);
     }
+  }
+
+  /**
+   * A small copy of the photo an AI can look at: the JPEG preview the phone
+   * made, else the thumbnail, else the original when it's a plain small image.
+   */
+  async smallCopy(photo: Photo): Promise<{
+    bytes: Buffer;
+    mediaType: 'image/jpeg' | 'image/png' | 'image/webp';
+  } | null> {
+    const candidates: {
+      path: string;
+      mediaType: 'image/jpeg' | 'image/png' | 'image/webp';
+    }[] = [];
+    if (photo.hasPreview)
+      candidates.push({
+        path: this.storage.pathFor(photo, 'preview'),
+        mediaType: 'image/jpeg',
+      });
+    if (photo.hasThumb)
+      candidates.push({
+        path: this.storage.pathFor(photo, 'thumb'),
+        mediaType: 'image/jpeg',
+      });
+    const plain = {
+      jpg: 'image/jpeg',
+      png: 'image/png',
+      webp: 'image/webp',
+    } as const;
+    if (photo.ext in plain)
+      candidates.push({
+        path: this.storage.pathFor(photo, 'original'),
+        mediaType: plain[photo.ext as keyof typeof plain],
+      });
+    for (const c of candidates) {
+      try {
+        const s = await stat(c.path);
+        if (s.size > 0 && s.size <= SMALL_COPY_MAX_BYTES)
+          return { bytes: await readFile(c.path), mediaType: c.mediaType };
+      } catch {
+        /* try the next one */
+      }
+    }
+    return null;
+  }
+
+  /** Throw away staged upload files that ended up not being stored. */
+  async discard(paths: string[]): Promise<void> {
+    for (const p of paths) await this.storage.unlinkQuiet(p);
   }
 
   private canManage(me: Member, photo: Photo): boolean {

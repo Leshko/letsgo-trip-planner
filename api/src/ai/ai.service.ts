@@ -12,7 +12,7 @@ import {
 } from '../unfurl/unfurl.digest';
 import type { Unfurled } from '../unfurl/unfurl.parser';
 import { AI_CLIENT } from './ai.client';
-import type { AiClient } from './ai.client';
+import type { AiClient, StructuredInput } from './ai.client';
 import { SYSTEM_PROMPT } from './ai.prompt';
 import { AiPreview, AiStatus, COST_LEVELS } from './ai.schema';
 
@@ -134,6 +134,49 @@ export class AiService {
     } catch (e) {
       this.warnOnce(`AI summary failed: ${(e as Error).message}`);
       return { ai: null, aiStatus: 'error' };
+    }
+  }
+
+  /**
+   * Ask the AI a question with a fixed answer shape (optionally about one
+   * image). Null whenever it can't answer: AI off, daily limit reached, slow,
+   * refused. Callers always have a non-AI fallback.
+   */
+  async structured<T>(
+    tripId: string,
+    input: Omit<StructuredInput<T>, 'model'>,
+  ): Promise<T | null> {
+    const cfg = this.config();
+    if (!cfg.enabled || !this.client.structured) return null;
+    if (!this.underCap(tripId, cfg.dailyCap)) return null;
+    try {
+      const res = await Promise.race([
+        this.client.structured<T>({ ...input, model: cfg.model }),
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(new Error('AI timeout')),
+            CALL_TIMEOUT_MS,
+          ).unref(),
+        ),
+      ]);
+      if (res.usage)
+        this.log.debug(
+          `AI ${input.task} tokens in=${res.usage.input} out=${res.usage.output} (${cfg.model})`,
+        );
+      if (
+        !res.parsed ||
+        res.stopReason === 'refusal' ||
+        res.stopReason === 'max_tokens'
+      ) {
+        this.warnOnce(
+          `AI ${input.task} gave no usable answer (${res.stopReason})`,
+        );
+        return null;
+      }
+      return res.parsed;
+    } catch (e) {
+      this.warnOnce(`AI ${input.task} failed: ${(e as Error).message}`);
+      return null;
     }
   }
 

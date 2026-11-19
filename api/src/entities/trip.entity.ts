@@ -80,6 +80,10 @@ export class Trip extends Timestamped {
   @Column({ default: '' })
   timeZone!: string;
 
+  /** The selfie game runs by itself on trip days unless the organizer switches it off. */
+  @Column({ type: 'varchar', default: 'on' })
+  selfieGame!: 'on' | 'off';
+
   @OneToMany(() => Member, (m) => m.trip)
   members!: Member[];
 }

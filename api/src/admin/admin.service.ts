@@ -23,6 +23,7 @@ import {
   Trip,
   User,
   Vote,
+  SelfieEntry,
 } from '../entities';
 import { adoptSpot } from '../auth/profile';
 
@@ -232,6 +233,17 @@ export class AdminService {
       await move(Comment, 'memberId', 'comments');
       await move(PhotoComment, 'memberId', 'comments');
       await move(Photo, 'memberId', 'photos');
+      // Selfie game: the kept spot's own selfie wins where both did a challenge.
+      const intoSelfies = await m.find(SelfieEntry, {
+        where: { memberId: intoId },
+      });
+      const doneAlready = intoSelfies.map((e) => e.challengeId);
+      if (doneAlready.length)
+        await m.delete(SelfieEntry, {
+          memberId: fromId,
+          challengeId: In(doneAlready),
+        });
+      await move(SelfieEntry, 'memberId', 'selfies');
       await move(Post, 'memberId', 'posts');
       await move(ItineraryEntry, 'addedById', 'plan entries');
       await move(Activity, 'memberId', 'activity');

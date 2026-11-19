@@ -12,7 +12,14 @@ import { Timestamped } from './created-at';
 import type { ActivityType } from './activity.entity';
 
 export type RefKind =
-  'idea' | 'itinerary' | 'lodging' | 'photo' | 'post' | 'poll' | null;
+  | 'idea'
+  | 'itinerary'
+  | 'lodging'
+  | 'photo'
+  | 'post'
+  | 'poll'
+  | 'selfie'
+  | null;
 
 /** One line in a member's bell: "Dad is in for Kayaking". One row per recipient. */
 @Entity()

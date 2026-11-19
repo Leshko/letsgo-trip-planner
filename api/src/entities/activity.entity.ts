@@ -18,7 +18,8 @@ export type ActivityType =
   | 'lodging'
   | 'trip'
   | 'photo'
-  | 'post';
+  | 'post'
+  | 'selfie';
 
 /** One line in the "what's happening" feed: "Sam suggested Kayaking". */
 @Entity()
@@ -46,7 +47,15 @@ export class Activity extends Timestamped {
 
   /** What the line is about, so the UI can link to it. */
   @Column({ type: 'varchar', nullable: true })
-  refKind!: 'idea' | 'itinerary' | 'lodging' | 'photo' | 'post' | 'poll' | null;
+  refKind!:
+    | 'idea'
+    | 'itinerary'
+    | 'lodging'
+    | 'photo'
+    | 'post'
+    | 'poll'
+    | 'selfie'
+    | null;
 
   @Column({ type: 'varchar', nullable: true })
   refId!: string | null;

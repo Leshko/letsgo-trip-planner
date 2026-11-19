@@ -16,6 +16,7 @@ export * from './legacy-import.entity';
 export * from './account.entities';
 export * from './member-alias.entity';
 export * from './member-location.entity';
+export * from './selfie.entities';
 
 import { Trip } from './trip.entity';
 import { Member } from './member.entity';
@@ -34,6 +35,7 @@ import { UnfurlCache } from './unfurl-cache.entity';
 import { LegacyImport } from './legacy-import.entity';
 import { MemberAlias } from './member-alias.entity';
 import { MemberLocation } from './member-location.entity';
+import { SelfieChallenge, SelfieEntry } from './selfie.entities';
 import {
   AccountSession,
   AuthFlow,
@@ -67,4 +69,6 @@ export const ENTITIES = [
   AuthHandoff,
   MemberAlias,
   MemberLocation,
+  SelfieChallenge,
+  SelfieEntry,
 ];

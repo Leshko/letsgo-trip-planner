@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -13,17 +12,13 @@ import {
   Res,
   UploadedFiles,
   UseGuards,
-  UseInterceptors,
 } from '@nestjs/common';
-import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import archiver from 'archiver';
-import { diskStorage } from 'multer';
 import { MemberGuard } from '../common/member.guard';
 import { CurrentMember } from '../common/current-member.decorator';
 import { Member } from '../entities';
-import { photosTmpDir } from '../common/paths';
-import { ALLOWED_MIMES } from './image-type';
+import { PhotoUpload } from './photo-upload';
 import {
   CreatePhotoCommentDto,
   UpdatePhotoDto,
@@ -31,7 +26,6 @@ import {
 } from './photos.dto';
 import { PhotosService, UploadedFiles as Files } from './photos.service';
 
-const MAX_FILE_BYTES = 25 * 1024 * 1024;
 const VARIANTS = new Set(['original', 'thumb', 'preview']);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -46,36 +40,7 @@ export class PhotosController {
   }
 
   @Post('photos')
-  @UseInterceptors(
-    FileFieldsInterceptor(
-      [
-        { name: 'original', maxCount: 1 },
-        { name: 'thumb', maxCount: 1 },
-        { name: 'preview', maxCount: 1 },
-      ],
-      {
-        storage: diskStorage({
-          destination: (_req, _file, cb) => cb(null, photosTmpDir()),
-        }),
-        limits: { fileSize: MAX_FILE_BYTES, files: 3, fields: 8 },
-        fileFilter: (_req, file, cb) => {
-          // Cheap first gate on the browser's claim; the bytes are sniffed afterwards.
-          if (
-            ALLOWED_MIMES.has(file.mimetype) ||
-            file.mimetype === 'application/octet-stream'
-          )
-            cb(null, true);
-          else
-            cb(
-              new BadRequestException(
-                `${file.mimetype} is not a supported image type`,
-              ),
-              false,
-            );
-        },
-      },
-    ),
-  )
+  @PhotoUpload()
   upload(
     @Param('tripId') tripId: string,
     @CurrentMember() me: Member,

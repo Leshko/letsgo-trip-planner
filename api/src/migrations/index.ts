@@ -8,6 +8,7 @@ import { NativePush1794015451049 } from './1794015451049-NativePush';
 import { Polls1794940115124 } from './1794940115124-Polls';
 import { TripKind1794960364361 } from './1794960364361-TripKind';
 import { UserProfile1794962118332 } from './1794962118332-UserProfile';
+import { SelfieGame1795095536011 } from './1795095536011-SelfieGame';
 
 /** Every migration, in order. New ones are appended here. */
 export const MIGRATIONS: (new () => unknown)[] = [
@@ -21,4 +22,5 @@ export const MIGRATIONS: (new () => unknown)[] = [
   Polls1794940115124,
   TripKind1794960364361,
   UserProfile1794962118332,
+  SelfieGame1795095536011,
 ];

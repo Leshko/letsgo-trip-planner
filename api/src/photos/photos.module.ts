@@ -13,5 +13,6 @@ import { PhotoStorage } from './photo-storage';
   ],
   controllers: [PhotosController, PhotoFilesController],
   providers: [PhotosService, PhotoStorage],
+  exports: [PhotosService],
 })
 export class PhotosModule {}

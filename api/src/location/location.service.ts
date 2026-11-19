@@ -31,7 +31,7 @@ export interface LocationsView {
   locations: LocationView[];
 }
 
-function shiftDays(iso: string, n: number): string {
+export function shiftDays(iso: string, n: number): string {
   const d = new Date(iso + 'T00:00:00Z');
   d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);

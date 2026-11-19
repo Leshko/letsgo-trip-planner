@@ -43,6 +43,7 @@ export function prefKeyFor(type: ActivityType): NotifyPrefKey | null {
     case 'lodging':
       return 'plan';
     case 'photo':
+    case 'selfie':
       return 'photos';
     case 'joined':
       return 'members';
