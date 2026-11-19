@@ -24,6 +24,25 @@
       </section>
     }
 
+    @if (selfies(); as g) {
+      <a routerLink="/trip/selfies" class="card card--flat selfie-card mt" data-testid="home-selfies">
+        <span class="selfie-card__ico" aria-hidden="true">{{ g.winner ? '🏆' : '🤳' }}</span>
+        <div class="grow">
+          @if (g.winner; as w) {
+            <strong>{{ w.member.id === me()?.id ? 'You' : w.member.name }} won the selfie game</strong>
+            <div class="tiny">{{ w.points }} points. See the final scoreboard and everyone's selfies.</div>
+          } @else if (!letsGo.tripDay()) {
+            <strong>The selfie game is ready</strong>
+            <div class="tiny">{{ g.total }} challenges for the trip. Look them over and swap any you don't like.</div>
+          } @else {
+            <strong>Selfie game</strong>
+            <div class="tiny">{{ g.me.done }} of {{ g.total }} done · {{ g.me.points }} points</div>
+          }
+        </div>
+        <span class="muted">›</span>
+      </a>
+    }
+
     @if (t.lodging.name || t.lodging.address) {
       <a routerLink="/trip/stay" class="card card--sea row mt" style="text-decoration:none;color:inherit">
         @if (t.lodging.photos[0]) {

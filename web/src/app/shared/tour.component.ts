@@ -151,7 +151,7 @@ export class TourComponent {
       {
         art: '🚗',
         title: 'Once the trip starts',
-        body: "On day one the app switches to trip mode: today's plan up front, a family map where you can choose to share where you are, and the wall and photos one tap away.",
+        body: "On day one the app switches to trip mode: today's plan up front, a family map where you can choose to share where you are, a selfie game with challenges written for your trip, and the wall and photos one tap away.",
       },
       ...this.newSteps,
     ];

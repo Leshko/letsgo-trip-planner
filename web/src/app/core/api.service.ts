@@ -27,6 +27,9 @@ import {
   SignedIn,
   SignInOptions,
   FamilyMap,
+  SelfieDifficulty,
+  SelfieGame,
+  SelfieResult,
 } from './models';
 import { IdeaInput } from './models';
 
@@ -246,6 +249,39 @@ export class ApiService {
   uploadPhoto(tripId: string, form: FormData): Observable<HttpEvent<Photo>> {
     return this.http.post<Photo>(`${this.base}/trips/${tripId}/photos`, form, { reportProgress: true, observe: 'events' });
   }
+  // selfie game
+  selfieGame(tripId: string) {
+    return this.get<SelfieGame>(`/trips/${tripId}/selfies`);
+  }
+  /** Multipart upload (same files as an album photo); the response carries the judge's verdict. */
+  submitSelfie(tripId: string, challengeId: string, form: FormData): Observable<HttpEvent<SelfieResult>> {
+    return this.http.post<SelfieResult>(`${this.base}/trips/${tripId}/selfies/challenges/${challengeId}/entries`, form, {
+      reportProgress: true,
+      observe: 'events',
+    });
+  }
+  selfieSetOn(tripId: string, on: boolean) {
+    return this.put<SelfieGame>(`/trips/${tripId}/selfies/state`, { on });
+  }
+  selfieRegenerate(tripId: string) {
+    return this.post<SelfieGame>(`/trips/${tripId}/selfies/regenerate`, {});
+  }
+  selfieAdd(tripId: string, body: { title: string; hint: string; difficulty: SelfieDifficulty }) {
+    return this.post<SelfieGame>(`/trips/${tripId}/selfies/challenges`, body);
+  }
+  selfieEdit(tripId: string, challengeId: string, body: { title?: string; hint?: string; difficulty?: SelfieDifficulty }) {
+    return this.patch<SelfieGame>(`/trips/${tripId}/selfies/challenges/${challengeId}`, body);
+  }
+  selfieRemove(tripId: string, challengeId: string) {
+    return firstValueFrom(this.http.delete<SelfieGame>(`${this.base}/trips/${tripId}/selfies/challenges/${challengeId}`));
+  }
+  selfieReplace(tripId: string, challengeId: string) {
+    return this.post<SelfieGame>(`/trips/${tripId}/selfies/challenges/${challengeId}/replace`, {});
+  }
+  selfieOverrule(tripId: string, entryId: string, status: 'approved' | 'rejected') {
+    return this.put<SelfieGame>(`/trips/${tripId}/selfies/entries/${entryId}`, { status });
+  }
+
   updatePhotoCaption(tripId: string, photoId: string, caption: string) {
     return this.patch<Photo>(`/trips/${tripId}/photos/${photoId}`, { caption });
   }

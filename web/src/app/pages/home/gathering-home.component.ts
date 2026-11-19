@@ -16,6 +16,7 @@ const ICONS: Partial<Record<Activity['type'], string>> = {
   trip: '🎉',
   photo: '📷',
   post: '📝',
+  selfie: '🤳',
 };
 
 /** Home for a gathering: when and where, who's coming, the wall and the photos. */

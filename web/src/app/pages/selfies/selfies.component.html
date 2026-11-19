@@ -1,0 +1,236 @@
+<div class="page" data-testid="selfies">
+  <a routerLink="/trip" class="btn btn--ghost btn--sm" style="margin-left:-10px">‹ Back</a>
+  <h1>Selfie game</h1>
+
+  @if (game(); as g) {
+    @switch (g.status) {
+      @case ('off') {
+        <div class="card empty mt" data-testid="selfies-off">
+          <div class="big">🤳</div>
+          <h2>The selfie game is off for this trip</h2>
+          @if (g.canManage) { <button class="btn btn--primary mt-lg" type="button" (click)="setOn(true)" [disabled]="working() === 'state'">Turn it on</button> }
+        </div>
+      }
+      @case ('before') {
+        <div class="card empty mt" data-testid="selfies-before">
+          <div class="big">🤳</div>
+          <h2>The selfie game starts with the trip</h2>
+          <p class="muted mt">About ten selfies to hunt for, written for where you're going. Points for each one, and a winner at the end.</p>
+        </div>
+      }
+      @case ('preparing') {
+        <div class="card empty mt" data-testid="selfies-preparing">
+          <div class="big">✍️</div>
+          <h2>Writing your challenges…</h2>
+          <p class="muted mt">This takes a few seconds.</p>
+        </div>
+      }
+      @default {
+        <p class="muted">
+          @if (g.status === 'closed') { The trip is over. Here's how it ended. }
+          @else { Take each selfie, upload it, and the judge awards the points. First to finish a challenge gets +5. }
+        </p>
+
+        @if (g.winner; as w) {
+          <section class="card card--accent mt selfie-winner" data-testid="selfie-winner">
+            <span class="selfie-winner__cup" aria-hidden="true">🏆</span>
+            <app-avatar [member]="w.member" size="lg" />
+            <div><div class="tiny">Selfie champion</div><strong>{{ w.member.id === me()?.id ? 'You' : w.member.name }}</strong> won with {{ w.points }} points</div>
+          </section>
+        }
+
+        @if (g.status === 'open') {
+          <section class="card card--sea mt selfie-me" data-testid="selfie-me">
+            <div class="countdown">{{ g.me.points }}</div>
+            <div><strong>your points</strong><div class="tiny">{{ summary() }}</div></div>
+          </section>
+        }
+
+        @if (error()) { <p class="error mt" data-testid="selfie-error">{{ error() }}</p> }
+
+        <div class="stack-v mt" data-testid="selfie-list">
+          @for (c of g.challenges; track c.id) {
+            <article class="card selfie" [class.is-done]="!!c.mine" [attr.data-challenge]="c.title">
+              <div class="selfie__top">
+                <span class="chip" [class.chip--leaf]="c.difficulty === 'easy'" [class.chip--sun]="c.difficulty === 'medium'" [class.chip--accent]="c.difficulty === 'hard'">+{{ c.points }}</span>
+                <div class="grow">
+                  <div class="selfie__title">{{ c.title }}</div>
+                  @if (c.hint) { <div class="tiny">{{ c.hint }}</div> }
+                </div>
+                @if (c.mine; as m) {
+                  <button type="button" class="selfie__thumb" (click)="viewing.set({ entry: m, title: c.title })" aria-label="See your selfie">
+                    <img [src]="m.photo.thumb" alt="" /><span class="selfie__check" aria-hidden="true">✓</span>
+                  </button>
+                }
+              </div>
+
+              @if (c.mine; as m) {
+                <div class="selfie__verdict selfie__verdict--yes" data-testid="selfie-done">
+                  <strong>+{{ m.points + m.bonus }}</strong>
+                  @if (m.bonus) { <span class="chip chip--sun">first! +{{ m.bonus }}</span> }
+                  @if (m.comment) { <span>{{ m.comment }}</span> }
+                </div>
+              } @else if (c.myRejected; as r) {
+                <div class="selfie__verdict selfie__verdict--no" data-testid="selfie-rejected">
+                  <strong>Didn't count.</strong> <span>{{ r.comment }}</span>
+                </div>
+              }
+
+              <div class="selfie__foot">
+                @if (c.done.length) {
+                  <button type="button" class="selfie__who" (click)="viewing.set({ entry: c.done[0], title: c.title })" [attr.aria-label]="'See who has done this'">
+                    <app-avatar-stack [members]="doneBy(c)" [max]="5" /> <span class="tiny">{{ c.done.length === 1 ? '1 done' : c.done.length + ' done' }}</span>
+                  </button>
+                } @else { <span class="tiny">Nobody yet. Be first for +5.</span> }
+
+                @if (canPlay()) {
+                  @if (uploadingFor(c); as u) {
+                    <span class="selfie__busy" data-testid="selfie-busy">{{ u.stage === 'judging' ? 'The judge is looking…' : u.stage === 'uploading' ? 'Uploading ' + u.pct + '%' : 'Getting it ready…' }}</span>
+                  } @else {
+                    <label class="btn btn--sm" [class.btn--primary]="!c.mine" [class.btn--ghost]="!!c.mine" [class.is-disabled]="!!upload()" style="cursor:pointer">
+                      {{ c.mine ? 'Retake' : c.myRejected ? 'Try again' : 'Take selfie' }}
+                      <input type="file" accept="image/*" style="display:none" (change)="onPicked(c, $event)" [disabled]="!!upload()" data-testid="selfie-input" />
+                    </label>
+                  }
+                }
+              </div>
+
+              @if (g.canManage && c.rejected.length) {
+                <div class="selfie__review" data-testid="selfie-review">
+                  @for (r of c.rejected; track r.id) {
+                    <div class="row" style="gap:8px">
+                      <button type="button" class="selfie__thumb selfie__thumb--sm" (click)="viewing.set({ entry: r, title: c.title })" [attr.aria-label]="'See ' + r.member.name + '\'s selfie'"><img [src]="r.photo.thumb" alt="" /></button>
+                      <span class="grow tiny">The judge turned down {{ r.member.name }}'s selfie.</span>
+                      <button class="btn btn--sm btn--tinted" type="button" (click)="overrule(r, 'approved')" [disabled]="!!working()" data-testid="selfie-count-it">Count it</button>
+                    </div>
+                  }
+                </div>
+              }
+
+              @if (g.canManage && managing() && g.status === 'open') {
+                <div class="selfie__manage" data-testid="selfie-manage">
+                  <button class="btn btn--sm btn--tinted" type="button" (click)="replace(c)" [disabled]="!!working()" data-testid="selfie-replace">{{ working() === c.id ? 'Thinking…' : '✨ Replace with a new idea' }}</button>
+                  <button class="btn btn--sm" type="button" (click)="startEdit(c)" [disabled]="!!working()">Edit</button>
+                  <button class="btn btn--sm btn--ghost btn--danger" type="button" (click)="remove(c)" [disabled]="!!working()">Remove</button>
+                </div>
+              }
+            </article>
+          }
+        </div>
+
+        @if (g.canManage && g.status === 'open') {
+          <section class="card card--flat mt stack-v" data-testid="selfie-organizer">
+            <label class="switch-row">
+              <span>Edit the challenges<span class="tiny" style="display:block">Only you, the organizer, can change the list.</span></span>
+              <input type="checkbox" class="switch" [checked]="managing()" (change)="managing.set($any($event.target).checked)" data-testid="selfie-manage-toggle" />
+            </label>
+            @if (managing()) {
+              <div class="row row--wrap" style="gap:8px">
+                <button class="btn btn--sm" type="button" (click)="startAdd()" data-testid="selfie-add">＋ Add your own</button>
+                @if (!anyEntries()) { <button class="btn btn--sm" type="button" (click)="newList()" [disabled]="!!working()" data-testid="selfie-new-list">{{ working() === 'list' ? 'Writing…' : 'New list' }}</button> }
+                <button class="btn btn--sm btn--ghost btn--danger" type="button" (click)="setOn(false)" [disabled]="!!working()">Turn the game off</button>
+              </div>
+            }
+          </section>
+        }
+
+        <div class="section-title"><h2>Scoreboard</h2></div>
+        <section class="card" data-testid="selfie-scoreboard">
+          @if (!g.scoreboard.length) { <p class="muted">Nobody has scored yet. The first selfie takes the lead.</p> }
+          <ol class="scoreboard">
+            @for (r of g.scoreboard; track r.member.id) {
+              <li class="scoreboard__row" [class.is-me]="r.member.id === me()?.id">
+                <span class="scoreboard__rank">{{ r.rank === 1 ? '🥇' : r.rank === 2 ? '🥈' : r.rank === 3 ? '🥉' : r.rank }}</span>
+                <app-avatar [member]="r.member" size="sm" />
+                <span class="grow">{{ r.member.id === me()?.id ? 'You' : r.member.name }}<span class="tiny" style="display:block">{{ r.done }} of {{ g.total }} done</span></span>
+                <strong class="scoreboard__pts">{{ r.points }}</strong>
+              </li>
+            }
+          </ol>
+        </section>
+      }
+    }
+  } @else {
+    <p class="muted mt">Loading…</p>
+  }
+
+  <!-- The verdict after an upload. -->
+  @if (result(); as r) {
+    <div class="modal-backdrop" (click)="result.set(null)">
+      <div class="modal stack-v selfie-result" (click)="$event.stopPropagation()" role="dialog" aria-label="Selfie result" data-testid="selfie-result">
+        <img class="selfie-result__img" [src]="r.entry.photo.preview" alt="" />
+        @if (r.entry.status === 'approved') {
+          <div class="selfie-result__pts" data-testid="selfie-result-points">+{{ r.entry.points + r.entry.bonus }}</div>
+          <h2 style="text-align:center">{{ r.title }}</h2>
+          @if (r.entry.bonus) { <p style="text-align:center"><span class="chip chip--sun">First to finish! +{{ r.entry.bonus }}</span></p> }
+          @if (r.entry.comment) { <p class="muted" style="text-align:center">“{{ r.entry.comment }}”</p> }
+          @if (r.entry.judgedBy === 'honor') { <p class="tiny" style="text-align:center">The judge is on a break, so this one counts on the honor system.</p> }
+          <button class="btn btn--primary" type="button" (click)="result.set(null)" data-testid="selfie-result-ok">Nice!</button>
+        } @else {
+          <h2 style="text-align:center">Not quite</h2>
+          <p class="muted" style="text-align:center">{{ r.entry.comment }}</p>
+          @if (r.earlierStillCounts) { <p class="tiny" style="text-align:center">Your earlier selfie for this one still counts.</p> }
+          @else { <p class="tiny" style="text-align:center">Think the judge got it wrong? The organizer can count it.</p> }
+          <button class="btn btn--primary" type="button" (click)="result.set(null)" data-testid="selfie-result-ok">OK, I'll try again</button>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Someone's selfie, full size. -->
+  @if (viewing(); as v) {
+    <div class="modal-backdrop" (click)="viewing.set(null)">
+      <div class="modal stack-v selfie-result" (click)="$event.stopPropagation()" role="dialog" aria-label="Selfie" data-testid="selfie-viewer">
+        <img class="selfie-result__img" [src]="v.entry.photo.preview" alt="" />
+        <div class="row" style="gap:10px">
+          <app-avatar [member]="v.entry.member" />
+          <div class="grow"><strong>{{ v.entry.member.id === me()?.id ? 'You' : v.entry.member.name }}</strong><div class="tiny">{{ v.title }}</div></div>
+          @if (v.entry.status === 'approved') { <strong>+{{ v.entry.points + v.entry.bonus }}</strong> }
+        </div>
+        @if (v.entry.comment) { <p class="muted">“{{ v.entry.comment }}”</p> }
+        @if (game(); as g) {
+          @for (c of g.challenges; track c.id) {
+            @if (c.id === v.entry.challengeId && c.done.length > 1 && v.entry.status === 'approved') {
+              <div class="row row--wrap" style="gap:6px">
+                @for (e of c.done; track e.id) {
+                  <button type="button" class="selfie__thumb selfie__thumb--sm" [class.is-current]="e.id === v.entry.id" (click)="viewing.set({ entry: e, title: v.title })" [attr.aria-label]="e.member.name"><img [src]="e.photo.thumb" alt="" /></button>
+                }
+              </div>
+            }
+          }
+          @if (g.canManage && g.status === 'open') {
+            @if (v.entry.status === 'approved') { <button class="btn btn--ghost btn--danger btn--sm" type="button" (click)="overrule(v.entry, 'rejected')" data-testid="selfie-take-off">Take it off the board</button> }
+            @else { <button class="btn btn--tinted btn--sm" type="button" (click)="overrule(v.entry, 'approved')">Count it</button> }
+          }
+        }
+        <button class="btn btn--ghost" type="button" (click)="viewing.set(null)">Close</button>
+      </div>
+    </div>
+  }
+
+  <!-- Organizer: add or edit a challenge. -->
+  @if (adding() || editing()) {
+    <div class="modal-backdrop" (click)="cancelForm()">
+      <form class="modal stack-v" (click)="$event.stopPropagation()" (ngSubmit)="saveForm()" role="dialog" aria-label="Challenge" data-testid="selfie-form">
+        <h2>{{ editing() ? 'Edit challenge' : 'Add a challenge' }}</h2>
+        <div class="field"><label for="sftitle">The selfie</label>
+          <input id="sftitle" class="input" name="sftitle" [(ngModel)]="formTitle" required maxlength="80" placeholder="Selfie with the lighthouse" /></div>
+        <div class="field"><label for="sfhint">Hint (optional)</label>
+          <input id="sfhint" class="input" name="sfhint" [(ngModel)]="formHint" maxlength="140" placeholder="Where to find it, or what counts" /></div>
+        <div class="field"><label for="sfdiff">How hard?</label>
+          <select id="sfdiff" class="input" name="sfdiff" [(ngModel)]="formDifficulty">
+            <option value="easy">Easy · 10 points</option>
+            <option value="medium">Medium · 20 points</option>
+            <option value="hard">Hard · 30 points</option>
+          </select></div>
+        @if (error()) { <p class="error">{{ error() }}</p> }
+        <div class="row">
+          <button class="btn btn--primary grow" type="submit" [disabled]="formTitle.trim().length < 4">Save</button>
+          <button class="btn btn--ghost" type="button" (click)="cancelForm()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  }
+
+  @if (toast()) { <div class="toast" role="status">{{ toast() }}</div> }
+</div>

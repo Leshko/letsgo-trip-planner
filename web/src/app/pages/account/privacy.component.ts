@@ -27,6 +27,7 @@ import { RouterLink } from '@angular/router';
         <ul>
           <li>Sign-in codes are sent by email through Resend.</li>
           <li>When someone pastes a link to a place, the app reads that public page to fill in photos and details. If AI summaries are on, the page text is sent to Anthropic's Claude to write the summary.</li>
+          <li>Selfie game: when you upload a selfie for a challenge, a small copy of that one photo is sent to Anthropic's Claude to check it matches, along with the challenge text. Nothing else in the album is sent, and no names go with it. The challenges themselves are written from the trip's name, destination and plan.</li>
           <li>Nothing is sold or used for advertising.</li>
         </ul>
         <h2>Deleting your data</h2>

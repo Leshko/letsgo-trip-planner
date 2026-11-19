@@ -143,10 +143,10 @@ export interface Post {
 
 export interface Activity {
   id: string;
-  type: 'joined' | 'idea' | 'vote' | 'comment' | 'itinerary' | 'lodging' | 'trip' | 'photo' | 'post';
+  type: 'joined' | 'idea' | 'vote' | 'comment' | 'itinerary' | 'lodging' | 'trip' | 'photo' | 'post' | 'selfie';
   message: string;
   member: Member;
-  refKind: 'idea' | 'itinerary' | 'lodging' | 'photo' | 'post' | 'poll' | null;
+  refKind: 'idea' | 'itinerary' | 'lodging' | 'photo' | 'post' | 'poll' | 'selfie' | null;
   refId: string | null;
   createdAt: string;
 }
@@ -333,3 +333,61 @@ export interface SignedIn {
 }
 
 export type SignInOptions = Record<AuthProviderId, boolean>;
+
+// ---- selfie game ----
+
+export type SelfieDifficulty = 'easy' | 'medium' | 'hard';
+
+/** Someone's selfie for a challenge, and how it was judged. */
+export interface SelfieEntry {
+  id: string;
+  challengeId: string;
+  status: 'approved' | 'rejected';
+  /** The AI looked at it, the AI wasn't available (honor system), or the organizer decided. */
+  judgedBy: 'ai' | 'honor' | 'organizer';
+  comment: string;
+  points: number;
+  bonus: number;
+  member: Member;
+  photo: { id: string; thumb: string; preview: string; original: string };
+  createdAt: string;
+}
+
+export interface SelfieChallenge {
+  id: string;
+  title: string;
+  hint: string;
+  difficulty: SelfieDifficulty;
+  points: number;
+  source: 'ai' | 'builtin' | 'custom';
+  /** Everyone whose selfie counted, first to finish first. */
+  done: SelfieEntry[];
+  mine: SelfieEntry | null;
+  myRejected: SelfieEntry | null;
+  /** Organizer only: selfies the AI turned down. */
+  rejected: SelfieEntry[];
+}
+
+export interface SelfieScore {
+  member: Member;
+  points: number;
+  done: number;
+  rank: number;
+}
+
+export interface SelfieGame {
+  /** off: switched off. before: not yet. preparing: the list is being written. open: play. closed: results. */
+  status: 'off' | 'before' | 'preparing' | 'open' | 'closed';
+  canManage: boolean;
+  challenges: SelfieChallenge[];
+  scoreboard: SelfieScore[];
+  me: { points: number; done: number; rank: number | null };
+  total: number;
+  winner: SelfieScore | null;
+}
+
+export interface SelfieResult {
+  entry: SelfieEntry;
+  earlierStillCounts: boolean;
+  game: SelfieGame;
+}

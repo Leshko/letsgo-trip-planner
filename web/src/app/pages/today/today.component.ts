@@ -5,8 +5,8 @@ import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { LetsGoService } from '../../core/lets-go';
 import { LiveLocationService } from '../../core/live-location.service';
-import { ItineraryDay, ItineraryEntry, Photo, Post } from '../../core/models';
-import { addDays, longDate, time12 } from '../../core/format';
+import { ItineraryDay, ItineraryEntry, Photo, Post, SelfieGame } from '../../core/models';
+import { addDays, longDate, ordinal, time12 } from '../../core/format';
 import { usePolling } from '../../core/polling';
 import { AvatarComponent } from '../../shared/avatar.component';
 import { IconComponent } from '../../shared/icon.component';
@@ -32,6 +32,16 @@ export class TodayComponent {
   readonly posts = signal<Post[]>([]);
   readonly photos = signal<Photo[]>([]);
   readonly loaded = signal(false);
+  /** The selfie game, when it's on for this trip. */
+  readonly selfies = signal<SelfieGame | null>(null);
+  readonly selfieLine = computed(() => {
+    const g = this.selfies();
+    if (!g) return '';
+    if (g.status === 'preparing') return 'Getting your challenges ready…';
+    if (!g.me.done) return `${g.total} selfies to hunt for. Points for each one!`;
+    const place = g.me.rank ? ` · ${ordinal(g.me.rank)} place` : '';
+    return `${g.me.done} of ${g.total} done · ${g.me.points} points${place}`;
+  });
   readonly error = signal('');
   readonly posting = signal(false);
   draft = '';
@@ -69,6 +79,11 @@ export class TodayComponent {
     this.posts.set(posts);
     this.photos.set(photos);
     this.loaded.set(true);
+    // The game is a bonus: never let it hold up or break Today.
+    void this.api
+      .selfieGame(id)
+      .then((g) => this.selfies.set(g.status === 'open' || g.status === 'preparing' ? g : null))
+      .catch(() => undefined);
   }
 
   private entriesFor(date: string | undefined): ItineraryEntry[] {

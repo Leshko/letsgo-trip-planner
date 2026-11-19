@@ -3,7 +3,7 @@ import { Router, RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { SessionService } from '../../core/session.service';
 import { SignInOptionsService } from '../../core/signin-options.service';
-import { Activity, Idea, Photo, Post } from '../../core/models';
+import { Activity, Idea, Photo, Post, SelfieGame } from '../../core/models';
 import { daysUntil, nights, todayIso } from '../../core/format';
 import { usePolling } from '../../core/polling';
 import { AvatarComponent } from '../../shared/avatar.component';
@@ -23,6 +23,7 @@ const ICONS: Record<Activity['type'], string> = {
   trip: '✈️',
   photo: '📷',
   post: '📝',
+  selfie: '🤳',
 };
 
 @Component({
@@ -86,6 +87,11 @@ export class HomeComponent {
   readonly posts = signal<Post[]>([]);
   readonly photos = signal<Photo[]>([]);
   readonly loaded = signal(false);
+  /**
+   * The selfie game card: for the organizer to look the list over the day
+   * before, for anyone using this layout during the trip, and the winner after.
+   */
+  readonly selfies = signal<SelfieGame | null>(null);
 
   readonly topDo = computed(() => this.ideas().filter((i) => i.kind === 'activity').slice(0, 3));
   readonly topEat = computed(() => this.ideas().filter((i) => i.kind === 'food').slice(0, 3));
@@ -130,6 +136,17 @@ export class HomeComponent {
     this.posts.set(posts);
     this.photos.set(photos);
     this.loaded.set(true);
+    const t = this.trip();
+    // Only around the trip; a trip weeks away has no game yet.
+    if (t && daysUntil(t.startDate) <= 1)
+      void this.api
+        .selfieGame(id)
+        .then((g) => {
+          const during = g.status === 'open' && (g.canManage || !!this.letsGo.tripDay());
+          const after = g.status === 'closed' && !!g.winner;
+          this.selfies.set(during || after ? g : null);
+        })
+        .catch(() => undefined);
   }
 
   async vote(idea: Idea) {

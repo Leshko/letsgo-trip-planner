@@ -60,6 +60,11 @@ export const routes: Routes = [
       { canActivate: [tripOnlyGuard], path: 'plan', loadComponent: () => import('./pages/itinerary/itinerary.component').then((m) => m.ItineraryComponent) },
       { path: 'wall', loadComponent: () => import('./pages/wall/wall.component').then((m) => m.WallComponent) },
       { path: 'poll/:id', loadComponent: () => import('./pages/wall/poll-page.component').then((m) => m.PollPageComponent) },
+      {
+        canActivate: [tripOnlyGuard],
+        path: 'selfies',
+        loadComponent: () => import('./pages/selfies/selfies.component').then((m) => m.SelfiesComponent),
+      },
       { canActivate: [tripOnlyGuard], path: 'map', loadComponent: () => import('./pages/map/map.component').then((m) => m.MapComponent) },
     ],
   },

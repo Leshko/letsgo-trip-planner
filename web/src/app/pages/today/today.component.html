@@ -17,6 +17,15 @@
       <a class="btn btn--tinted" routerLink="/trip/ideas/do"><app-icon name="sparkles" [size]="20" /> Suggest an idea</a>
     </div>
 
+    @if (selfies(); as g) {
+      <a routerLink="/trip/selfies" class="card card--sea selfie-card mt" data-testid="today-selfies">
+        <span class="selfie-card__ico" aria-hidden="true">🤳</span>
+        <div class="grow"><strong>Selfie game</strong><div class="tiny">{{ selfieLine() }}</div></div>
+        @if (g.scoreboard[0]; as lead) { <span class="tiny" style="text-align:right">Leading<br /><strong>{{ lead.member.id === me()?.id ? 'You' : lead.member.name }}</strong></span> }
+        <span class="muted">›</span>
+      </a>
+    }
+
     <div class="section-title"><h2>Today's plan</h2><a routerLink="/trip/plan">Full plan ›</a></div>
     @if (loaded() && !todayPlan().length) {
       <a routerLink="/trip/plan" class="card card--flat empty" style="display:block;text-decoration:none;color:inherit">

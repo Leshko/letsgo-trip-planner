@@ -512,3 +512,36 @@ body.viewer-open { overflow: hidden; }
 
 /* Buttons with a sentence in them: wrap on narrow phones instead of spilling out. */
 .btn--wrap { white-space: normal; height: auto; min-height: 44px; padding-top: 10px; padding-bottom: 10px; line-height: 1.25; text-align: center; }
+
+/* ---------- selfie game ---------- */
+.selfie { display: flex; flex-direction: column; gap: 10px; }
+.selfie.is-done { box-shadow: inset 0 0 0 2px var(--green-soft); }
+.selfie__top { display: flex; align-items: flex-start; gap: 10px; }
+.selfie__title { font-weight: 600; font-size: 17px; line-height: 1.25; overflow-wrap: anywhere; }
+.selfie__thumb { position: relative; flex: 0 0 56px; width: 56px; height: 56px; padding: 0; border: 0; border-radius: 12px; overflow: hidden; background: var(--surface-2); cursor: pointer; }
+.selfie__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.selfie__thumb--sm { flex-basis: 40px; width: 40px; height: 40px; border-radius: 10px; }
+.selfie__thumb.is-current { box-shadow: 0 0 0 2px var(--tint); }
+.selfie__check { position: absolute; right: 3px; bottom: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--green); color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.selfie__verdict { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 14px; border-radius: 10px; padding: 8px 10px; }
+.selfie__verdict--yes { background: var(--green-soft); }
+.selfie__verdict--no { background: var(--coral-soft); }
+.selfie__foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.selfie__who { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; padding: 0; cursor: pointer; color: inherit; }
+.selfie__busy { font-size: 14px; font-weight: 600; color: var(--tint); }
+.selfie__review, .selfie__manage { border-top: 1px solid var(--border); padding-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
+.selfie__review { flex-direction: column; }
+.selfie-me { display: flex; align-items: center; gap: 14px; }
+.selfie-winner { display: flex; align-items: center; gap: 12px; }
+.selfie-winner__cup { font-size: 2.2rem; }
+.selfie-result__img { width: 100%; max-height: 46vh; object-fit: contain; border-radius: 14px; background: var(--surface-2); }
+.selfie-result__pts { font-size: 56px; font-weight: 800; letter-spacing: -0.04em; text-align: center; color: var(--green); line-height: 1; }
+.scoreboard { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.scoreboard__row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--border); }
+.scoreboard__row:first-child { border-top: 0; }
+.scoreboard__row.is-me { font-weight: 600; }
+.scoreboard__rank { flex: 0 0 28px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
+.scoreboard__pts { font-size: 18px; font-variant-numeric: tabular-nums; }
+.btn.is-disabled { opacity: 0.5; pointer-events: none; }
+.selfie-card { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
+.selfie-card__ico { font-size: 2rem; }
