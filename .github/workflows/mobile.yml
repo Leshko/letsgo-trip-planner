@@ -37,6 +37,13 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
+          # Keep downloaded build libraries between runs, so a busy library
+          # server (Maven Central) can't fail the build.
+          cache: gradle
+          cache-dependency-path: |
+            web/android/*.gradle
+            web/android/app/*.gradle
+            web/android/gradle/wrapper/gradle-wrapper.properties
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @letsgo/web build
       - name: Firebase file for Android notifications (when set up)
@@ -47,7 +54,14 @@ jobs:
       - run: pnpm --filter @letsgo/web exec cap sync android
       - name: Build the Android app (debug)
         working-directory: web/android
-        run: ./gradlew --no-daemon assembleDebug
+        # The library servers sometimes answer "too many requests"; wait and try again.
+        run: |
+          for attempt in 1 2 3; do
+            ./gradlew --no-daemon assembleDebug && exit 0
+            echo "Build attempt $attempt failed; waiting before trying again"
+            sleep $((attempt * 60))
+          done
+          exit 1
       - uses: actions/upload-artifact@v4
         with:
           name: letsgo-android-debug
